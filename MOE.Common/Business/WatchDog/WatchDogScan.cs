@@ -7,6 +7,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Entity.Validation;
 using System.Linq;
+using System.Net;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -383,22 +385,30 @@ namespace MOE.Common.Business.WatchDog
             }
         }
 
-        private void SendMessage( System.Net.Mail.MailMessage message)
+        private void SendMessage(System.Net.Mail.MailMessage message)
         {
             MOE.Common.Models.Repositories.IApplicationEventRepository er =
-                                MOE.Common.Models.Repositories.ApplicationEventRepositoryFactory.Create();
-            System.Net.Mail.SmtpClient smtp = new System.Net.Mail.SmtpClient(Settings.EmailServer);
+                MOE.Common.Models.Repositories.ApplicationEventRepositoryFactory.Create();
+            //System.Net.Mail.SmtpClient smtp = new System.Net.Mail.SmtpClient(Settings.EmailServer);
+            SmtpClient smtp = new SmtpClient();
+            smtp.Host = "smtp.gmail.com";
+            smtp.Port = 587;
+            smtp.UseDefaultCredentials = false;
+            smtp.EnableSsl = true;
+            var nc = new NetworkCredential("kitsrobot@gmail.com", "KimleyHorn");;
+            smtp.Credentials = nc;
             try
             {
-            Console.WriteLine("Sent message to: " + message.To.ToString() + "\nMessage text: " + message.Body + "\n");
-            smtp.Send(message);
-            System.Threading.Thread.Sleep(5000);
-            er.QuickAdd("SPMWatchDog", "Program", "SendMessage",
-                MOE.Common.Models.ApplicationEvent.SeverityLevels.Information,
-                "Email Sent Successfully to: " + message.To.ToString());
+                Console.WriteLine(
+                    "Sent message to: " + message.To.ToString() + "\nMessage text: " + message.Body + "\n");
+                smtp.Send(message);
+                System.Threading.Thread.Sleep(5000);
+                er.QuickAdd("SPMWatchDog", "Program", "SendMessage",
+                    MOE.Common.Models.ApplicationEvent.SeverityLevels.Information,
+                    "Email Sent Successfully to: " + message.To.ToString());
             }
-            catch(Exception ex)
-            {                            
+            catch (Exception ex)
+            {
                 er.QuickAdd("SPMWatchDog", "Program", "SendMessage",
                     MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium, ex.Message);
             }
