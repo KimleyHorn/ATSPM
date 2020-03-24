@@ -8,7 +8,7 @@
 
     @Html.AntiForgeryToken()
     <br/>
-    <div class="row">
+    <div class="well">
         <div class="col-4">
             <div class="card panel-signal">
                 <div class="card-header">
@@ -207,7 +207,7 @@
             <div class="">
                 <div class="col-4">
                     @*<button id="CreateMetric" type="submit" name="CreateMetric" value="CreateMetric" class="btn btn-primary">Create Chart &nbsp;<span id='RunReportSpinner' class="glyphicon"></span></button>*@
-                    <button id="CreateMetric" type="submit" name="CreateMetric" value="CreateMetric" class="btn btn-primary">Create Chart &nbsp;<span id='RunReportSpinner' class=""style="font-size:18px"></span></button> 
+                    <button id="CreateMetric" type="submit" name="CreateMetric" value="CreateMetric" class="btn btn-primary">Create Chart<span id='RunReportSpinner' class=""style="font-size:18px"></span></button> 
 
                     @Html.ValidationSummary(false, "", new {@class = "text-danger"})
                 </div>

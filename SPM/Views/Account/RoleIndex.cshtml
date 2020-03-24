@@ -2,9 +2,9 @@
     ViewBag.Title = "RoleIndex";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-<p>&nbsp;</p>
-<div class="spacerBody">
+<div class="well">
     @Html.ActionLink("Create New Role", "RoleCreate") | @Html.ActionLink("Add Role to User", "RoleAddToUser")
+    <p>&nbsp;</p>
     <h2>Role index</h2>
     @foreach (string s in Model)
     {

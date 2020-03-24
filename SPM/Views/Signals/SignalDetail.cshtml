@@ -4,11 +4,14 @@
     ViewBag.Title = "SPM Configuration Tool";
 }
 @Html.AntiForgeryToken()
-<h2>Signal Configuration</h2>
 
-@Html.Partial("~/Views/DefaultCharts/SignalSearch.cshtml", new ViewDataDictionary(Model.SignalSearch))
-<div class="" id="ResultMessage"></div>
-<div id="SignalResult"></div>
+<div class="well">
+    <h2>Signal Configuration</h2>
+
+    @Html.Partial("~/Views/DefaultCharts/SignalSearch.cshtml", new ViewDataDictionary(Model.SignalSearch))
+    <div class="" id="ResultMessage"></div>
+    <div id="SignalResult"></div>
+</div>
 @section Scripts
     {
     <script type="text/javascript" src="~/Scripts/Map.js"></script>

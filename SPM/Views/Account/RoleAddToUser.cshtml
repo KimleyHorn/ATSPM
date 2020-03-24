@@ -3,10 +3,9 @@
     ViewBag.Title = "RoleAddToUser";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-<div class="spacerBody">
-    <p>&nbsp;</p>
+<div class="well">
     @Html.ActionLink("Create New Role", "RoleCreate") | @Html.ActionLink("Roles", "RoleIndex")
-
+    <p>&nbsp;</p>
     <h2>Add role to user</h2>
     @using (Html.BeginForm("RoleAddToUser", "Account"))
     {
@@ -21,7 +20,7 @@
             @Html.DropDownList("RoleName", ViewBag.Roles as SelectList, htmlAttributes: new { @class = "form-control col-md-2", title = "Role" })
         </p>
 
-        <input type="submit" value="Save" />
+        <input type="submit" value="Save" class="btn btn-primary" />
     }
 
     <h2>Remove role from user</h2>
@@ -37,7 +36,7 @@
             @Html.DropDownList("RoleName", ViewBag.Roles as SelectList, htmlAttributes: new { @class = "form-control col-md-2", title = "Role" })
         </p>
 
-        <input type="submit" value="Delete this user from Role" />
+        <input type="submit" value="Delete this user from Role"  class="btn btn-primary" />
     }
 
     <h2>List roles for user</h2>
@@ -47,7 +46,7 @@
         <p>
             Username : 
             @Html.DropDownList("UserName", ViewBag.Users as SelectList, htmlAttributes: new { @class = "form-control col-md-2", title = "User" })
-            <input type="submit" value="Get Roles for this User" />
+            <input type="submit" value="Get Roles for this User"  class="btn btn-primary" />
         </p>
     }
 

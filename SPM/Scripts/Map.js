@@ -1,4 +1,60 @@
 ﻿var infobox;
+
+var mapStyle = {
+    "version": "1.0",
+    "settings": {
+        "landColor": "#0B334D"
+    },
+    "elements": {
+        "mapElement": {
+            "labelColor": "#FFFFFF",
+            "labelOutlineColor": "#000000"
+        },
+        "political": {
+            "borderStrokeColor": "#144B53",
+            "borderOutlineColor": "#aa000000"
+        },
+        "point": {
+            "iconColor": "#0C4152",
+            "fillColor": "#000000",
+            "strokeColor": "#0C4152"
+        },
+        "transportation": {
+            "strokeColor": "#000000",
+            "fillColor": "#000000"
+        },
+        "highway": {
+            "strokeColor": "#158399",
+            "fillColor": "#000000"
+        },
+        "controlledAccessHighway": {
+            "strokeColor": "#158399",
+            "fillColor": "#000000"
+        },
+        "arterialRoad": {
+            "strokeColor": "#157399",
+            "fillColor": "#000000"
+        },
+        "majorRoad": {
+            "strokeColor": "#157399",
+            "fillColor": "#000000"
+        },
+        "railway": {
+            "strokeColor": "#146474",
+            "fillColor": "#000000"
+        },
+        "structure": {
+            "fillColor": "#115166"
+        },
+        "water": {
+            "fillColor": "#021019"
+        },
+        "area": {
+            "fillColor": "#115166"
+        }
+    }
+};
+
 function openWindow(url) {
     var w = window.open(url, '',
     'width=800,height=600,toolbar=0,status=0,location=0,menubar=0,directories=0,resizable=1,scrollbars=1');
@@ -15,7 +71,8 @@ function GetMap()
         enableSearchLogo: false,
         showMapTypeSelector: false,
         zoom: 6,
-        customizeOverlays: false
+        customizeOverlays: false,
+        customMapStyle: mapStyle
     });
     var dataLayer = AddData();
     //map.entities.push(dataLayer);
@@ -38,7 +95,8 @@ function GetRouteMap() {
         enableSearchLogo: false,
         showMapTypeSelector: false,
         zoom: 6,
-        customizeOverlays: false
+        customizeOverlays: false,
+        customMapStyle: mapStyle
     });
     var dataLayer = AddData();
     //map.entities.push(dataLayer);
@@ -93,7 +151,8 @@ function GetMapWithCenter(lat, long, zoom) {
         enableSearchLogo: false,
         showMapTypeSelector: false,
         zoom: zoom,
-        customizeOverlays: false
+        customizeOverlays: false,
+        customMapStyle: mapStyle
     });
     var dataLayer = AddData();
     //map.entities.push(dataLayer);

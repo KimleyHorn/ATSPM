@@ -439,7 +439,9 @@
     <Content Include="Content\bootstrap-reboot.css" />
     <Content Include="Content\bootstrap-reboot.min.css" />
     <Content Include="Content\bootstrap.css" />
-    <Content Include="Content\bootstrap.min.css" />
+    <Content Include="Content\bootstrap.min.css">
+      <DependentUpon>bootstrap.css</DependentUpon>
+    </Content>
     <Content Include="Content\font-awesome.css" />
     <Content Include="Content\font-awesome.min.css" />
     <Content Include="Content\themes\base\accordion.css" />
@@ -562,6 +564,7 @@
     <Content Include="fonts\fontawesome-webfont.woff" />
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
+    <None Include="bundleconfig.json" />
     <None Include="Properties\PublishProfiles\FolderProfile.pubxml" />
     <None Include="Properties\PublishProfiles\Historical.pubxml" />
     <None Include="Properties\PublishProfiles\srtcns61-Staging.pubxml" />
@@ -817,7 +820,7 @@
     <Content Include="Views\DefaultCharts\LeftTurnGapAnalysisOptions.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
-      </None>
+    </None>
     <None Include="Service References\MetricGeneratorService\MOE.Common.Business.Bins.xsd">
       <SubType>Designer</SubType>
     </None>

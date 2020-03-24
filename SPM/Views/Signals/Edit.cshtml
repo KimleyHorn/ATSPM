@@ -5,11 +5,11 @@
 <div class="card panel-signal">
     <div class="card-header">
         Signal @Model.SignalID
-        <button type="submit" class="float-right btn btn-success" onclick="javascript:UpdateVersionDropdown()" value="Save">Save &nbsp;<span class="" aria-hidden="true"></span></button>
-        <button type="button" class="float-right btn btn-danger" onclick="DeleteSignal()">Delete This Signal &nbsp;<span class="" aria-hidden="true"></span></button>
-        <button type="button" class="float-right btn btn-dark" onclick="CopySignal()">Copy Signal&nbsp;<span class="" aria-hidden="true"></span></button>
-        <Button type="button" onclick="AddNewVersion()" class="float-right btn btn-info">Add New Version &nbsp;<span class="" aria-hidden="true"></span></Button>
-        <Button type="button" onclick="DeleteVersion()" class="float-right btn btn-warning">Delete This Version &nbsp;<span class="" aria-hidden="true"></span></Button>
+        <button type="submit" class="float-right btn btn-success signal-btn" onclick="javascript:UpdateVersionDropdown()" value="Save">Save &nbsp;<span class="" aria-hidden="true"></span></button>
+        <button type="button" class="float-right btn btn-danger signal-btn" onclick="DeleteSignal()">Delete This Signal &nbsp;<span class="" aria-hidden="true"></span></button>
+        <button type="button" class="float-right btn btn-dark signal-btn" onclick="CopySignal()">Copy Signal&nbsp;<span class="" aria-hidden="true"></span></button>
+        <Button type="button" onclick="AddNewVersion()" class="float-right btn btn-info signal-btn">Add New Version &nbsp;<span class="" aria-hidden="true"></span></Button>
+        <Button type="button" onclick="DeleteVersion()" class="float-right btn btn-warning signal-btn">Delete This Version &nbsp;<span class="" aria-hidden="true"></span></Button>
         <span class="pull-right" id="ActionMessage"></span>
     </div>
     <div class="card-body">
@@ -105,7 +105,7 @@
                 <div class="col-md-6">
                     <br />
                     @Html.LabelFor(model => model.Comments, htmlAttributes: new { @class = "control-label" })
-                    <button type="button" class="btn btn-info" onclick="GetCreateComment()">Add Comment&nbsp;<span class="" aria-hidden="true"></span></button>
+                    <button type="button" class="btn btn-info signal-btn" onclick="GetCreateComment()">Add Comment&nbsp;<span class="" aria-hidden="true"></span></button>
 
                     @*Could not get the glyphion-plus sign to work.  We will need to fix this, but for now we will use a button.*@
                     @*<span onclick="GetCreateComment()" class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>*@

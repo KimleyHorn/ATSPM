@@ -7,9 +7,9 @@
     @Html.Raw(Model.RunMetricJavascript)
 }</script>
 
-<h2>Signal</h2>
 <form id="MainForm" class="card card-body bg-light">
     <div class="row">
+        <div class="col-md-12"><h2>Signal</h2></div>
         <div id="SignalSearchContainer" class="col-6 panel-min-width">
             @Html.Partial("SignalSearch", new ViewDataDictionary(Model.SignalSearch))
         </div>
@@ -35,32 +35,32 @@
                             <div class="row">
                                 <div class="col-7">
                                     <div class="row">
-                                    <div class="col-12">
-                                        @Html.LabelFor(model => model.StartDateDay, htmlAttributes: new {@class = "control-label"})
-                                        <div class="input-group-custom">
-                                            @Html.EditorFor(model => model.StartDateDay, new {htmlAttributes = new {@class = "form-control DayWidth datepicker"}})
-                                            @Html.EditorFor(model => model.StartTime, new {htmlAttributes = new {@class = "form-control timeWidth", title = "Time component of start date"}})
-                                            @Html.DropDownList("StartAMPMddl", Model.StartAMPMList, new {@class = "form-control AMPMWidth", title = "AM PM component of start date"})
+                                        <div class="col-12">
+                                            @Html.LabelFor(model => model.StartDateDay, htmlAttributes: new {@class = "control-label"})
+                                            <div class="input-group-custom">
+                                                @Html.EditorFor(model => model.StartDateDay, new {htmlAttributes = new {@class = "form-control DayWidth datepicker"}})
+                                                @Html.EditorFor(model => model.StartTime, new {htmlAttributes = new {@class = "form-control timeWidth", title = "Time component of start date"}})
+                                                @Html.DropDownList("StartAMPMddl", Model.StartAMPMList, new {@class = "form-control AMPMWidth", title = "AM PM component of start date"})
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-12">
-                                        @Html.LabelFor(model => model.EndDateDay, htmlAttributes: new {@class = "control-label"})
-                                        <div class="input-group-custom">
-                                            @Html.EditorFor(model => model.EndDateDay, new {htmlAttributes = new {@class = "form-control DayWidth datepicker"}})
-                                            @Html.EditorFor(model => model.EndTime, new {htmlAttributes = new {@class = "form-control timeWidth", title = "Time component of end date"}})
-                                            @Html.DropDownList("EndAMPMddl", Model.EndAMPMList, new {@class = "form-control AMPMWidth", title = "AM PM component of end date"})
+                                        <div class="col-12">
+                                            @Html.LabelFor(model => model.EndDateDay, htmlAttributes: new {@class = "control-label"})
+                                            <div class="input-group-custom">
+                                                @Html.EditorFor(model => model.EndDateDay, new {htmlAttributes = new {@class = "form-control DayWidth datepicker"}})
+                                                @Html.EditorFor(model => model.EndTime, new {htmlAttributes = new {@class = "form-control timeWidth", title = "Time component of end date"}})
+                                                @Html.DropDownList("EndAMPMddl", Model.EndAMPMList, new {@class = "form-control AMPMWidth", title = "AM PM component of end date"})
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        @Html.ValidationMessageFor(model => model.StartTime, "", new {id = "StartTime-error", @class = "text-danger"})
-                                        @Html.ValidationMessageFor(model => model.StartDateDay, "", new {id = "StartDateDay-error", @class = "text-danger"})
-                                        @Html.ValidationMessageFor(model => model.SelectedStartAMPM, "", new {id = "SelectedStartAMPM-error", @class = "text-danger"})
-                                        @Html.ValidationMessageFor(model => model.EndTime, "", new {id = "EndTime-error", @class = "text-danger"})
-                                        @Html.ValidationMessageFor(model => model.EndDateDay, "", new {id = "EndDateDay-error", @class = "text-danger"})
-                                        @Html.ValidationMessageFor(model => model.SelectedEndAMPM, "", new {id = "SelectedEndAMPM-error", @class = "text-danger"})
-                                    </div>
+                                        <div class="col-md-12">
+                                            @Html.ValidationMessageFor(model => model.StartTime, "", new {id = "StartTime-error", @class = "text-danger"})
+                                            @Html.ValidationMessageFor(model => model.StartDateDay, "", new {id = "StartDateDay-error", @class = "text-danger"})
+                                            @Html.ValidationMessageFor(model => model.SelectedStartAMPM, "", new {id = "SelectedStartAMPM-error", @class = "text-danger"})
+                                            @Html.ValidationMessageFor(model => model.EndTime, "", new {id = "EndTime-error", @class = "text-danger"})
+                                            @Html.ValidationMessageFor(model => model.EndDateDay, "", new {id = "EndDateDay-error", @class = "text-danger"})
+                                            @Html.ValidationMessageFor(model => model.SelectedEndAMPM, "", new {id = "SelectedEndAMPM-error", @class = "text-danger"})
+                                        </div>
                                         <div class="col-md-12 col-sm-12 ">
-                                            <button id="ResetDate" type="button" class="btn">Reset Date</button>
+                                            <button id="ResetDate" type="button" class="btn btn-primary">Reset Date</button>
                                         </div>
                                     </div>
                                 </div>
@@ -71,7 +71,7 @@
                         </div>
                     </div>
                     <div>
-                        <button id="CreateMetric" type="button" class="btn btn-primary">Create Chart &nbsp;<span id='RunReportSpinner' class="" style="font-size:18px"></span></button>
+                        <button id="CreateMetric" type="button" class="btn btn-primary">Create Chart<span id='RunReportSpinner' class="" style="font-size: 18px"></span></button>
 
                     </div>
                 </div>
