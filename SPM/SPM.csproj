@@ -689,6 +689,7 @@
       <Generator>WCF Proxy Generator</Generator>
       <LastGenOutput>Reference.cs</LastGenOutput>
     </None>
+    <Content Include="Scripts\WatchdogExclusions.js" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>
     </Content>
@@ -815,6 +816,7 @@
     <Content Include="Views\DatabaseArchiveSettings\Edit.cshtml" />
     <Content Include="Views\DatabaseArchiveSettings\EditorTemplates\DatabaseArchiveExcludedSignal.cshtml" />
     <Content Include="Views\DefaultCharts\LeftTurnGapAnalysisOptions.cshtml" />
+    <Content Include="Views\WatchdogExclusions\WatchdogExclusionsList.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

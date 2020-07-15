@@ -581,6 +581,14 @@
     <Compile Include="Migrations\201910162223114_Model-for Oct2019.Designer.cs">
       <DependentUpon>201910162223114_Model-for Oct2019.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202006240117494_SPMWatchdogExclusionsInitialModelChanges.cs" />
+    <Compile Include="Migrations\202006240117494_SPMWatchdogExclusionsInitialModelChanges.Designer.cs">
+      <DependentUpon>202006240117494_SPMWatchdogExclusionsInitialModelChanges.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202006252300105_SPMWatchdogExclusionsInitialModelChanges1.cs" />
+    <Compile Include="Migrations\202006252300105_SPMWatchdogExclusionsInitialModelChanges1.Designer.cs">
+      <DependentUpon>202006252300105_SPMWatchdogExclusionsInitialModelChanges1.cs</DependentUpon>
+    </Compile>
     <Compile Include="Models\Application.cs" />
     <Compile Include="Models\ApplicationSettings.cs" />
     <Compile Include="Models\PhasePedAggregation.cs" />
@@ -589,6 +597,7 @@
     <Compile Include="Models\DetectorEventCountAggregation.cs" />
     <Compile Include="Models\Region.cs" />
     <Compile Include="Models\Repositories\IPhasePedAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\ISPMWatchdogExclusionsRepository.cs" />
     <Compile Include="Models\Repositories\PhasePedAggregationRepository.cs" />
     <Compile Include="Models\Repositories\PhaseTerminationAggregationRepository.cs" />
     <Compile Include="Models\Repositories\PhasePedAggregationRepositoryFactory.cs" />
@@ -601,6 +610,8 @@
     <Compile Include="Models\Repositories\PhaseEventCountAggregationRepository.cs" />
     <Compile Include="Models\Repositories\DetectorEventCountAggregationRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\PhaseEventCountAggregationRepositoryFactory.cs" />
+    <Compile Include="Models\Repositories\SPMWatchdogExclusionsRepository.cs" />
+    <Compile Include="Models\Repositories\SPMWatchdogExclusionsRepositoryFactory.cs" />
     <Compile Include="Models\SignalEventCountAggregation.cs" />
     <Compile Include="Models\ApproachPcdAggregation.cs" />
     <Compile Include="Models\ApproachYellowRedActivationsAggregation.cs" />
@@ -911,6 +922,7 @@
     <Compile Include="Models\Comment.cs" />
     <Compile Include="Models\MetricComment.cs" />
     <Compile Include="Models\SPMWatchDogErrorEvent.cs" />
+    <Compile Include="Models\SPMWatchdogExclusions.cs" />
     <Compile Include="Models\StatusOfProcessedTable.cs" />
     <Compile Include="Models\TablePartitionProcessed.cs" />
     <Compile Include="Models\ToBeProcessedTable.cs" />
@@ -938,6 +950,7 @@
     <Compile Include="Models\ViewModel\RouteEdit\ApproachRouteDetailViewModel.cs" />
     <Compile Include="Models\ViewModel\RouteEdit\RouteCreateViewModel.cs" />
     <Compile Include="Models\ViewModel\RouteEdit\RouteMapViewModel.cs" />
+    <Compile Include="Models\ViewModel\WatchdogExclusionsViewModel.cs" />
     <Compile Include="Models\ViewModel\WebConfigTool\WebConfigToolViewModel.cs" />
     <Compile Include="Models\ViewModel\_MainMenu\MenuItem.cs" />
     <Compile Include="Models\DatabaseArchiveSettings.cs" />
@@ -994,6 +1007,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201910162223114_Model-for Oct2019.resx">
       <DependentUpon>201910162223114_Model-for Oct2019.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202006240117494_SPMWatchdogExclusionsInitialModelChanges.resx">
+      <DependentUpon>202006240117494_SPMWatchdogExclusionsInitialModelChanges.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202006252300105_SPMWatchdogExclusionsInitialModelChanges1.resx">
+      <DependentUpon>202006252300105_SPMWatchdogExclusionsInitialModelChanges1.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\CustomStuffForExistingUpgrade.txt" />
     <EmbeddedResource Include="Migrations\FillDetectorTypeMetricTypesTable.SQL" />
