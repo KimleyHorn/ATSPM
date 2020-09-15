@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.IO;
 using System.Linq;
 using MOE.Common.Models;
+using MOE.Common.Models.Repositories;
+using Parquet;
 
 namespace MOE.Common.Business
 {
     public class ControllerEventLogs
     {
         private readonly SPM db = new SPM();
+        private const string LocalArchiveDirectory = "LocalArchiveDirectory";
+        private readonly string _localPath = GetSetting(LocalArchiveDirectory);
 
         public ControllerEventLogs(string signalId, DateTime startDate, DateTime endDate)
         {
@@ -16,11 +22,15 @@ namespace MOE.Common.Business
             EndDate = endDate;
             EventCodes = new List<int>();
             Events = new List<Controller_Event_Log>();
+
+            db.Database.CommandTimeout = 1800;
         }
 
         public ControllerEventLogs()
         {
             Events = new List<Controller_Event_Log>();
+
+            db.Database.CommandTimeout = 1800;
         }
 
         public ControllerEventLogs(string signalID, DateTime startDate, DateTime endDate, List<int> eventCodes)
@@ -38,6 +48,13 @@ namespace MOE.Common.Business
                 select s;
 
             Events = events.ToList();
+
+            if (!Events.Any())
+            {
+                Events = GetDataFromArchive(signalID, startDate, endDate);
+                Events = Events.Where(x => eventCodes.Contains(x.EventCode)).ToList();
+            }
+
             Events.Sort((x, y) => DateTime.Compare(x.Timestamp, y.Timestamp));
         }
 
@@ -58,6 +75,13 @@ namespace MOE.Common.Business
                 select s;
 
             Events = events.ToList();
+
+            if (!Events.Any())
+            {
+                Events = GetDataFromArchive(signalID, startDate, endDate);
+                Events = Events.Where(x => x.EventParam == eventParam && eventCodes.Contains(x.EventCode)).ToList();
+            }
+
             Events = Events.OrderBy(e => e.Timestamp).ThenBy(e => e.EventCode).ToList();
             //Events.Sort((x, y) => DateTime.Compare(x.Timestamp, y.Timestamp));
         }
@@ -84,6 +108,12 @@ namespace MOE.Common.Business
                       Codes.Contains(s.EventCode)
                 select s).ToList();
 
+            if (!events.Any())
+            {
+                events = GetDataFromArchive(signalID, startDate, endDate);
+                events = events.Where(x => Codes.Contains(x.EventCode)).ToList();
+            }
+
             Events.AddRange(events);
             OrderEventsBytimestamp();
         }
@@ -96,6 +126,15 @@ namespace MOE.Common.Business
                       s.Timestamp <= endDate &&
                       (s.EventCode == 105 || s.EventCode == 111)
                 select s).ToList();
+
+            if (!events.Any())
+            {
+                //Check the archive if no data in DB
+                var archivedData = GetDataFromArchive(signalId, startDate, endDate);
+                archivedData = archivedData.Where(c => c.EventCode == 105 || c.EventCode == 111).ToList();
+                events = archivedData;
+            }
+
             foreach (var v in events)
             {
                 v.EventCode = 99;
@@ -160,7 +199,15 @@ namespace MOE.Common.Business
                       s.Timestamp >= startDate &&
                       s.Timestamp <= endDate &&
                       pedEventCodes.Contains(s.EventCode)
-                select s.EventParam).Distinct();
+                select s.EventParam).Distinct().ToList();
+
+            if (!events.Any())
+            {
+                //Check the archive if no data in DB
+                var archivedData = GetDataFromArchive(signalID, startDate, endDate);
+                events = archivedData.Where(c => pedEventCodes.Contains(c.EventCode)).Select(x => x.EventParam).Distinct().ToList();
+            }
+
             return events.ToList();
         }
 
@@ -193,5 +240,89 @@ namespace MOE.Common.Business
             ).DefaultIfEmpty(null).First();
             return eventRecord;
         }
+
+        #region Parquet Archive
+
+        public static List<Controller_Event_Log> GetDataFromArchive(string signalId, DateTime startTime, DateTime endTime)
+        {
+            try
+            {
+                const string LocalArchiveDirectory = "LocalArchiveDirectory";
+                var localPath = GetSetting(LocalArchiveDirectory);
+                Log("Getting data from" + LocalArchiveDirectory, "GetDataFromArchive");
+
+                if (string.IsNullOrWhiteSpace(localPath)) return new List<Controller_Event_Log>();
+                var dateRange = startTime.Date == endTime.Date ? new List<DateTime>() { startTime.Date } : GetDateRange(startTime, endTime);
+
+                var events = new List<Controller_Event_Log>();
+                foreach (var date in dateRange)
+                {
+                    Log($"Checking for file {localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet", "GetDataFromArchive");
+                    if (File.Exists($"{localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet"))
+                    {
+                        using (var stream = File.OpenRead($"{localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet"))
+                        {
+                            var newEvents = ParquetConvert.Deserialize<ParquetEventLog>(stream);
+                            Log($"Deserializing {newEvents.Count()} events", "GetDataFromArchive");
+                            foreach (var parquetEvent in newEvents)
+                            {
+                                events.Add(new Controller_Event_Log
+                                {
+                                    SignalID = parquetEvent.SignalID,
+                                    Timestamp = date.AddMilliseconds(parquetEvent.TimestampMs),
+                                    EventCode = parquetEvent.EventCode,
+                                    EventParam = parquetEvent.EventParam
+                                });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Log($"File {localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet does not exist", "GetDataFromArchive");
+                    }
+                }
+
+                //var test = events.Where(x => x.Timestamp < startTime || x.Timestamp > endTime);
+                return events.Where(x => x.Timestamp >= startTime && x.Timestamp < endTime).ToList();
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message, "GetDataFromArchive");
+                throw;
+            }
+
+        }
+
+        public static IEnumerable<DateTime> GetDateRange(DateTime startDate, DateTime endDate)
+        {
+            if (endDate < startDate)
+                throw new ArgumentException("EndDate must be greater than or equal to StartDate");
+
+            while (startDate <= endDate)
+            {
+                yield return startDate;
+                startDate = startDate.AddDays(1);
+            }
+        }
+
+        private static string GetSetting(string settingName)
+        {
+            return ConfigurationManager.AppSettings[settingName];
+        }
+
+        private static void Log(string message, string function)
+        {
+            var logRepository = ApplicationEventRepositoryFactory.Create();
+            var e = new ApplicationEvent();
+            e.ApplicationName = "MOE.Common";
+            e.Class = "ControllEventLogs.cs";
+            e.Function = function;
+            e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
+            e.Timestamp = DateTime.Now;
+            e.Description = message;
+            logRepository.Add(e);
+        }
+
+        #endregion
     }
 }

@@ -1,18 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.Entity.Core;
 using System.Data.Entity.Core.Objects;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Web.Management;
 using Microsoft.EntityFrameworkCore.Internal;
+using Parquet;
 
 namespace MOE.Common.Models.Repositories
 {
+    public class ParquetEventLog
+    {
+        public string SignalID { get; set; }
+        public string Date { get; set; }
+        public double TimestampMs { get; set; }
+        public int EventCode { get; set; }
+        public int EventParam { get; set; }
+
+        public ParquetEventLog()
+        { }
+    }
+
     public class ControllerEventLogRepository : IControllerEventLogRepository
     {
         private readonly SPM _db = new SPM();
+        private const string LocalArchiveDirectory = "LocalArchiveDirectory";
+        private readonly string _localPath = GetSetting(LocalArchiveDirectory);
 
         public ControllerEventLogRepository()
         {
@@ -30,7 +47,18 @@ namespace MOE.Common.Models.Repositories
                 query = query.Where(c => eventParameters.Contains(c.EventParam));
             if (eventCodes != null && eventCodes.Count > 0)
                 query = query.Where(c => eventCodes.Contains(c.EventCode));
-            return query.Count();
+            if (query.Any())
+                return query.Count();
+
+            //Check the archive if no data in DB
+            var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+
+            if (eventParameters != null && eventParameters.Count > 0)
+                archivedData = archivedData.Where(c => eventParameters.Contains(c.EventParam)).ToList();
+            if (eventCodes != null && eventCodes.Count > 0)
+                archivedData = archivedData.Where(c => eventCodes.Contains(c.EventCode)).ToList();
+
+            return archivedData.Count;
         }
 
         public List<Controller_Event_Log> GetRecordsByParameterAndEvent(string signalId, DateTime startTime,
@@ -42,7 +70,18 @@ namespace MOE.Common.Models.Repositories
                 query = query.Where(c => eventParameters.Contains(c.EventParam));
             if (eventCodes != null && eventCodes.Count > 0)
                 query = query.Where(c => eventCodes.Contains(c.EventCode));
-            return query.ToList();
+
+            if (query.Any())
+                return query.ToList();
+
+            var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+
+            if (eventParameters != null && eventParameters.Count > 0)
+                archivedData = archivedData.Where(c => eventParameters.Contains(c.EventParam)).ToList();
+            if (eventCodes != null && eventCodes.Count > 0)
+                archivedData = archivedData.Where(c => eventCodes.Contains(c.EventCode)).ToList();
+
+            return archivedData.ToList();
         }
 
         public List<Controller_Event_Log> GetAllAggregationCodes(string signalId, DateTime startTime, DateTime endTime)
@@ -52,6 +91,12 @@ namespace MOE.Common.Models.Repositories
                 .Where(c => c.SignalID == signalId && c.Timestamp >= startTime && c.Timestamp <= endTime &&
                             codes.Contains(c.EventCode))
                 .ToList();
+
+            if (records.Any()) return records;
+
+            var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+            records = archivedData.Where(x => codes.Contains(x.EventCode)).ToList();
+
             return records;
         }
 
@@ -65,6 +110,11 @@ namespace MOE.Common.Models.Repositories
                                && cel.EventParam == detectorChannel
                                && cel.EventCode == 82
                          select cel).Count();
+
+            if (count > 0) return count;
+
+            var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+            count = archivedData.Count(x => x.EventParam == detectorChannel && x.EventCode == 82);
             return count;
         }
 
@@ -90,6 +140,11 @@ namespace MOE.Common.Models.Repositories
                                   && cel.EventCode == 82
                             select cel).Count();
 
+            if (!(count <= 0)) return count;
+
+            var archivedData = GetDataFromArchive(signalId, startDate, endDate);
+            count = archivedData.Count(x => x.EventCode == 82 && tmcChannels.Contains(x.EventParam));
+
             return count;
         }
 
@@ -100,6 +155,11 @@ namespace MOE.Common.Models.Repositories
                                  && r.EventCode > 130 && r.EventCode < 150
                            select r).ToList();
 
+            if (results.Any()) return results;
+
+            var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+            results = archivedData.Where(x => x.EventCode > 130 && x.EventCode < 150).ToList();
+
             return results;
         }
 
@@ -108,11 +168,15 @@ namespace MOE.Common.Models.Repositories
         {
             try
             {
-                return (from r in _db.Controller_Event_Log
+                var events = (from r in _db.Controller_Event_Log
                         where r.SignalID == signalId
                               && r.Timestamp >= startTime
                               && r.Timestamp < endTime
                         select r).ToList();
+                if (events.Any()) return events;
+
+                return GetDataFromArchive(signalId, startTime, endTime);
+
             }
             catch (Exception ex)
             {
@@ -142,10 +206,13 @@ namespace MOE.Common.Models.Repositories
                        && r.Timestamp < endTime
                  select r).Take(numberOfRecords).ToList();
 
-                if (events != null)
+                if (events.Any())
                     return events;
-                var emptyEvents = new List<Controller_Event_Log>();
-                return emptyEvents;
+
+                var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+                events = archivedData.Take(numberOfRecords).ToList();
+
+                return events;
             }
             catch (Exception ex)
             {
@@ -167,9 +234,15 @@ namespace MOE.Common.Models.Repositories
         {
             try
             {
-                return _db.Controller_Event_Log.Count(r => r.SignalID == signalId
+                var count =  _db.Controller_Event_Log.Count(r => r.SignalID == signalId
                                                            && r.Timestamp >= startTime
                                                            && r.Timestamp < endTime);
+
+                if (count > 0)
+                    return count;
+
+                var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+                return archivedData.Count;
             }
              catch (Exception ex)
             {
@@ -194,6 +267,8 @@ namespace MOE.Common.Models.Repositories
                 return _db.Controller_Event_Log.Any(r => r.SignalID == signalId
                                                          && r.Timestamp >= startTime
                                                          && r.Timestamp < endTime);
+
+                //todo: ? mjw
             }
             catch (Exception ex)
             {
@@ -217,12 +292,25 @@ namespace MOE.Common.Models.Repositories
         {
             try
             {
-                return (from r in _db.Controller_Event_Log
+                var events = (from r in _db.Controller_Event_Log
                         where r.SignalID == signalId
                               && r.Timestamp >= startTime
                               && r.Timestamp < endTime
                               && r.EventCode == eventCode
                         select r).ToList();
+
+                if (!events.Any())
+                {
+                    var logs = GetDataFromArchive(signalId, startTime, endTime);
+                    events = (from s in logs
+                              where s.SignalID == signalId &&
+                                    s.Timestamp >= startTime &&
+                                    s.Timestamp < endTime &&
+                                    s.EventCode == eventCode
+                              select s).ToList();
+                }
+
+                return events;
             }
             catch (Exception ex)
             {
@@ -251,14 +339,22 @@ namespace MOE.Common.Models.Repositories
                                     s.Timestamp <= endTime &&
                                     eventCodes.Contains(s.EventCode)
                               select s).ToList();
+
+                if (!events.Any())
+                {
+
+                    var logs = GetDataFromArchive(signalId, startTime, endTime);
+                    events = (from s in logs
+                              where s.SignalID == signalId &&
+                                    s.Timestamp >= startTime &&
+                                    s.Timestamp <= endTime &&
+                                    eventCodes.Contains(s.EventCode)
+                              select s).ToList();
+                }
+
                 events.Sort((x, y) => DateTime.Compare(x.Timestamp, y.Timestamp));
                 return events;
             }
-            //catch (EntityCommandExecutionException ex)
-            //{
-                
-            //}
-            
             catch (Exception ex)
             {
                 var logRepository =
@@ -285,6 +381,13 @@ namespace MOE.Common.Models.Repositories
                                    s.Timestamp <= endTime &&
                                    s.EventParam == param &&
                                    eventCodes.Contains(s.EventCode)).ToList();
+
+                if (!events.Any())
+                {
+                    var logs = GetDataFromArchive(signalId, startTime, endTime);
+                    events = logs.Where(x => x.EventParam == param && eventCodes.Contains(x.EventCode)).ToList();
+                }
+
                 events = events.OrderBy(e => e.Timestamp).ThenBy(e => e.EventParam).ToList();
                 return events;
             }
@@ -311,14 +414,22 @@ namespace MOE.Common.Models.Repositories
             {
                 var endDate = timestamp.AddHours(1);
                 var events = _db.Controller_Event_Log.Where(c =>
-                    c.SignalID == signalId &&
-                    c.Timestamp > timestamp &&
-                    c.Timestamp < endDate &&
-                    c.EventParam == param &&
-                    eventCodes.Contains(c.EventCode)).ToList();
-                return events
+                        c.SignalID == signalId &&
+                        c.Timestamp > timestamp &&
+                        c.Timestamp < endDate &&
+                        c.EventParam == param &&
+                        eventCodes.Contains(c.EventCode))
                     .OrderBy(s => s.Timestamp)
-                    .Take(top).ToList(); 
+                    .Take(top).ToList();
+
+                if (events.Any())
+                    return events;
+
+                var archivedData = GetDataFromArchive(signalId, timestamp, endDate);
+                events = archivedData.Where(x => x.EventParam == param && eventCodes.Contains(x.EventCode))
+                    .OrderBy(x => x.Timestamp).Take(top).ToList();
+
+                return events;
             }
             catch (Exception e)
             {
@@ -336,7 +447,7 @@ namespace MOE.Common.Models.Repositories
         {
             try
             {
-                return
+                var count =
                 (from s in _db.Controller_Event_Log
                  where s.SignalID == signalId &&
                        s.Timestamp >= startTime &&
@@ -352,6 +463,28 @@ namespace MOE.Common.Models.Repositories
                        s.EventParam == param &&
                        eventCodes.Contains(s.EventCode)
                  select s).Count();
+
+                if (count <= 0)
+                {
+                    var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+                    count = (from s in archivedData
+                             where s.SignalID == signalId &&
+                                   s.Timestamp >= startTime &&
+                                   s.Timestamp <= endTime &&
+                                   (s.Timestamp.Hour > startHour && s.Timestamp.Hour < endHour ||
+                                    s.Timestamp.Hour == startHour && s.Timestamp.Hour == endHour &&
+                                    s.Timestamp.Minute >= startMinute && s.Timestamp.Minute <= endMinute ||
+                                    s.Timestamp.Hour == startHour && s.Timestamp.Hour < endHour &&
+                                    s.Timestamp.Minute >= startMinute ||
+                                    s.Timestamp.Hour < startHour && s.Timestamp.Hour == endHour &&
+                                    s.Timestamp.Minute <= endMinute)
+                                   &&
+                                   s.EventParam == param &&
+                                   eventCodes.Contains(s.EventCode)
+                             select s).Count();
+                }
+
+                return count;
             }
             catch (Exception ex)
             {
@@ -391,6 +524,27 @@ namespace MOE.Common.Models.Repositories
                                     s.EventParam == param &&
                                     eventCodes.Contains(s.EventCode)
                               select s).ToList();
+
+                if (!events.Any())
+                {
+                    var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+                    events = (from s in archivedData
+                              where s.SignalID == signalId &&
+                                    s.Timestamp >= startTime &&
+                                    s.Timestamp <= endTime &&
+                                    (s.Timestamp.Hour > startHour && s.Timestamp.Hour < endHour ||
+                                     s.Timestamp.Hour == startHour && s.Timestamp.Hour == endHour &&
+                                     s.Timestamp.Minute >= startMinute && s.Timestamp.Minute <= endMinute ||
+                                     s.Timestamp.Hour == startHour && s.Timestamp.Hour < endHour &&
+                                     s.Timestamp.Minute >= startMinute ||
+                                     s.Timestamp.Hour < startHour && s.Timestamp.Hour == endHour &&
+                                     s.Timestamp.Minute <= endMinute)
+                                    &&
+                                    s.EventParam == param &&
+                                    eventCodes.Contains(s.EventCode)
+                              select s).ToList();
+                }
+
                 events.Sort((x, y) => DateTime.Compare(x.Timestamp, y.Timestamp));
                 return events;
             }
@@ -424,6 +578,18 @@ namespace MOE.Common.Models.Repositories
                                     s.EventParam == param &&
                                     eventCodes.Contains(s.EventCode)
                               select s).ToList();
+                if (!events.Any())
+                {
+                    var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+                    events = (from s in archivedData
+                              where s.SignalID == signalId &&
+                                    s.Timestamp >= startTime &&
+                                    s.Timestamp <= endTime &&
+                                    s.EventParam == param &&
+                                    eventCodes.Contains(s.EventCode)
+                              select s).ToList();
+                }
+
                 events.Sort((x, y) => DateTime.Compare(x.Timestamp, y.Timestamp));
                 foreach (var cel in events)
                 {
@@ -458,6 +624,17 @@ namespace MOE.Common.Models.Repositories
                           s.Timestamp <= endTime &&
                           s.EventParam == param &&
                           eventCodes.Contains(s.EventCode)).ToList();
+
+                if (!events.Any())
+                {
+                    var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+                    events = archivedData.Where(s => s.SignalID == signalId &&
+                                                     s.Timestamp >= startTime &&
+                                                     s.Timestamp <= endTime &&
+                                                     s.EventParam == param &&
+                                                     eventCodes.Contains(s.EventCode)).ToList();
+                }
+
                 foreach (var cel in events)
                 {
                     cel.Timestamp = cel.Timestamp.AddSeconds(0 - latencyCorrection);
@@ -491,6 +668,17 @@ namespace MOE.Common.Models.Repositories
                                                                     c.Timestamp < date &&
                                                                     c.EventCode == eventCode)
                     .OrderByDescending(c => c.Timestamp).FirstOrDefault();
+
+                if (lastEvent == null)
+                {
+                    var archivedData = GetDataFromArchive(signalId, tempDate, date);
+                    lastEvent = archivedData.Where(c => c.SignalID == signalId &&
+                                                        c.Timestamp >= tempDate &&
+                                                        c.Timestamp < date &&
+                                                        c.EventCode == eventCode)
+                        .OrderByDescending(c => c.Timestamp).FirstOrDefault();
+                }
+
                 return lastEvent;
             }
             catch (Exception ex)
@@ -520,6 +708,18 @@ namespace MOE.Common.Models.Repositories
                                                                     c.EventCode == eventCode &&
                                                                     c.EventParam == eventParam)
                     .OrderByDescending(c => c.Timestamp).FirstOrDefault();
+
+                if (lastEvent == null)
+                {
+                    var archivedData = GetDataFromArchive(signalId, tempDate, date);
+                    lastEvent = archivedData.Where(c => c.SignalID == signalId &&
+                                                                    c.Timestamp >= tempDate &&
+                                                                    c.Timestamp < date &&
+                                                                    c.EventCode == eventCode &&
+                                                                    c.EventParam == eventParam)
+                    .OrderByDescending(c => c.Timestamp).FirstOrDefault();
+                }
+
                 return lastEvent;
             }
             catch (Exception ex)
@@ -539,9 +739,18 @@ namespace MOE.Common.Models.Repositories
 
         public int GetSignalEventsCountBetweenDates(string signalId, DateTime startTime, DateTime endTime)
         {
-            return _db.Controller_Event_Log.Count(r => r.SignalID == signalId &&
+            var count = _db.Controller_Event_Log.Count(r => r.SignalID == signalId &&
                                                 r.Timestamp >= startTime
                                                 && r.Timestamp < endTime);
+
+            if (count <= 0)
+            {
+                var archivedData = GetDataFromArchive(signalId, startTime, endTime);
+                count = archivedData.Count(r =>
+                    r.SignalID == signalId && r.Timestamp >= startTime && r.Timestamp < endTime);
+            }
+
+            return count;
         }
 
         public int GetApproachEventsCountBetweenDates(int approachId, DateTime startTime, DateTime endTime,
@@ -553,9 +762,17 @@ namespace MOE.Common.Models.Repositories
 
             var results = _db.Controller_Event_Log.Where(r =>
                 r.SignalID == approach.SignalID && r.Timestamp > startTime && r.Timestamp < endTime
-                && approachCodes.Contains(r.EventCode) && r.EventParam == phaseNumber);
+                && approachCodes.Contains(r.EventCode) && r.EventParam == phaseNumber).ToList();
 
-            return results.Count();
+            if (!results.Any())
+            {
+                var archivedData = GetDataFromArchive(approach.SignalID, startTime, endTime);
+                results = archivedData.Where(r =>
+                    r.SignalID == approach.SignalID && r.Timestamp > startTime && r.Timestamp < endTime
+                    && approachCodes.Contains(r.EventCode) && r.EventParam == phaseNumber).ToList();
+            }
+
+            return results.Count;
         }
 
         public DateTime GetMostRecentRecordTimestamp(string signalID)
@@ -573,5 +790,87 @@ namespace MOE.Common.Models.Repositories
                 return new DateTime();
             }
         }
+
+        #region Parquet Archive
+
+        public List<Controller_Event_Log> GetDataFromArchive(string signalId, DateTime startTime, DateTime endTime)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_localPath)) return new List<Controller_Event_Log>();
+                var dateRange = startTime.Date == endTime.Date ? new List<DateTime>() { startTime.Date } : GetDateRange(startTime, endTime);
+
+                var events = new List<Controller_Event_Log>();
+                foreach (var date in dateRange)
+                {
+                    if (File.Exists($"{_localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet"))
+                    {
+                        using (var stream = File.OpenRead($"{_localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet"))
+                        {
+                            var newEvents = ParquetConvert.Deserialize<ParquetEventLog>(stream);
+                            foreach (var parquetEvent in newEvents)
+                            {
+                                events.Add(new Controller_Event_Log
+                                {
+                                    SignalID = parquetEvent.SignalID,
+                                    Timestamp = date.AddMilliseconds(parquetEvent.TimestampMs),
+                                    EventCode = parquetEvent.EventCode,
+                                    EventParam = parquetEvent.EventParam
+                                });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var logRepository = ApplicationEventRepositoryFactory.Create();
+                        var e = new ApplicationEvent();
+                        e.ApplicationName = "MOE.Common";
+                        e.Class = GetType().ToString();
+                        e.Function = "GetDataFromArchive";
+                        e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
+                        e.Description = $"File {_localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet does not exist";
+                        e.Timestamp = DateTime.Now;
+                        logRepository.Add(e);
+                        return new List<Controller_Event_Log>();
+                    }
+
+                    return events.Where(x => x.Timestamp >= startTime && x.Timestamp < endTime).ToList();
+                }
+
+                return events.Where(x => x.Timestamp >= startTime && x.Timestamp < endTime).ToList();
+            }
+            catch (Exception ex)
+            {
+                var logRepository = ApplicationEventRepositoryFactory.Create();
+                var e = new ApplicationEvent();
+                e.ApplicationName = "MOE.Common";
+                e.Class = GetType().ToString();
+                e.Function = "GetDataFromArchive";
+                e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
+                e.Description = ex.Message;
+                e.Timestamp = DateTime.Now;
+                logRepository.Add(e);
+                return new List<Controller_Event_Log>();
+            }
+        }
+
+        public static IEnumerable<DateTime> GetDateRange(DateTime startDate, DateTime endDate)
+        {
+            if (endDate < startDate)
+                throw new ArgumentException("EndDate must be greater than or equal to StartDate");
+
+            while (startDate <= endDate)
+            {
+                yield return startDate;
+                startDate = startDate.AddDays(1);
+            }
+        }
+
+        private static string GetSetting(string settingName)
+        {
+            return ConfigurationManager.AppSettings[settingName];
+        }
+
+        #endregion
     }
 }

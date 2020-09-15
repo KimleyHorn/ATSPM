@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Entity.Validation;
 using System.Linq;
+using System.Net;
 using System.Net.Mail;
 using System.Threading;
 using System.Threading.Tasks;
@@ -451,7 +452,20 @@ namespace MOE.Common.Business.WatchDog
         {
             var er =
                 ApplicationEventRepositoryFactory.Create();
-            var smtp = new SmtpClient(Settings.EmailServer);
+            //var smtp = new SmtpClient(Settings.EmailServer);
+
+            string EMAIL = "wisboom.robot@gmail.com";
+            string PASSWORD = "KimleyHorn1";
+
+            var smtp = new SmtpClient
+            {
+                Host = "smtp.gmail.com",
+                Port = 587,
+                EnableSsl = true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(EMAIL, PASSWORD)
+            };
             try
             {
                 Console.WriteLine("Sent message to: " + message.To + "\nMessage text: " + message.Body + "\n");
