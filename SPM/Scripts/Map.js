@@ -8,7 +8,7 @@ function openWindow(url) {
 function GetMap() 
 {
     map = new Microsoft.Maps.Map(document.getElementById('mapDiv'), { credentials: 'ArDqSVBgLAcobelrUlW6yVPIyL-UGPwVKTE0ce2_tAxvrZr5YFnSEFds7I1CNy5O',
-        center: new Microsoft.Maps.Location(39.50, -111.00),
+        center: new Microsoft.Maps.Location(32.717139, -83.341369),
         mapTypeId: Microsoft.Maps.MapTypeId.road,
         showDashboard: true,
         showScalebar: false,
@@ -31,7 +31,7 @@ function GetMap()
 function GetRouteMap() {
     map = new Microsoft.Maps.Map(document.getElementById('mapDiv'), {
         credentials: 'ArDqSVBgLAcobelrUlW6yVPIyL-UGPwVKTE0ce2_tAxvrZr5YFnSEFds7I1CNy5O',
-        center: new Microsoft.Maps.Location(39.50, -111.00),
+        center: new Microsoft.Maps.Location(32.717139, -83.341369),
         mapTypeId: Microsoft.Maps.MapTypeId.road,
         showDashboard: true,
         showScalebar: false,
@@ -66,19 +66,28 @@ function RegionChange(e) {
 
 function CenterMap(region) {
     if (region == 0) {
-        GetMapWithCenter(39.777584, -111.719971, 6);
+        GetMapWithCenter(32.717139, -83.341369, 6);
     }
     else if (region == 1) {
-        GetMapWithCenter(41.510213, -112.015501, 8);
+        GetMapWithCenter(34.254288, -83.772573, 8);
     }
     else if (region == 2) {
-        GetMapWithCenter(40.653381, -112.040634, 10);
+        GetMapWithCenter(32.930101, -82.803301, 10);
     }
     else if (region == 3) {
-        GetMapWithCenter(40.354719, -110.710757, 8);
+        GetMapWithCenter(32.938362, -84.340447, 8);
     }
     else if (region == 4) {
-        GetMapWithCenter(38.268951, -111.417847, 7);
+        GetMapWithCenter(31.445675, -83.493490, 7);
+    }
+    else if (region == 5) {
+        GetMapWithCenter(31.602449, -81.878550, 7);
+    }
+    else if (region == 6) {
+        GetMapWithCenter(34.163892, -84.798490, 7);
+    }
+    else if (region == 7) {
+        GetMapWithCenter(33.872482, -84.306002, 7);
     }
 }
 
