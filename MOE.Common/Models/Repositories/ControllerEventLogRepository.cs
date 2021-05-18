@@ -33,7 +33,7 @@ namespace MOE.Common.Models.Repositories
 
         public ControllerEventLogRepository()
         {
-            //_db.Database.CommandTimeout = 180;
+            _db.Database.CommandTimeout = 60;
             _db.Database.ExecuteSqlCommand("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
         }
 
@@ -188,9 +188,10 @@ namespace MOE.Common.Models.Repositories
                 e.Function = "GetSignalEventsBetweenDates";
                 e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
                 e.Timestamp = DateTime.Now;
-                e.Description = ex.Message;
+                e.Description = signalId + " " + startTime.Date.ToShortDateString() + " - " + ex.Message;
                 logRepository.Add(e);
-                throw;
+                return new List<Controller_Event_Log>();
+                //throw;
             }
         }
 
@@ -822,15 +823,15 @@ namespace MOE.Common.Models.Repositories
                     }
                     else
                     {
-                        var logRepository = ApplicationEventRepositoryFactory.Create();
-                        var e = new ApplicationEvent();
-                        e.ApplicationName = "MOE.Common";
-                        e.Class = GetType().ToString();
-                        e.Function = "GetDataFromArchive";
-                        e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
-                        e.Description = $"File {_localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet does not exist";
-                        e.Timestamp = DateTime.Now;
-                        logRepository.Add(e);
+                        //var logRepository = ApplicationEventRepositoryFactory.Create();
+                        //var e = new ApplicationEvent();
+                        //e.ApplicationName = "MOE.Common";
+                        //e.Class = GetType().ToString();
+                        //e.Function = "GetDataFromArchive";
+                        //e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
+                        //e.Description = $"File {_localPath}\\date={date.Date:yyyy-MM-dd}\\{signalId}_{date.Date:yyyy-MM-dd}.parquet does not exist";
+                        //e.Timestamp = DateTime.Now;
+                        //logRepository.Add(e);
                         return new List<Controller_Event_Log>();
                     }
 
