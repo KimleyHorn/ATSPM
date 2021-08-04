@@ -815,9 +815,10 @@
     <Content Include="Views\DatabaseArchiveSettings\Edit.cshtml" />
     <Content Include="Views\DatabaseArchiveSettings\EditorTemplates\DatabaseArchiveExcludedSignal.cshtml" />
     <Content Include="Views\DefaultCharts\LeftTurnGapAnalysisOptions.cshtml" />
+    <Content Include="Views\DefaultCharts\WaitTimeOptions.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
-      </None>
+    </None>
     <None Include="Service References\MetricGeneratorService\MOE.Common.Business.Bins.xsd">
       <SubType>Designer</SubType>
     </None>

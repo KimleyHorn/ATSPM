@@ -1107,6 +1107,15 @@ namespace MOE.Common.Migrations
                     ShowOnWebsite = true,
                     ShowOnAggregationSite = false,
                     DisplayOrder = 112
+                },
+                new MetricType
+                {
+                    MetricID = 32,
+                    ChartName = "Wait Time",
+                    Abbreviation = "WT",
+                    ShowOnWebsite = true,
+                    ShowOnAggregationSite = false,
+                    DisplayOrder = 113
                 }
             );
             context.SaveChanges();
@@ -1129,6 +1138,7 @@ namespace MOE.Common.Migrations
                         detectionType.MetricTypes.Add(context.MetricTypes.Find(8));
                         detectionType.MetricTypes.Add(context.MetricTypes.Find(9));
                         detectionType.MetricTypes.Add(context.MetricTypes.Find(13));
+                        detectionType.MetricTypes.Add(context.MetricTypes.Find(32));
                         break;
                     case 3:
                         detectionType.MetricTypes.Add(context.MetricTypes.Find(10));
@@ -1144,6 +1154,7 @@ namespace MOE.Common.Migrations
                     case 6:
                         detectionType.MetricTypes.Add(context.MetricTypes.Find(12)); 
                         detectionType.MetricTypes.Add(context.MetricTypes.Find(31));
+                        detectionType.MetricTypes.Add(context.MetricTypes.Find(32));
                         break;
                 }
             context.SaveChanges();

@@ -813,7 +813,7 @@ namespace MOE.Common.Models.Repositories
                                 events.Add(new Controller_Event_Log
                                 {
                                     SignalID = parquetEvent.SignalID,
-                                    Timestamp = date.AddMilliseconds(parquetEvent.TimestampMs),
+                                    Timestamp = date.Date.AddMilliseconds(parquetEvent.TimestampMs),
                                     EventCode = parquetEvent.EventCode,
                                     EventParam = parquetEvent.EventParam
                                 });
