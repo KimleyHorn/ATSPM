@@ -245,7 +245,7 @@ namespace MOE.Common.Models.Repositories
                 var archivedData = GetDataFromArchive(signalId, startTime, endTime);
                 return archivedData.Count;
             }
-             catch (Exception ex)
+            catch (Exception ex)
             {
                 var logRepository =
                     ApplicationEventRepositoryFactory.Create();
@@ -255,7 +255,8 @@ namespace MOE.Common.Models.Repositories
                 e.Function = "GetRecordCount";
                 e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
                 e.Timestamp = DateTime.Now;
-                e.Description = signalId + " - " +ex.Message;
+                if (ex.InnerException != null)
+                    e.Description = signalId + " - " + ex.Message + ex.InnerException.Message.Substring(0, 50);
                 logRepository.Add(e);
                 throw ex;
             }
