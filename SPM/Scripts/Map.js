@@ -8,13 +8,13 @@ function openWindow(url) {
 function GetMap() 
 {
     map = new Microsoft.Maps.Map(document.getElementById('mapDiv'), { credentials: 'ArDqSVBgLAcobelrUlW6yVPIyL-UGPwVKTE0ce2_tAxvrZr5YFnSEFds7I1CNy5O',
-        center: new Microsoft.Maps.Location(39.50, -111.00),
+        center: new Microsoft.Maps.Location(33.427508, -112.120943),
         mapTypeId: Microsoft.Maps.MapTypeId.road,
         showDashboard: true,
         showScalebar: false,
         enableSearchLogo: false,
         showMapTypeSelector: false,
-        zoom: 6,
+        zoom: 9,
         customizeOverlays: false
     });
     var dataLayer = AddData();
@@ -31,13 +31,13 @@ function GetMap()
 function GetRouteMap() {
     map = new Microsoft.Maps.Map(document.getElementById('mapDiv'), {
         credentials: 'ArDqSVBgLAcobelrUlW6yVPIyL-UGPwVKTE0ce2_tAxvrZr5YFnSEFds7I1CNy5O',
-        center: new Microsoft.Maps.Location(39.50, -111.00),
+        center: new Microsoft.Maps.Location(33.427508, -112.120943),
         mapTypeId: Microsoft.Maps.MapTypeId.road,
         showDashboard: true,
         showScalebar: false,
         enableSearchLogo: false,
         showMapTypeSelector: false,
-        zoom: 6,
+        zoom: 8,
         customizeOverlays: false
     });
     var dataLayer = AddData();
@@ -65,20 +65,32 @@ function RegionChange(e) {
 }
 
 function CenterMap(region) {
-    if (region == 0) {
-        GetMapWithCenter(39.777584, -111.719971, 6);
+    if (region == 110) {
+        GetMapWithCenter(33.602825, -112.290065, 12);
     }
-    else if (region == 1) {
-        GetMapWithCenter(41.510213, -112.015501, 8);
+    else if (region == 120) {
+        GetMapWithCenter(33.348979, -111.928438, 12);
     }
-    else if (region == 2) {
-        GetMapWithCenter(40.653381, -112.040634, 10);
+    else if (region == 130) {
+        GetMapWithCenter(33.629273, -112.240424, 11);
     }
-    else if (region == 3) {
-        GetMapWithCenter(40.354719, -110.710757, 8);
+    else if (region == 140) {
+        GetMapWithCenter(33.311551, -111.757441, 12);
     }
-    else if (region == 4) {
-        GetMapWithCenter(38.268951, -111.417847, 7);
+    else if (region == 150) {
+        GetMapWithCenter(33.553463, -111.889354, 11);
+    }
+	else if (region == 160) {
+        GetMapWithCenter(33.349773, -111.789797, 11);
+    }
+	else if (region == 170) {
+        GetMapWithCenter(33.072490, -112.043772, 10);
+    }
+	else if (region == 180) {
+        GetMapWithCenter(33.480363, -112.203214, 12);
+    }
+	else if (region == 190) {
+        GetMapWithCenter(33.638710, -112.328951, 12);
     }
 }
 
