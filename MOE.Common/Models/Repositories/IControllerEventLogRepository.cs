@@ -20,6 +20,9 @@ namespace MOE.Common.Models.Repositories
         List<Controller_Event_Log> GetTopEventsAfterDateByEventCodesParam(string signalId, DateTime timestamp,
             List<int> eventCodes, int param, int top);
 
+        List<Controller_Event_Log> GetTopEventsBeforeDateByEventCodesParam(string signalId, DateTime timestamp,
+            List<int> eventCodes, int param, int top);
+
         int GetEventCountByEventCodesParamDateTimeRange(string signalId,
             DateTime startTime, DateTime endTime, int startHour, int startMinute, int endHour, int endMinute,
             List<int> eventCodes, int param);
@@ -61,11 +64,16 @@ namespace MOE.Common.Models.Repositories
         Controller_Event_Log GetFirstEventBeforeDateByEventCodeAndParameter(string signalId, int eventCode,
             int eventParam, DateTime date);
 
+        List<Controller_Event_Log> GetEventsBetweenDates(DateTime startTime, DateTime endTime);
+
         int GetSignalEventsCountBetweenDates(string signalId, DateTime startTime, DateTime endTime);
 
         int GetApproachEventsCountBetweenDates(int approachId, DateTime startTime, DateTime endTime,
             int phaseNumber);
         DateTime GetMostRecentRecordTimestamp(string signalID);
         bool CheckForRecords(string signalId, DateTime startTime, DateTime endTime);
+
+        Controller_Event_Log GetFirstEventAfterDateByEventCodesAndParameter(string signalId, List<int> eventCodes,
+            int eventParam, DateTime start, int secondsToSearch);
     }
 }

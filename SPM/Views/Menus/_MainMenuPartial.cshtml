@@ -1,4 +1,5 @@
-﻿@model IEnumerable<MOE.Common.Models.ViewModel._MainMenu.MenuItem>
+@model IEnumerable<MOE.Common.Models.ViewModel._MainMenu.MenuItem>
+
 @foreach (var m in Model)
 {
     @RenderMenuItems(m)
@@ -26,18 +27,18 @@
         {
             if (m.MenuObject.MenuName != "Admin" || (m.MenuObject.MenuName == "Admin" && m.IsAdmin))
             {
-                <li nav-item dropdown>
+                <li class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">@m.MenuObject.MenuName </a>
                     <div class="dropdown-menu">
                         @foreach (var s in m.SubMenuItems)
                         {
+                            if (s.MenuObject.MenuName == "Left Turn Gap Analysis" && !m.IsRestrictedConfiguration) { continue; }
                             @RenderMenuItems(s)
                         }
                         @if (m.MenuObject.MenuName == "Links")
                         {
                             foreach (MOE.Common.Models.ExternalLink e in m.ExternalLinks.OrderBy(x => x.DisplayOrder).ToList())
                             {
-
                                 <a href="@e.Url" class="dropdown-item">@e.Name</a>
                             }
                         }
@@ -48,12 +49,16 @@
             {
                 if ((m.MenuObject.MenuName == "Admin" && m.IsTechnician) || (m.MenuObject.MenuName == "Admin" && m.IsConfiguration))
                 {
-                    <li>
-                        <a href="#" class="nav-link" dropdown-toggle data-toggle="dropdown">@m.MenuObject.MenuName </a>
-                        <ul class="dropdown-menu ">
+                    <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">@m.MenuObject.MenuName </a>
+                        <ul class="dropdown-menu">
                             @foreach (var s in m.SubMenuItems)
                             {
-                                if (s.MenuObject.MenuName == "Signal Configuration" || s.MenuObject.MenuName == "Route Configuration" || (s.MenuObject.MenuName == "Raw Data Export" && m.IsData))
+                                if (s.MenuObject.MenuName == "Signal Configuration" 
+                                    || s.MenuObject.MenuName == "Route Configuration" 
+                                    || (s.MenuObject.MenuName == "Area Configuration" && m.IsConfiguration) 
+                                    || (s.MenuObject.MenuName == "Jurisdiction Configuration" && m.IsConfiguration) 
+                                    || (s.MenuObject.MenuName == "Raw Data Export" && m.IsData))
                                 {
                                     @RenderMenuItems(s)
                                 }
@@ -63,11 +68,9 @@
                 }
                 else if (m.MenuObject.MenuName == "Admin" && m.IsData)
                 {
-                    <li>
-                        @*<a href="#" class="dropdown-toggle menuItem" data-toggle="dropdown">@m.MenuObject.MenuName </a>*@
-                        @*  <ul class="dropdown-menu multi-level">*@
-                        <a href="#" class="nav-link" dropdown-toggle data-toggle="dropdown">@m.MenuObject.MenuName </a>
-                        <ul class="dropdown-menu ">
+                    <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">@m.MenuObject.MenuName </a>
+                        <ul class="dropdown-menu">
                             @foreach (var s in m.SubMenuItems)
                             {
                                 if (s.MenuObject.MenuName == "Raw Data Export")
@@ -82,9 +85,9 @@
         }
         else
         {
-            <li class="dropdown-submenu">
+            <li class="dropdown-menu">
                 @*<a tabindex="-1" href="@Url.Action(m.MenuObject.Action, m.MenuObject.Controller, new { id = UrlParameter.Optional }, this.Request.Url.Scheme)" class=" dropdown-toggle menuitem" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">@m.MenuObject.MenuName <span class="caret"></span></a>*@
-                <a href="#" class="dropdown-toggle menuItem" data-toggle="dropdown">@m.MenuObject.MenuName </a>
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">@m.MenuObject.MenuName </a>
                 <ul class="dropdown-menu">
                     @foreach (var s in m.SubMenuItems)
                     {

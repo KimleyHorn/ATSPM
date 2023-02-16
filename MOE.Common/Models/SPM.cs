@@ -1,20 +1,32 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
+using System.Data.Entity.Core.EntityClient;
+using System.Data.Entity.Infrastructure;
 using System.Data.Entity.Infrastructure.Annotations;
+using System.Data.Entity.Migrations;
+using System.Linq;
 using Microsoft.AspNet.Identity.EntityFramework;
 using MOE.Common.Business.SiteSecurity;
+using MOE.Common.Migrations;
 
 namespace MOE.Common.Models
 {
     public class SPM : IdentityDbContext<SPMUser>
     {
         public SPM()
-            : base("name=SPM")
+            :base("SPM")
+            //: base("name=SPM")
         {
-            Database.SetInitializer<SPM>(new CreateDatabaseIfNotExists<SPM>());
+            
 
-            //Database.CommandTimeout = 1500;
+            Database.SetInitializer<SPM>(new CreateDatabaseIfNotExists<SPM>());
             Database.CommandTimeout = 900;
+        }
+
+        public SPM(string ConnectionString) : base(ConnectionString)
+        {
+            Database.SetInitializer(new CustomInitializer());
+            Database.Initialize(true);
         }
 
 
@@ -41,6 +53,8 @@ namespace MOE.Common.Models
         public virtual DbSet<ActionLog> ActionLogs { get; set; }
         public virtual DbSet<Route> Routes { get; set; }
         public virtual DbSet<RouteSignal> RouteSignals { get; set; }
+        public virtual DbSet<Area> Areas { get; set; }
+        public virtual DbSet<Jurisdiction> Jurisdictions { get; set; }
         public virtual DbSet<RoutePhaseDirection> RoutePhaseDirections { get; set; }
         public virtual DbSet<ControllerType> ControllerType { get; set; }
         public virtual DbSet<Speed_Events> Speed_Events { get; set; }
@@ -56,28 +70,31 @@ namespace MOE.Common.Models
         public virtual DbSet<VersionAction> VersionActions { get; set; }
         public virtual DbSet<PreemptionAggregation> PreemptionAggregations { get; set; }
         public virtual DbSet<PriorityAggregation> PriorityAggregations { get; set; }
-        public virtual DbSet<ApproachCycleAggregation> ApproachCycleAggregations { get; set; }
+        public virtual DbSet<PhaseCycleAggregation> PhaseCycleAggregations { get; set; }
         public virtual DbSet<ApproachPcdAggregation> ApproachPcdAggregations { get; set; }
         public virtual DbSet<ApproachSplitFailAggregation> ApproachSplitFailAggregations { get; set; }
         public virtual DbSet<PhaseTerminationAggregation> PhaseTerminationAggregations { get; set; }
         public virtual DbSet<PhasePedAggregation> PhasePedAggregations { get; set; }
         public virtual DbSet<SignalEventCountAggregation> SignalEventCountAggregations { get; set; }
-        public virtual DbSet<ApproachEventCountAggregation> ApproachEventCountAggregations { get; set; }
-        public virtual DbSet<DetectorEventCountAggregation> DetectorEventCountAggregations { get; set; }
+       public virtual DbSet<DetectorEventCountAggregation> DetectorEventCountAggregations { get; set; }
 
         public virtual DbSet<TablePartitionProcessed> TablePartitionProcesseds { get; set; }
         public virtual DbSet<StatusOfProcessedTable> StatusOfProcessedTables { get; set; }
         public virtual DbSet<ToBeProcessededTable> ToBeProcessededTables { get; set; }
         public virtual DbSet<ToBeProcessedTableIndex> ToBeProcessededIndexes { get; set; }
 
-public virtual DbSet<ApproachYellowRedActivationAggregation> ApproachYellowRedActivationAggregations
+        public virtual DbSet<ApproachYellowRedActivationAggregation> ApproachYellowRedActivationAggregations
         {
             get;
             set;
         }
 
         public virtual DbSet<ApproachSpeedAggregation> ApproachSpeedAggregations { get; set; }
-        public virtual DbSet<DetectorAggregation> DetectorAggregations { get; set; }
+        public virtual DbSet<SignalPlanAggregation> SignalPlanAggregations { get; set; }
+        public virtual DbSet<PhaseSplitMonitorAggregation> PhaseSplitMonitorAggregationsAggregations { get; set; }
+        public virtual DbSet<PhaseLeftTurnGapAggregation> PhaseLeftTurnGapAggregations { get; set; }
+        public virtual DbSet<SignalToAggregate> SignalsToAggregate { get; set; }
+        public virtual DbSet<MeasuresDefaults> MeasuresDefaults { get; set; }
 
         public static SPM Create()
         {
@@ -113,6 +130,12 @@ public virtual DbSet<ApproachYellowRedActivationAggregation> ApproachYellowRedAc
 
             modelBuilder.Entity<Signal>()
                 .Property(e => e.RegionID);
+
+            modelBuilder.Entity<Signal>()
+                .HasRequired(s => s.Jurisdiction)
+                .WithMany(s => s.Signals)
+                .HasForeignKey(u => u.JurisdictionId)
+                .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<Approach>()
                 .HasMany(e => e.Detectors)
@@ -169,7 +192,29 @@ public virtual DbSet<ApproachYellowRedActivationAggregation> ApproachYellowRedAc
             modelBuilder.Entity<ActionLog>()
                 .HasMany(al => al.MetricTypes);
         }
-
-        //public System.Data.Entity.DbSet<SPM.Models.AggDataExportViewModel> AggDataExportViewModels { get; set; }
     }
+
+    public class CustomInitializer : IDatabaseInitializer<SPM>
+    {
+        #region IDatabaseInitializer<SPM> Members
+
+        // fix the problem with MigrateDatabaseToLatestVersion 
+        // by copying the connection string FROM the context
+        public void InitializeDatabase(SPM context)
+        {
+            
+            Configuration cfg = new Configuration(); // migration configuration class
+            cfg.TargetDatabase = new DbConnectionInfo(context.Database.Connection.ConnectionString, "System.Data.SqlClient");
+
+          
+            DbMigrator dbMigrator = new DbMigrator(cfg);
+            if(dbMigrator.GetPendingMigrations().Any())
+                // this will call the parameterless constructor of the datacontext
+                // but the connection string from above will be then set on in
+                dbMigrator.Update();
+        }
+
+        #endregion
+    }
+
 }

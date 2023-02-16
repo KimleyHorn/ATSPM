@@ -113,7 +113,7 @@ namespace MOE.Common.Models.Repositories
                 detector.DetectionTypes = new List<DetectionType>();
                 detector.DetectionTypes = _db.DetectionTypes
                     .Where(dt => detector.DetectionTypeIDs.Contains(dt.DetectionTypeID)).ToList();
-                ;
+                
                 try
                 {
                     _db.Detectors.Add(detector);
@@ -273,6 +273,13 @@ namespace MOE.Common.Models.Repositories
             return detectors;
         }
 
- 
+        public List<Detector> GetDetectorsBySignalIdMovementTypeIdDirectionTypeId(string signalId, int directionTypeId, List<int> movementTypeIds)
+        {
+            return _db.Approaches
+                .Where(a => a.DirectionTypeID == directionTypeId)
+                .SelectMany(a => a.Detectors)
+                .Where(d => movementTypeIds.Contains(d.MovementTypeID??-1))
+                .ToList();
+        }
     }
 }

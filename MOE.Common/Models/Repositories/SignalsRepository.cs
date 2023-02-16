@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Validation;
 using System.Linq;
+using System.Threading.Tasks;
 using MOE.Common.Business;
 using MOE.Common.Business.CustomReport;
 using NuGet;
@@ -40,15 +41,22 @@ namespace MOE.Common.Models.Repositories
                 .Where(signal => signal.VersionActionId != 3)
                 .ToList();
 
+            Signal versionSignal;
             if (signals.Count > 1)
             {
                 var orderedSignals = signals.OrderByDescending(signal => signal.Start);
-                return orderedSignals.First();
+                versionSignal = orderedSignals.First();
             }
             else
             {
-                return signals.FirstOrDefault();
+                versionSignal = signals.FirstOrDefault();
             }
+
+            if (versionSignal != null)
+            {
+                AddSignalAndDetectorLists(versionSignal);
+            }
+            return versionSignal;
         }
 
         public Signal GetVersionOfSignalByDateWithDetectionTypes(string signalId, DateTime startDate)
@@ -99,8 +107,8 @@ namespace MOE.Common.Models.Repositories
         public void SetAllVersionsOfASignalToDeleted(string signalId)
         {
             var signals = from r in _db.Signals
-                where r.SignalID == signalId
-                select r;
+                          where r.SignalID == signalId
+                          select r;
 
             foreach (var s in signals)
                 s.VersionActionId = 3;
@@ -149,8 +157,8 @@ namespace MOE.Common.Models.Repositories
             //    select r).FirstOrDefault();
 
             newVersion.VersionAction = (from r in _db.VersionActions
-                where r.ID == 4
-                select r).FirstOrDefault();
+                                        where r.ID == 4
+                                        select r).FirstOrDefault();
 
 
             newVersion.SignalID = originalVersion.SignalID;
@@ -162,8 +170,10 @@ namespace MOE.Common.Models.Repositories
             newVersion.ControllerTypeID = originalVersion.ControllerTypeID;
             newVersion.RegionID = originalVersion.RegionID;
             newVersion.Enabled = originalVersion.Enabled;
+            newVersion.Pedsare1to1 = originalVersion.Pedsare1to1;
             newVersion.Latitude = originalVersion.Latitude;
             newVersion.Longitude = originalVersion.Longitude;
+            newVersion.JurisdictionId = originalVersion.JurisdictionId;
             _db.Signals.Add(newVersion);
             _db.SaveChanges();
 
@@ -177,8 +187,8 @@ namespace MOE.Common.Models.Repositories
             var signals = GetLatestVersionOfAllSignals();
 
             var filteredSignals = (from r in signals
-                where r.ControllerTypeID == controllerTypeId
-                select r).ToList();
+                                   where r.ControllerTypeID == controllerTypeId
+                                   select r).ToList();
 
             return filteredSignals;
         }
@@ -216,8 +226,8 @@ namespace MOE.Common.Models.Repositories
         public string GetSignalDescription(string signalId)
         {
             var signal = (from r in _db.Signals
-                where r.SignalID == signalId
-                select r).FirstOrDefault();
+                          where r.SignalID == signalId
+                          select r).FirstOrDefault();
             var location = string.Empty;
             if (signal != null)
                 location = signal.SignalDescription;
@@ -225,29 +235,11 @@ namespace MOE.Common.Models.Repositories
             return location;
         }
 
-        public List<Pin> GetPinInfo()
-        {
-            var pins = new List<Pin>();
-            //foreach (var signal in GetLatestVersionOfAllSignals().Where(s => s.Enabled //&& s.SignalID == "7063"
-            //).ToList())
-            List<Signal> signals = GetLatestVersionOfAllSignals().Where(s => s.Enabled).ToList();
-            foreach (var signal in signals)
-                {
-                var pin = new Pin(signal.SignalID, signal.Latitude,
-                    signal.Longitude,
-                    signal.PrimaryName + " " + signal.SecondaryName, signal.RegionID.ToString());
-                pin.MetricTypes = signal.GetMetricTypesString();
-                pins.Add(pin);
-                //Console.WriteLine(pin.SignalID);
-            }
-            return pins;
-        }
-
         public void AddOrUpdate(Signal signal)
         {
             var g = (from r in _db.Signals
-                where r.VersionID == signal.VersionID
-                select r).FirstOrDefault();
+                     where r.VersionID == signal.VersionID
+                     select r).FirstOrDefault();
             if (g == null)
             {
                 if (signal.Approaches != null)
@@ -297,8 +289,8 @@ namespace MOE.Common.Models.Repositories
             try
             {
                 var g = (from r in _db.Detectors
-                    where r.ID == detector.ID
-                    select r).FirstOrDefault();
+                         where r.ID == detector.ID
+                         select r).FirstOrDefault();
                 if (g == null)
                 {
                     detector.DetectionTypes = new List<DetectionType>();
@@ -339,21 +331,21 @@ namespace MOE.Common.Models.Repositories
         public List<SignalFTPInfo> GetSignalFTPInfoForAllFTPSignals()
         {
             var signallist = (from r in GetLatestVersionOfAllSignals()
-                join ftp in _db.ControllerType on r.ControllerTypeID equals ftp.ControllerTypeID
-                where r.ControllerTypeID != 4
-                select new SignalFTPInfo
-                {
-                    SignalID = r.SignalID,
-                    PrimaryName = r.PrimaryName,
-                    Secondary_Name = r.SecondaryName,
-                    User_Name = ftp.UserName,
-                    Password = ftp.Password,
-                    FTP_Directory = ftp.FTPDirectory,
-                    IP_Address = r.IPAddress,
-                    SNMPPort = ftp.SNMPPort,
-                    ActiveFTP = ftp.ActiveFTP,
-                    ControllerType = r.ControllerTypeID
-                }
+                              join ftp in _db.ControllerType on r.ControllerTypeID equals ftp.ControllerTypeID
+                              where r.ControllerTypeID != 4
+                              select new SignalFTPInfo
+                              {
+                                  SignalID = r.SignalID,
+                                  PrimaryName = r.PrimaryName,
+                                  Secondary_Name = r.SecondaryName,
+                                  User_Name = ftp.UserName,
+                                  Password = ftp.Password,
+                                  FTP_Directory = ftp.FTPDirectory,
+                                  IP_Address = r.IPAddress,
+                                  SNMPPort = ftp.SNMPPort,
+                                  ActiveFTP = ftp.ActiveFTP,
+                                  ControllerType = r.ControllerTypeID
+                              }
             ).ToList();
 
             return signallist;
@@ -363,21 +355,21 @@ namespace MOE.Common.Models.Repositories
         public SignalFTPInfo GetSignalFTPInfoByID(string signalId)
         {
             var signal = from r in GetLatestVersionOfAllSignals()
-                join ftp in _db.ControllerType on r.ControllerTypeID equals ftp.ControllerTypeID
-                where r.SignalID == signalId
-                select new SignalFTPInfo
-                {
-                    SignalID = r.SignalID,
-                    PrimaryName = r.PrimaryName,
-                    Secondary_Name = r.SecondaryName,
-                    User_Name = ftp.UserName,
-                    Password = ftp.Password,
-                    FTP_Directory = ftp.FTPDirectory,
-                    IP_Address = r.IPAddress,
-                    SNMPPort = ftp.SNMPPort,
-                    ActiveFTP = ftp.ActiveFTP,
-                    ControllerType = r.ControllerTypeID
-                };
+                         join ftp in _db.ControllerType on r.ControllerTypeID equals ftp.ControllerTypeID
+                         where r.SignalID == signalId
+                         select new SignalFTPInfo
+                         {
+                             SignalID = r.SignalID,
+                             PrimaryName = r.PrimaryName,
+                             Secondary_Name = r.SecondaryName,
+                             User_Name = ftp.UserName,
+                             Password = ftp.Password,
+                             FTP_Directory = ftp.FTPDirectory,
+                             IP_Address = r.IPAddress,
+                             SNMPPort = ftp.SNMPPort,
+                             ActiveFTP = ftp.ActiveFTP,
+                             ControllerType = r.ControllerTypeID
+                         };
             return signal as SignalFTPInfo;
         }
 
@@ -386,6 +378,8 @@ namespace MOE.Common.Models.Repositories
         {
             var returnSignal = _db.Signals
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionTypes)))
+                .Include(signal => signal.Areas)
+                .Include(signal => signal.Jurisdiction)
                 .Include(signal =>
                     signal.Approaches.Select(
                         a => a.Detectors.Select(d => d.DetectionTypes.Select(dt => dt.MetricTypes))))
@@ -448,19 +442,33 @@ namespace MOE.Common.Models.Repositories
         {
             var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionTypes)))
+                .Include(signal => signal.Areas)
                 .Include(signal =>
                     signal.Approaches.Select(
                         a => a.Detectors.Select(d => d.DetectionTypes.Select(dt => dt.MetricTypes))))
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionHardware)))
-                .Include(signal => signal.Approaches.Select(a => a.DirectionType))
+                .Include(signal => signal.Approaches.Select(a => a.DirectionType)).ToList();
+
+            activeSignals
                 .GroupBy(r => r.SignalID)
                 .Select(g => g.OrderByDescending(r => r.Start).FirstOrDefault()).ToList();
             return activeSignals;
+
+        }
+
+        public IQueryable<Signal> GetLatestVersionOfAllSignalsAsQueryable()
+        {
+            var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
+                    .GroupBy(r => r.SignalID)
+                    .Select(g => g.OrderByDescending(r => r.Start).FirstOrDefault());
+
+            return activeSignals;
+
         }
 
         public List<Signal> GetLatestVersionOfAllSignalsForFtp()
         {
-            List<int> controllerTypes = new List<int>{4,5};
+            List<int> controllerTypes = new List<int> { 4 };
             var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
                 .Include(s => s.ControllerType)
                 //.Where(s => !controllerTypes.Contains(s.ControllerTypeID))
@@ -493,8 +501,8 @@ namespace MOE.Common.Models.Repositories
         private void CopyApproaches(Signal signalFromDb, Signal newSignal)
         {
             var approaches = (from r in _db.Approaches
-                where r.VersionID == signalFromDb.VersionID
-                select r).ToList();
+                              where r.VersionID == signalFromDb.VersionID
+                              select r).ToList();
 
             foreach (var apprFromDb in approaches)
             {
@@ -521,8 +529,8 @@ namespace MOE.Common.Models.Repositories
         private void CopyDetectors(Approach apprFromDb, Approach newApp)
         {
             var detectorsFromDb = (from r in _db.Detectors
-                where r.ApproachID == apprFromDb.ApproachID
-                select r).ToList();
+                                   where r.ApproachID == apprFromDb.ApproachID
+                                   select r).ToList();
 
             foreach (var detFromDb in detectorsFromDb)
             {
@@ -536,12 +544,12 @@ namespace MOE.Common.Models.Repositories
                 newDetector.DetectionHardwareID = detFromDb.DetectionHardwareID;
                 newDetector.DetectorID = detFromDb.DetectorID;
                 newDetector.LaneNumber = detFromDb.LaneNumber;
-                if(detFromDb.DetectorCommentIDs != null)
+                if (detFromDb.DetectorCommentIDs != null)
                     newDetector.DetectorCommentIDs.AddRange(detFromDb.DetectorCommentIDs);
                 newDetector.MovementTypeID = detFromDb.MovementTypeID;
                 newDetector.MinSpeedFilter = detFromDb.MinSpeedFilter;
                 newDetector.DistanceFromStopBar = detFromDb.DistanceFromStopBar;
-                if(newDetector.DetectionTypes == null)
+                if (newDetector.DetectionTypes == null)
                     newDetector.DetectionTypes = new List<DetectionType>();
                 newDetector.DetectionTypes.AddRange(detFromDb.DetectionTypes);
                 _db.Detectors.Add(newDetector);
@@ -560,10 +568,25 @@ namespace MOE.Common.Models.Repositories
         public void Update(Signal incomingSignal)
         {
             var signalFromDatabase = (from r in _db.Signals
-                where r.VersionID == incomingSignal.VersionID
-                select r).FirstOrDefault();
+                                      where r.VersionID == incomingSignal.VersionID
+                                      select r).FirstOrDefault();
             if (signalFromDatabase != null)
             {
+                if (signalFromDatabase.Areas != null)
+                {
+                    foreach (var area in signalFromDatabase.Areas.ToList())
+                    {
+                        signalFromDatabase.Areas.Remove(area);
+                    }
+                }
+                if (incomingSignal.AreaIds != null && incomingSignal.AreaIds.Count > 0)
+                {
+                    foreach (var id in incomingSignal.AreaIds)
+                    {
+                        var area = _db.Areas.Where(a => a.Id == id).FirstOrDefault();
+                        signalFromDatabase.Areas.Add(area);
+                    }
+                }
                 if (incomingSignal.VersionActionId == 0)
                     incomingSignal.VersionActionId = signalFromDatabase.VersionActionId;
                 _db.Entry(signalFromDatabase).CurrentValues.SetValues(incomingSignal);
@@ -629,9 +652,9 @@ namespace MOE.Common.Models.Repositories
             else
             {
                 foreach (var a in incomingSignal.Approaches)
-                foreach (var gd in a.Detectors)
-                    gd.DetectionTypes = _db.DetectionTypes
-                        .Where(x => gd.DetectionTypeIDs.Contains(x.DetectionTypeID)).ToList();
+                    foreach (var gd in a.Detectors)
+                        gd.DetectionTypes = _db.DetectionTypes
+                            .Where(x => gd.DetectionTypeIDs.Contains(x.DetectionTypeID)).ToList();
                 _db.Signals.Add(incomingSignal);
             }
             try
@@ -655,8 +678,8 @@ namespace MOE.Common.Models.Repositories
         private VersionAction GetVersionActionByVersionAction_ID(int id)
         {
             var va = (from r in _db.VersionActions
-                where r.ID == id
-                select r).FirstOrDefault();
+                      where r.ID == id
+                      select r).FirstOrDefault();
 
             return va;
         }

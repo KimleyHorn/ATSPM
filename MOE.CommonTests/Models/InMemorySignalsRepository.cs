@@ -516,5 +516,15 @@ namespace MOE.CommonTests.Models
         {
             throw new NotImplementedException();
         }
+
+        public Signal GetVersionOfSignalByDateWithDetectionTypes(string signalId, DateTime startDate)
+        {
+            throw new NotImplementedException();
+        }
+
+        IQueryable<Signal> ISignalsRepository.GetLatestVersionOfAllSignalsAsQueryable()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

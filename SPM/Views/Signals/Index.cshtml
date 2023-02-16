@@ -4,20 +4,30 @@
 }
 @Html.AntiForgeryToken()
 <h2>ATSPM Configuration Tool</h2>
-<p>
-    <a href="javascript:CreateNewSignal()">Create New Signal</a>
-</p>
+
+<div class="row">
+    <form action="javascript:CreateNewSignal()" style="margin: 0 0 5px 10px">
+        <input type="submit" value="Create New Signal" class="btn btn-dark" />
+    </form>
+    <form action="javascript:ImportSignal()" style="margin: 0 0 5px 10px">
+        <input type="submit" value="Import Signal" class="btn btn-dark" />
+    </form>
+</div>
+
 @Html.Partial("~/Views/DefaultCharts/SignalSearch.cshtml", new ViewDataDictionary(Model.SignalSearch))
 <div class="" id="ResultMessage"></div>
 <div id="SignalEdit"></div>
 @section Scripts
     {
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/chosen")
     <script type="text/javascript" src="~/Scripts/Map.js"></script>
     <script type="text/javascript" src="~/Scripts/AddData.js"></script>
     <script type="text/javascript" src="~/Scripts/SignalsSearch.js"></script>
     <script type="text/javascript" src="~/Scripts/SPMConfigurationTool.js"></script>
     <script type="text/javascript" src="~/Scripts/SignalEdit.js"></script>
     <script type="text/javascript" src="~/Scripts/GetMetrics.js"></script>
+    <script type="text/javascript" src="~/Scripts/chosen.jquery.js"></script>
     <script type="text/javascript">
         var urlpathGetSignalLocation = '@Url.Action("GetSignalLocation", "DefaultCharts")';
         var urlpathSignalInfoBox = '@Url.Action("SignalInfoBox", "DefaultCharts")';
@@ -33,6 +43,7 @@
         var urlpathCopyDetector = '@Url.Action("CopyDetector", "Signals")';
         var urlpathCopySignal = '@Url.Action("Copy", "Signals")';
         var urlpathCreateSignal = '@Url.Action("Create", "Signals")';
+        var urlpathImportSignal = '@Url.Action("Import", "Signals")';
         var urlpathCreateMetricComments = '@Url.Action("Create", "MetricComments")';
         var urlpathCreateDetectorComments = '@Url.Action("Create", "DetectorComments")';
         var urlpathGetConfigurationTable = '@Url.Action("Index", "ConfigurationTable")';
@@ -42,5 +53,6 @@
         var urlpathDeleteVersion = '@Url.Action("DeleteVersion", "Signals")';
     </script>
 
+    <link href="~/Content/bootstrap-chosen.css" rel="stylesheet" />
     <link href="~/Content/font-awesome.min.css" rel="stylesheet" />
 }

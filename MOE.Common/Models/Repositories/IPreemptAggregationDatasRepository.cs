@@ -3,16 +3,16 @@ using System.Collections.Generic;
 
 namespace MOE.Common.Models.Repositories
 {
-    public interface IPreemptAggregationDatasRepository
+    public interface IPreemptAggregationDatasRepository:IAggregationRepositoryBase
     {
-        List<PreemptionAggregation> GetPreemptAggregationByVersionIdAndDateRange(int versionId, DateTime start,
+        List<PreemptionAggregation> GetPreemptAggregationByVersionIdAndDateRange(DateTime start,
             DateTime end);
 
-        int GetPreemptAggregationTotalByVersionIdAndDateRange(int versionId, DateTime start,
+        int GetPreemptAggregationTotalByVersionIdAndDateRange(DateTime start,
             DateTime end);
 
 
-        int GetPreemptAggregationTotalByVersionIdPreemptNumberAndDateRange(int versionId, DateTime start,
+        int GetPreemptAggregationTotalByVersionIdPreemptNumberAndDateRange(DateTime start,
             DateTime end, int preemptNumber);
 
 

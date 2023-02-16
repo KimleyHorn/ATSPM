@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewBag.Title = "Home Page";
 }
 <div class="container">
@@ -21,33 +21,72 @@
             <p>
                 You can download the software for our site by clicking the button below.
             </p>
-            <p><a class="btn btn-dark" href="https://www.itsforge.net/">Download &raquo;</a></p>
+            <p><a class="btn btn-dark" href="https://github.com/udotdevelopment/ATSPM/releases">Download &raquo;</a></p>
         </div>
         <div class="col-md-4">
             <h2>What's New</h2>
-            <p>Version 4.2.3 (January 2020)</p>
-            <p>Updated the following libraries:</p>
+            <h5>Version 4.3.1 (Dec 2022)</h5>
+            <p>Changes:</p>
             <ul>
-                <li>New GDOT Left Turn Gap Analysis Metric</li>
-                <Li>New Web API</Li>
-                <li>Changed the options on Timing And Actuations, to include time before and after the display for the system to look for events</li>
-                <li>Fixed several bugs</li>
+                <li>
+                    <p>The ConvertDBForHistoricalConfigurations executable has been added to the executables folder.</p>
+                </li>
+                <li>
+                    <p>A bug that can prevent the chart usage report from working has been fixed.</p>
+                </li>
+                <li>
+                    <p>The Split Fail measure now shows the full time span selected.</p>
+                </li>
+                <li>
+                    <p>The method the Arrivals On Red measure uses to create bins has been updated to prevent boundary issues.</p>
+                </li>
+                <li>
+                    <p>A bug preventing the FTPfromasc3 project from running properly has been fixed.</p>
+                </li>
+                <li>
+                    <p>Additional updates have been made to the aggregation tables and programs.</p>
+                </li>
+                <li>
+                    <p>A bug in the Wait Time measure has been fixed; Phase Call Dropped events are now considered whenever stop bar presence detection is being used.</p>
+                </li>
+            </ul>
+            <h5>Version 4.3 (May 2022)</h5>
+            <p>Changes:</p>
+            <ul>
+                <li>
+                    <b>Wait Time Measure</b>
+                    <p>New measure calculating the average wait time for vehicles by approach and movement.</p>
+                </li>
+                <li>
+                    <b>Left Turn Gap Report</b>
+                    <p>Left turn phasing analysis based on existing gaps, volumes, and critical gap.</p>
+                </li>
+                <li>
+                    <b>Options and Thresholds</b>
+                    <p>New admin page with the ability to modify default options and thresholds for all measures.</p>
+                </li>
             </ul>
         </div>
         <div class="col-md-4">
             <h2>What's Next</h2>
-            <p>Version 4.2.4 (Anticipated Release Summer/Fall 2020)</p>
+            <h5>Version 5.0 (Anticipated Release: 2023)</h5>
             <ul>
-                <Li>GDOT to enhance the source code to add an installer program</Li>
-                <Li> All pull requests from other entities</Li>
-                <li>Higher level dashboards of performance measures using aggregated data</li>
-                <li>All pull requests from other entities (github)</li>
-                <li>Fix minor bugs</li>
-            </ul>
-            <p>Version 4.2.5 (Anticipated Summer/Fall 2020)</p>
-            <ul>
-                <li>Higher level dashboards of performance measures using aggregated data. </li>
-                <li>All pull requests from other entities (github).</li>
+                <li>
+                    <b>Backend</b>
+                    <p>-Migrate to .NET 6.0</p>
+                    <p>-Migrate to Entity Framework Core 6.0</p>
+                    <p>-Improved API</p>
+                </li>
+                <li>
+                    <b>New Measures</b>
+                    <p>-Green-Time Distribution</p> 
+                    <p>-Time-Space Diagram</p>
+                </li>
+                <li>
+                    <b>Additional Features</b>
+                    <p>-Options to download data in raw or 15-minute aggregated forms</p>
+                    <p>-Improved data compression</p>
+                </li>
             </ul>
         </div>
     </div>

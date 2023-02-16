@@ -1,5 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\xunit.core.2.4.1\build\xunit.core.props" Condition="Exists('..\packages\xunit.core.2.4.1\build\xunit.core.props')" />
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -12,10 +14,14 @@
     <AssemblyName>MOE.Common</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <SccProjectName>Svn</SccProjectName>
-    <SccLocalPath>Svn</SccLocalPath>
-    <SccAuxPath>Svn</SccAuxPath>
-    <SccProvider>SubversionScc</SccProvider>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>
+    </SccProvider>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <NuGetPackageImportStamp>
@@ -40,6 +46,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
@@ -51,28 +58,91 @@
     <CodeAnalysisRuleSet>SecurityRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>SecurityRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="AjaxControlToolkit, Version=18.1.1.0, Culture=neutral, PublicKeyToken=28f01b0e84b6d53e, processorArchitecture=MSIL">
       <HintPath>..\packages\AjaxControlToolkit.18.1.1\lib\net40\AjaxControlToolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="AWSSDK.Core, Version=3.3.0.0, Culture=neutral, PublicKeyToken=885c28607f98e604, processorArchitecture=MSIL">
+      <HintPath>..\packages\AWSSDK.Core.3.7.12.27\lib\net45\AWSSDK.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="AWSSDK.S3, Version=3.3.0.0, Culture=neutral, PublicKeyToken=885c28607f98e604, processorArchitecture=MSIL">
+      <HintPath>..\packages\AWSSDK.S3.3.7.9.45\lib\net45\AWSSDK.S3.dll</HintPath>
+    </Reference>
+    <Reference Include="Azure.Core, Version=1.25.0.0, Culture=neutral, PublicKeyToken=92742159e12e44c8, processorArchitecture=MSIL">
+      <HintPath>..\packages\Azure.Core.1.25.0\lib\net461\Azure.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Azure.Storage.Blobs, Version=12.13.1.0, Culture=neutral, PublicKeyToken=92742159e12e44c8, processorArchitecture=MSIL">
+      <HintPath>..\packages\Azure.Storage.Blobs.12.13.1\lib\netstandard2.0\Azure.Storage.Blobs.dll</HintPath>
+    </Reference>
+    <Reference Include="Azure.Storage.Common, Version=12.12.0.0, Culture=neutral, PublicKeyToken=92742159e12e44c8, processorArchitecture=MSIL">
+      <HintPath>..\packages\Azure.Storage.Common.12.12.0\lib\netstandard2.0\Azure.Storage.Common.dll</HintPath>
     </Reference>
     <Reference Include="CsvHelper, Version=12.0.0.0, Culture=neutral, PublicKeyToken=8c4959082be5c823, processorArchitecture=MSIL">
       <HintPath>..\packages\CsvHelper.12.0.1\lib\net45\CsvHelper.dll</HintPath>
     </Reference>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.dll</HintPath>
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
     </Reference>
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
     <Reference Include="FluentFTP, Version=19.2.2.0, Culture=neutral, PublicKeyToken=f4af092b1d8df44f, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentFTP.19.2.2\lib\net45\FluentFTP.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Api.Gax, Version=4.0.0.0, Culture=neutral, PublicKeyToken=3ec5ea7f18953e47, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Api.Gax.4.0.0\lib\net462\Google.Api.Gax.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Api.Gax.Rest, Version=4.0.0.0, Culture=neutral, PublicKeyToken=3ec5ea7f18953e47, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Api.Gax.Rest.4.0.0\lib\net462\Google.Api.Gax.Rest.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.1.57.0\lib\net45\Google.Apis.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Auth, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Auth.1.57.0\lib\net461\Google.Apis.Auth.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Auth.PlatformServices, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Auth.1.57.0\lib\net461\Google.Apis.Auth.PlatformServices.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Core, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Core.1.57.0\lib\net45\Google.Apis.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.PlatformServices, Version=1.57.0.0, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.1.57.0\lib\net45\Google.Apis.PlatformServices.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Storage.v1, Version=1.57.0.2742, Culture=neutral, PublicKeyToken=4b01fa6e34db77ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Apis.Storage.v1.1.57.0.2742\lib\net45\Google.Apis.Storage.v1.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Cloud.Storage.V1, Version=4.1.0.0, Culture=neutral, PublicKeyToken=185c282632e132a0, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Cloud.Storage.V1.4.1.0\lib\net462\Google.Cloud.Storage.V1.dll</HintPath>
+    </Reference>
+    <Reference Include="IronSnappy, Version=1.2.2.0, Culture=neutral, PublicKeyToken=b1d4b1dc83bdcf31, processorArchitecture=MSIL">
+      <HintPath>..\packages\IronSnappy.1.2.2\lib\netstandard2.0\IronSnappy.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.AspNet.Identity.Core, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.Identity.Core.2.2.2\lib\net45\Microsoft.AspNet.Identity.Core.dll</HintPath>
@@ -128,20 +198,17 @@
     <Reference Include="Microsoft.AspNetCore.Identity, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNetCore.Identity.2.2.0\lib\netstandard2.0\Microsoft.AspNetCore.Identity.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNetCore.Identity.EntityFrameworkCore.2.2.0\lib\netstandard2.0\Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.AspNetCore.WebUtilities, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNetCore.WebUtilities.2.2.0\lib\netstandard2.0\Microsoft.AspNetCore.WebUtilities.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=6.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.6.0.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.EntityFrameworkCore, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.EntityFrameworkCore.2.2.0\lib\netstandard2.0\Microsoft.EntityFrameworkCore.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.EntityFrameworkCore.Abstractions, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.EntityFrameworkCore.Abstractions.2.2.0\lib\netstandard2.0\Microsoft.EntityFrameworkCore.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.EntityFrameworkCore.Relational, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.EntityFrameworkCore.Relational.2.2.0\lib\netstandard2.0\Microsoft.EntityFrameworkCore.Relational.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.Caching.Abstractions, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Extensions.Caching.Abstractions.2.2.0\lib\netstandard2.0\Microsoft.Extensions.Caching.Abstractions.dll</HintPath>
@@ -161,8 +228,8 @@
     <Reference Include="Microsoft.Extensions.DependencyInjection, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.2.2.0\lib\net461\Microsoft.Extensions.DependencyInjection.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.2.2.0\lib\netstandard2.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=6.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.6.0.0\lib\net461\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.FileProviders.Abstractions, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Extensions.FileProviders.Abstractions.2.2.0\lib\netstandard2.0\Microsoft.Extensions.FileProviders.Abstractions.dll</HintPath>
@@ -226,8 +293,8 @@
       <HintPath>..\packages\MvcCheckBoxList.1.4.5\lib\net45\MvcCheckBoxList.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NuGet.Core, Version=2.14.0.832, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\NuGet.Core.2.14.0\lib\net40-Client\NuGet.Core.dll</HintPath>
@@ -235,6 +302,9 @@
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
       <Private>True</Private>
+    </Reference>
+    <Reference Include="Parquet, Version=3.0.0.0, Culture=neutral, PublicKeyToken=d380b3dee6d01926, processorArchitecture=MSIL">
+      <HintPath>..\packages\Parquet.Net.3.7.4\lib\netstandard2.0\Parquet.dll</HintPath>
     </Reference>
     <Reference Include="Remotion.Linq, Version=2.2.0.0, Culture=neutral, PublicKeyToken=fee00910d6e5f53b, processorArchitecture=MSIL">
       <HintPath>..\packages\Remotion.Linq.2.2.0\lib\net45\Remotion.Linq.dll</HintPath>
@@ -244,7 +314,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.5.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="System.Collections.Immutable, Version=1.2.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Collections.Immutable.1.5.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
@@ -257,18 +327,28 @@
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.OracleClient" />
-    <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.3.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Diagnostics.DiagnosticSource.4.5.1\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
+    <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Diagnostics.DiagnosticSource.4.6.0\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
     </Reference>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Interactive.Async, Version=3.2.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Interactive.Async.3.2.0\lib\net46\System.Interactive.Async.dll</HintPath>
     </Reference>
-    <Reference Include="System.Memory, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Memory.4.5.1\lib\netstandard2.0\System.Memory.dll</HintPath>
+    <Reference Include="System.IO.Hashing, Version=6.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.IO.Hashing.6.0.0\lib\net461\System.IO.Hashing.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory.Data, Version=1.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.Data.1.0.2\lib\net461\System.Memory.Data.dll</HintPath>
     </Reference>
     <Reference Include="System.Net" />
-    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http, Version=4.1.1.3, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Net.Http.4.3.4\lib\net46\System.Net.Http.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Net.Http.Formatting, Version=5.2.7.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.7\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
@@ -276,13 +356,38 @@
     <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.7.1\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.3.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.Security.AccessControl, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Security.AccessControl.4.5.0\lib\net461\System.Security.AccessControl.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Algorithms, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.Algorithms.4.3.0\lib\net463\System.Security.Cryptography.Algorithms.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Encoding, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.Encoding.4.3.0\lib\net46\System.Security.Cryptography.Encoding.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Primitives, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.Primitives.4.3.0\lib\net46\System.Security.Cryptography.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.X509Certificates, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.X509Certificates.4.3.0\lib\net461\System.Security.Cryptography.X509Certificates.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Security.Cryptography.Xml, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Security.Cryptography.Xml.4.5.0\lib\net461\System.Security.Cryptography.Xml.dll</HintPath>
@@ -295,8 +400,14 @@
     </Reference>
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.ServiceProcess" />
-    <Reference Include="System.Text.Encodings.Web, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Encodings.Web.4.5.0\lib\netstandard2.0\System.Text.Encodings.Web.dll</HintPath>
+    <Reference Include="System.Text.Encodings.Web, Version=4.0.5.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.4.7.2\lib\net461\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.4.7.2\lib\net461\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -316,6 +427,7 @@
     </Reference>
     <Reference Include="System.Web.Mvc, Version=5.2.7.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.Mvc.5.2.7\lib\net45\System.Web.Mvc.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.Razor.3.2.7\lib\net45\System.Web.Razor.dll</HintPath>
@@ -334,11 +446,24 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\xunit.abstractions.2.0.3\lib\net35\xunit.abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.assert, Version=2.4.1.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\xunit.assert.2.4.1\lib\netstandard1.1\xunit.assert.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.core, Version=2.4.1.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\xunit.extensibility.core.2.4.1\lib\net452\xunit.core.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.execution.desktop, Version=2.4.1.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\xunit.extensibility.execution.2.4.1\lib\net452\xunit.execution.desktop.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Business\ActionLog\ChartData.cs" />
     <Compile Include="Business\AnalysisPhaseCycle.cs" />
     <Compile Include="Business\AnalysisPhaseCycleCollection.cs" />
+    <Compile Include="Business\Approaches.cs" />
     <Compile Include="Business\ApproachVolume\ApproachVolume.cs" />
     <Compile Include="Business\ApproachVolume\ApproachVolumeViewModel.cs" />
     <Compile Include="Business\ApproachVolume\MetricInfo.cs" />
@@ -356,6 +481,20 @@
     <Compile Include="Business\DataAggregation\DataAggregation.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
+    <Compile Include="Business\DataAggregation\PhaseLeftTurnGapAggregationByApproach.cs" />
+    <Compile Include="Business\DataAggregation\PhaseLeftTurnGapAggregationBySignal.cs" />
+    <Compile Include="Business\DataAggregation\PhaseSplitMonitorAggregationByPhase.cs" />
+    <Compile Include="Business\DataAggregation\PhaseSplitMonitorAggregationBySignal.cs" />
+    <Compile Include="Business\ExtensionMethods.cs" />
+    <Compile Include="Business\LeftTurnGapAnalysis\LeftTurnGapAnalysis.cs" />
+    <Compile Include="Business\LeftTurnGapReport\LeftTurnGapOutAnalysis.cs" />
+    <Compile Include="Business\LeftTurnGapReport\LeftTurnPedestrianAnalysis.cs" />
+    <Compile Include="Business\LeftTurnGapReport\LeftTurnReportPreCheck.cs" />
+    <Compile Include="Business\LeftTurnGapReport\LeftTurnSplitFailAnalysis.cs" />
+    <Compile Include="Business\LeftTurnGapReport\LeftTurnVolumeAnalysis.cs" />
+    <Compile Include="Business\SplitMonitor\SplitMonitor.cs" />
+    <Compile Include="Business\Parquet\ParquetArchive.cs" />
+    <Compile Include="Business\Parquet\ParquetEventLog.cs" />
     <Compile Include="Business\TimingAndActuationCycle.cs" />
     <Compile Include="Business\Phase.cs">
       <SubType>Code</SubType>
@@ -381,18 +520,16 @@
     <Compile Include="Business\DataAggregation\AggregationByDetector.cs" />
     <Compile Include="Business\DataAggregation\AggregationByApproach.cs" />
     <Compile Include="Business\DataAggregation\DetectorAggregationByDetector.cs" />
-    <Compile Include="Business\DataAggregation\CycleAggregationByApproach.cs" />
+    <Compile Include="Business\DataAggregation\PhaseCycleAggregationByApproach.cs" />
     <Compile Include="Business\DataAggregation\DetectorAggregationByApproach.cs" />
     <Compile Include="Business\DataAggregation\PcdAggregationByApproach.cs" />
     <Compile Include="Business\DataAggregation\PcdAggregationBySignal.cs" />
-    <Compile Include="Business\DataAggregation\CycleAggregationBySignal.cs" />
+    <Compile Include="Business\DataAggregation\PhaseCycleAggregationBySignal.cs" />
     <Compile Include="Business\DataAggregation\PhasePedAggregationByPhase.cs" />
     <Compile Include="Business\DataAggregation\PhasePedAggregationBySignal.cs" />
     <Compile Include="Business\DataAggregation\SignalEventCountAggregationBySignal.cs" />
     <Compile Include="Business\DataAggregation\SpeedAggregationByApproach.cs" />
     <Compile Include="Business\DataAggregation\SpeedAggregationBySignal.cs" />
-    <Compile Include="Business\DataAggregation\EventCountAggregationByApproach.cs" />
-    <Compile Include="Business\DataAggregation\EventCountAggregationBySignal .cs" />
     <Compile Include="Business\DataAggregation\PhaseTerminationAggregationBySignal.cs" />
     <Compile Include="Business\DataAggregation\PhaseTerminationAggregationByPhase.cs" />
     <Compile Include="Business\DataAggregation\YellowRedActivationsAggregationBySignal.cs" />
@@ -433,13 +570,17 @@
     <Compile Include="Business\PCD\Phase.cs" />
     <Compile Include="Business\PCD\Plan.cs" />
     <Compile Include="Business\TMC\TMCViewModel.cs" />
+    <Compile Include="Business\WaitTimeChart.cs" />
     <Compile Include="Business\WatchDog\WatchDogScan.cs" />
+    <Compile Include="Business\WCFServiceLibrary\PedsVsFailuresOptions.cs" />
+    <Compile Include="Business\WCFServiceLibrary\GapVsDemandOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\LeftTurnGapAnalysisOptions.cs" />
+    <Compile Include="Business\WCFServiceLibrary\PhaseLeftTurnGapAggregationOptions.cs" />
+    <Compile Include="Business\WCFServiceLibrary\PhaseSplitMonitorAggregationOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\TimingAndActuationsOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\PhaseAggregationMetricOptions.cs" />
-    <Compile Include="Business\WCFServiceLibrary\ApproachCycleAggregationOptions.cs" />
+    <Compile Include="Business\WCFServiceLibrary\PhaseCycleAggregationOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\ApproachSpeedAggregationOptions.cs" />
-    <Compile Include="Business\WCFServiceLibrary\ApproachEventCountAggregationOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\PhasePedAggregationOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\PhaseTerminationAggregationOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\ApproachYellowRedActivationsAggregationOptions.cs" />
@@ -447,11 +588,29 @@
     <Compile Include="Business\WCFServiceLibrary\DetectorVolumeAggregationOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\DetectorAggregationMetricOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\SignalEventCountAggregationOptions.cs" />
-    <Compile Include="Business\WCFServiceLibrary\SignalPriorityAggregationOptions.cs" />
-    <Compile Include="Business\WCFServiceLibrary\SignalPreemptionAggregationOptions.cs" />
+    <Compile Include="Business\WCFServiceLibrary\PriorityAggregationOptions.cs" />
+    <Compile Include="Business\WCFServiceLibrary\PreemptionAggregationOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\SignalAggregationMetricOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\ApproachAggregationMetricOptions.cs" />
     <Compile Include="Business\WCFServiceLibrary\ApproachSplitFailAggregationOptions.cs" />
+    <Compile Include="Business\WCFServiceLibrary\WaitTimeOptions.cs" />
+    <Compile Include="Migrations\202205122134008_PhasePedAggregationUpdate.cs" />
+    <Compile Include="Migrations\202205122134008_PhasePedAggregationUpdate.designer.cs">
+      <DependentUpon>202205122134008_PhasePedAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202206091913388_ChangePedActuationsToPedRequests.cs" />
+    <Compile Include="Migrations\202206091913388_ChangePedActuationsToPedRequests.designer.cs">
+      <DependentUpon>202206091913388_ChangePedActuationsToPedRequests.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202207061520118_AddApproachToPhasePedAgg.cs" />
+    <Compile Include="Migrations\202207061520118_AddApproachToPhasePedAgg.designer.cs">
+      <DependentUpon>202207061520118_AddApproachToPhasePedAgg.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202212060255479_YellowRedActivationsAggregation.cs" />
+    <Compile Include="Migrations\202212060255479_YellowRedActivationsAggregation.designer.cs">
+      <DependentUpon>202212060255479_YellowRedActivationsAggregation.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Models\Area.cs" />
     <Compile Include="Data\MOE.cs">
       <DependentUpon>MOE.xsd</DependentUpon>
     </Compile>
@@ -589,61 +748,143 @@
     <Compile Include="Migrations\202006252300105_SPMWatchdogExclusionsInitialModelChanges1.Designer.cs">
       <DependentUpon>202006252300105_SPMWatchdogExclusionsInitialModelChanges1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202102042152251_CycleCompletionSeconds.cs" />
+    <Compile Include="Migrations\202102042152251_CycleCompletionSeconds.designer.cs">
+      <DependentUpon>202102042152251_CycleCompletionSeconds.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103042041127_YellowRedActivationAggregateChange.cs" />
+    <Compile Include="Migrations\202103042041127_YellowRedActivationAggregateChange.designer.cs">
+      <DependentUpon>202103042041127_YellowRedActivationAggregateChange.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103082016593_PCDAggregateUpdate.cs" />
+    <Compile Include="Migrations\202103082016593_PCDAggregateUpdate.designer.cs">
+      <DependentUpon>202103082016593_PCDAggregateUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103091550504_DetectorEventAggregationUpdate.cs" />
+    <Compile Include="Migrations\202103091550504_DetectorEventAggregationUpdate.designer.cs">
+      <DependentUpon>202103091550504_DetectorEventAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103102112389_SplitFailAggregationUpdate.cs" />
+    <Compile Include="Migrations\202103102112389_SplitFailAggregationUpdate.designer.cs">
+      <DependentUpon>202103102112389_SplitFailAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103111512530_PedDelayAggregationUpdate.cs" />
+    <Compile Include="Migrations\202103111512530_PedDelayAggregationUpdate.designer.cs">
+      <DependentUpon>202103111512530_PedDelayAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103111632416_SignalPlanAggregation.cs" />
+    <Compile Include="Migrations\202103111632416_SignalPlanAggregation.designer.cs">
+      <DependentUpon>202103111632416_SignalPlanAggregation.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103121633479_ApproachCycleAggregationUpdate.cs" />
+    <Compile Include="Migrations\202103121633479_ApproachCycleAggregationUpdate.designer.cs">
+      <DependentUpon>202103121633479_ApproachCycleAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202103161717407_ApproachSpeedAggregationUpdate.cs" />
+    <Compile Include="Migrations\202103161717407_ApproachSpeedAggregationUpdate.designer.cs">
+      <DependentUpon>202103161717407_ApproachSpeedAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202104071353183_SplitMonitorAggregation.cs" />
+    <Compile Include="Migrations\202104071353183_SplitMonitorAggregation.designer.cs">
+      <DependentUpon>202104071353183_SplitMonitorAggregation.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202104212329348_LeftTurnGapAggregation.cs" />
+    <Compile Include="Migrations\202104212329348_LeftTurnGapAggregation.designer.cs">
+      <DependentUpon>202104212329348_LeftTurnGapAggregation.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202104271509298_PriorityAggregationUpdate.cs" />
+    <Compile Include="Migrations\202104271509298_PriorityAggregationUpdate.designer.cs">
+      <DependentUpon>202104271509298_PriorityAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202104272102077_SignalsToAggregate.cs" />
+    <Compile Include="Migrations\202104272102077_SignalsToAggregate.designer.cs">
+      <DependentUpon>202104272102077_SignalsToAggregate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202104291758303_speedAggregationUpdate.cs" />
+    <Compile Include="Migrations\202104291758303_speedAggregationUpdate.designer.cs">
+      <DependentUpon>202104291758303_speedAggregationUpdate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202105132005112_ReCreateAggTables.cs" />
+    <Compile Include="Migrations\202105132005112_ReCreateAggTables.designer.cs">
+      <DependentUpon>202105132005112_ReCreateAggTables.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202204300103177_4_3.cs" />
+    <Compile Include="Migrations\202204300103177_4_3.designer.cs">
+      <DependentUpon>202204300103177_4_3.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Models\Jurisdiction.cs" />
     <Compile Include="Models\Application.cs" />
     <Compile Include="Models\ApplicationSettings.cs" />
+    <Compile Include="Models\MeasuresDefaults.cs" />
     <Compile Include="Models\PhasePedAggregation.cs" />
+    <Compile Include="Models\PhaseSplitMonitorAggregation.cs" />
+    <Compile Include="Models\PhaseLeftTurnGapAggregation.cs" />
     <Compile Include="Models\PhaseTerminationAggregation.cs" />
-    <Compile Include="Models\PhaseEventCountAggregation.cs" />
     <Compile Include="Models\DetectorEventCountAggregation.cs" />
     <Compile Include="Models\Region.cs" />
+    <Compile Include="Models\Repositories\IAggregationRepositoryBase.cs" />
+    <Compile Include="Models\Repositories\IMeasuresDefaultsRepository.cs" />
+    <Compile Include="Models\Repositories\AreaRepositoryFactory.cs" />
+    <Compile Include="Models\Repositories\AreaRepository.cs" />
+    <Compile Include="Models\Repositories\IAreaRepository.cs" />
     <Compile Include="Models\Repositories\IPhasePedAggregationRepository.cs" />
     <Compile Include="Models\Repositories\ISPMWatchdogExclusionsRepository.cs" />
+    <Compile Include="Models\Repositories\IPhaseLeftTurnGapAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\IJurisdictionRepository.cs" />
+    <Compile Include="Models\Repositories\IPhaseSplitMonitorAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\ISignalPlanAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\MeasuresDefaultsRepositortFactory.cs" />
+    <Compile Include="Models\Repositories\MeasuresDefaultsRepository.cs" />
     <Compile Include="Models\Repositories\PhasePedAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\PhaseLeftTurnGapAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\PhaseSplitMonitorAggregationRepository .cs" />
     <Compile Include="Models\Repositories\PhaseTerminationAggregationRepository.cs" />
     <Compile Include="Models\Repositories\PhasePedAggregationRepositoryFactory.cs" />
+    <Compile Include="Models\Repositories\PhaseLeftTurnGapAggregationRepositoryFactory.cs" />
+    <Compile Include="Models\Repositories\PhaseSplitMonitorAggregationRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\PhaseTerminationAggregationRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\IPhaseTerminationAggregationRepository.cs" />
     <Compile Include="Models\Repositories\IDetectorEventCountAggregationRepository.cs" />
-    <Compile Include="Models\Repositories\IApproachEventCountAggregationRepository.cs" />
     <Compile Include="Models\Repositories\ISignalEventCountAggregationRepository.cs" />
     <Compile Include="Models\Repositories\DetectorEventCountAggregationRepository.cs" />
-    <Compile Include="Models\Repositories\PhaseEventCountAggregationRepository.cs" />
     <Compile Include="Models\Repositories\DetectorEventCountAggregationRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\PhaseEventCountAggregationRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\SPMWatchdogExclusionsRepository.cs" />
     <Compile Include="Models\Repositories\SPMWatchdogExclusionsRepositoryFactory.cs" />
+    <Compile Include="Models\Repositories\JurisdictionRepository.cs" />
+    <Compile Include="Models\Repositories\JurisdictionRepositoryFactory.cs" />
+    <Compile Include="Models\Repositories\SignalPlanAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\SignalPlanAggregationRepositoryFactory.cs" />
+    <Compile Include="Models\SignalToAggregate.cs" />
+    <Compile Include="Models\SignalPlanAggregation.cs" />
     <Compile Include="Models\SignalEventCountAggregation.cs" />
     <Compile Include="Models\ApproachPcdAggregation.cs" />
     <Compile Include="Models\ApproachYellowRedActivationsAggregation.cs" />
     <Compile Include="Models\ApproachSplitFailAggregation.cs" />
     <Compile Include="Models\ApproachSpeedAggregation.cs" />
-    <Compile Include="Models\ApproachCycleAggregation.cs" />
+    <Compile Include="Models\PhaseCycleAggregation.cs" />
     <Compile Include="Models\Custom\ActionLog.cs" />
     <Compile Include="Models\Custom\Aggregation.cs" />
     <Compile Include="Models\DatabaseArchiveExcludedSignal.cs" />
     <Compile Include="Models\GeneralSettings.cs" />
     <Compile Include="Models\DatabaseInitializer.cs" />
     <Compile Include="Models\DetectionHardware.cs" />
-    <Compile Include="Models\DetectorAggregation.cs" />
     <Compile Include="Models\ExternalLink.cs" />
     <Compile Include="Models\FAQ.cs" />
     <Compile Include="Models\PreemptionAggregation.cs" />
     <Compile Include="Models\PriorityAggregation.cs" />
     <Compile Include="Models\Repositories\ActionChart.cs" />
     <Compile Include="Models\Repositories\SignalEventCountAggregationRepository.cs" />
-    <Compile Include="Models\Repositories\ApproachCycleAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\PhaseCycleAggregationsRepository.cs" />
     <Compile Include="Models\Repositories\SignalEventCountAggregationRepositoryFactory.cs" />
-    <Compile Include="Models\Repositories\ApproachCycleAggregationRepositoryFactory.cs" />
+    <Compile Include="Models\Repositories\PhaseCycleAggregationsRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\ApproachPcdAggregationRepository.cs" />
     <Compile Include="Models\Repositories\ApproachPcdAggregationRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\ApproachYellowRedActivationsAggregationRepository.cs" />
     <Compile Include="Models\Repositories\ApproachYellowRedActivationsAggregationRepositoryFactory.cs" />
-    <Compile Include="Models\Repositories\DetectorAggregationsRepository.cs" />
-    <Compile Include="Models\Repositories\DetectorAggregationsRepositoryFactory.cs" />
-    <Compile Include="Models\Repositories\IApproachCycleAggregationRepository.cs" />
+    <Compile Include="Models\Repositories\IPhaseCycleAggregationRepository.cs" />
     <Compile Include="Models\Repositories\IApproachPcdAggregationRepository.cs" />
     <Compile Include="Models\Repositories\IApproachYellowRedActivationsAggregationRepository.cs" />
-    <Compile Include="Models\Repositories\IDetectorAggregationsRepository.cs" />
     <Compile Include="Models\Repositories\IRoutePhaseDirectionRepository.cs" />
     <Compile Include="Models\Repositories\IApproachSplitFailAggregationRepository.cs" />
     <Compile Include="Models\Repositories\IDatabaseArchiveExcludedSignalsRepository.cs" />
@@ -728,7 +969,7 @@
     <Compile Include="Business\PlanFactory.cs" />
     <Compile Include="Business\RLM\RLMSignalPhaseCollection.cs" />
     <Compile Include="Business\ScriptGenerator\GenerateAddData.cs" />
-    <Compile Include="Business\SignalFtp.cs" />
+    <Compile Include="Models\SignalFtp.cs" />
     <Compile Include="Business\RLM\RLMSignalPhase.cs" />
     <Compile Include="Business\ControllerEventLogs.cs" />
     <Compile Include="Business\SignalControllers\BaseController.cs" />
@@ -966,9 +1207,6 @@
     <Compile Include="Business\SPMChartOptions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="App.config">
-      <SubType>Designer</SubType>
-    </Content>
     <EmbeddedResource Include="Migrations\201810301701213_WatchDogEmailAllErrors.resx">
       <DependentUpon>201810301701213_WatchDogEmailAllErrors.cs</DependentUpon>
     </EmbeddedResource>
@@ -1013,6 +1251,65 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202006252300105_SPMWatchdogExclusionsInitialModelChanges1.resx">
       <DependentUpon>202006252300105_SPMWatchdogExclusionsInitialModelChanges1.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\202102042152251_CycleCompletionSeconds.resx">
+      <DependentUpon>202102042152251_CycleCompletionSeconds.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103042041127_YellowRedActivationAggregateChange.resx">
+      <DependentUpon>202103042041127_YellowRedActivationAggregateChange.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103082016593_PCDAggregateUpdate.resx">
+      <DependentUpon>202103082016593_PCDAggregateUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103091550504_DetectorEventAggregationUpdate.resx">
+      <DependentUpon>202103091550504_DetectorEventAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103102112389_SplitFailAggregationUpdate.resx">
+      <DependentUpon>202103102112389_SplitFailAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103111512530_PedDelayAggregationUpdate.resx">
+      <DependentUpon>202103111512530_PedDelayAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103111632416_SignalPlanAggregation.resx">
+      <DependentUpon>202103111632416_SignalPlanAggregation.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103121633479_ApproachCycleAggregationUpdate.resx">
+      <DependentUpon>202103121633479_ApproachCycleAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202103161717407_ApproachSpeedAggregationUpdate.resx">
+      <DependentUpon>202103161717407_ApproachSpeedAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202104071353183_SplitMonitorAggregation.resx">
+      <DependentUpon>202104071353183_SplitMonitorAggregation.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202104212329348_LeftTurnGapAggregation.resx">
+      <DependentUpon>202104212329348_LeftTurnGapAggregation.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202104271509298_PriorityAggregationUpdate.resx">
+      <DependentUpon>202104271509298_PriorityAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202104272102077_SignalsToAggregate.resx">
+      <DependentUpon>202104272102077_SignalsToAggregate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202104291758303_speedAggregationUpdate.resx">
+      <DependentUpon>202104291758303_speedAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202105132005112_ReCreateAggTables.resx">
+      <DependentUpon>202105132005112_ReCreateAggTables.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202204300103177_4_3.resx">
+      <DependentUpon>202204300103177_4_3.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202205122134008_PhasePedAggregationUpdate.resx">
+      <DependentUpon>202205122134008_PhasePedAggregationUpdate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202206091913388_ChangePedActuationsToPedRequests.resx">
+      <DependentUpon>202206091913388_ChangePedActuationsToPedRequests.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202207061520118_AddApproachToPhasePedAgg.resx">
+      <DependentUpon>202207061520118_AddApproachToPhasePedAgg.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202212060255479_YellowRedActivationsAggregation.resx">
+      <DependentUpon>202212060255479_YellowRedActivationsAggregation.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\CustomStuffForExistingUpgrade.txt" />
     <EmbeddedResource Include="Migrations\FillDetectorTypeMetricTypesTable.SQL" />
@@ -1116,7 +1413,26 @@
       <Name>Caseiro.Mvc.PagedList</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Analyzer Include="..\packages\AWSSDK.S3.3.7.9.45\analyzers\dotnet\cs\AWSSDK.S3.CodeAnalysis.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="App.config">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.targets'))" />
+    <Error Condition="!Exists('..\packages\xunit.core.2.4.1\build\xunit.core.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xunit.core.2.4.1\build\xunit.core.props'))" />
+    <Error Condition="!Exists('..\packages\xunit.core.2.4.1\build\xunit.core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xunit.core.2.4.1\build\xunit.core.targets'))" />
+  </Target>
+  <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
+  <Import Project="..\packages\xunit.core.2.4.1\build\xunit.core.targets" Condition="Exists('..\packages\xunit.core.2.4.1\build\xunit.core.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

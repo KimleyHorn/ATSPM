@@ -3,8 +3,7 @@
     $(".datepicker").datepicker({ constrainInput: false });
 }
 
-function SaveSuccesful()
-{
+function SaveSuccesful() {
     $("#ActionMessage").text("Save Successful! " + new Date().toLocaleString());
 }
 function NewActionMessage(message) {
@@ -59,7 +58,7 @@ function AddNewVersion() {
         success: function (data) {
             newVersionId = data;
         },
-        complete:function() {
+        complete: function () {
             LoadVersionByVersionID(newVersionId);
             SetDatePicker();
         },
@@ -94,15 +93,15 @@ function DeleteVersion() {
                 url: urlpathDeleteVersion,
                 datatype: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data) {
+                success: function (data) {
                     $('#SignalEdit').html(data);
 
                 },
                 statusCode: {
-                    404: function(content) { alert('cannot find resource'); },
-                    500: function(content) { alert('internal server error'); }
+                    404: function (content) { alert('cannot find resource'); },
+                    500: function (content) { alert('internal server error'); }
                 },
-                error: function(req, status, errorObj) {
+                error: function (req, status, errorObj) {
                     alert("Error");
                 }
             });
@@ -123,8 +122,8 @@ function DeleteSignal() {
             url: urlpathDeleteSignal,
             datatype: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data){window.location.reload(false)},
-                //(data) { $('#ConfigurationTableCollapse').html(data); },
+            success: function (data) { window.location.reload(false) },
+            //(data) { $('#ConfigurationTableCollapse').html(data); },
             statusCode: {
                 404: function (content) { alert('cannot find resource'); },
                 500: function (content) { alert('internal server error'); }
@@ -139,8 +138,8 @@ function DeleteSignal() {
 
 function GetCreateComment() {
     var signalID = $("#SignalID").val();
-   
-    var versionId =  $("#VersionID").val();
+
+    var versionId = $("#VersionID").val();
     var metricPath = urlpathCreateMetricComments + '/' + versionId;
 
     $.ajax({
@@ -156,13 +155,13 @@ function GetCreateComment() {
     });
 }
 //function GetConfigurationTable(signalID) {
-    function GetConfigurationTable() {
+function GetConfigurationTable() {
     var signalID = $("#SignalID").val();
     $.ajax({
         type: "Get",
         cache: false,
         async: true,
-        data:{"SignalID":signalID},
+        data: { "SignalID": signalID },
         url: urlpathGetConfigurationTable,
         success: function (data) { $('#ConfigurationTableCollapse').html(data); },
         statusCode: {
@@ -194,8 +193,7 @@ function GetConfigurationTableForVersion(versionId) {
     });
 }
 
-function UpdateVersionDropdown()
-{
+function UpdateVersionDropdown() {
     var selIndex = $("#VersionID option:selected").index();
     var dd = document.getElementById('VersionID');
     var oldVersionDescription = $("#VersionID option:selected").text();
@@ -207,8 +205,8 @@ function UpdateVersionDropdown()
 
 function PostCreateComment() {
     var tosend = {};
-    
-    tosend.VersionID =  $("#VersionID").val();
+
+    tosend.VersionID = $("#VersionID").val();
     tosend.SignalID = $("#SignalID").val();
     tosend.CommentText = $("#CommentText").val();
     tosend.MetricIDs = [];
@@ -248,7 +246,7 @@ function PostCreateComment() {
 
 
 function GetCreateDetectorComment(ID) {
-    var metricPath = urlpathCreateDetectorComments+'/' + ID;
+    var metricPath = urlpathCreateDetectorComments + '/' + ID;
 
     $.ajax({
         url: metricPath,
@@ -264,43 +262,100 @@ function GetCreateDetectorComment(ID) {
 }
 
 function PostCreateDetectorComment(ID) {
-   
+
     var tosend = {};
     tosend.ID = ID;
     tosend.CommentText = $("#CommentText").val();
     $.ajax({
-            type: "POST",
-            url: urlpathCreateDetectorComments,
-            cache: false,
-            async: true,
-            datatype: "json",
-            contentType: "application/json; charset=utf-8",
-            headers: GetRequestVerificationTokenObject(),
-            data: JSON.stringify(tosend),
-            success: function (data) {
-                $('#NewDetectorComment_' + tosend.ID).html("");
-                $('#AddedDetectorComment_' + tosend.ID).html(data + $('#AddedDetectorComment_' + tosend.ID).html());
-            },
-            statusCode: {
-                404: function (content) { alert('cannot find resource'); },
-                500: function (content) { alert('internal server error'); }
-            },
-            error: function (req, status, errorObj) {
-                alert("Error");
-            }
-        });
+        type: "POST",
+        url: urlpathCreateDetectorComments,
+        cache: false,
+        async: true,
+        datatype: "json",
+        contentType: "application/json; charset=utf-8",
+        headers: GetRequestVerificationTokenObject(),
+        data: JSON.stringify(tosend),
+        success: function (data) {
+            $('#NewDetectorComment_' + tosend.ID).html("");
+            $('#AddedDetectorComment_' + tosend.ID).html(data + $('#AddedDetectorComment_' + tosend.ID).html());
+        },
+        statusCode: {
+            404: function (content) { alert('cannot find resource'); },
+            500: function (content) { alert('internal server error'); }
+        },
+        error: function (req, status, errorObj) {
+            alert("Error");
+        }
+    });
+
+}
+
+function ImportSignal() {
+    var input = document.createElement("input");
+    input.type = "file";
+    input.setAttribute("accept", ".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel");
     
+    input.onchange = e => {
+
+        // getting a hold of the file reference
+        var file = e.target.files[0];
+
+        // setting up the reader
+        var reader = new FileReader();
+        reader.readAsText(file, 'UTF-8');
+        var formData = new FormData();
+        formData.append("file", file);
+        // here we tell the reader what to do when it's done reading...
+        reader.onload = readerEvent => {
+            var content = readerEvent.target.result; // this is the content!
+            console.log(content);
+
+            $.ajax({
+                type: "POST",
+                cache: false,
+                async: true,
+                url: urlpathImportSignal,
+                contentType: false,
+                processData: false,
+                data: formData,
+                headers: GetRequestVerificationTokenObject(),
+                success: function (data) {
+                    $('#SignalEdit').html(data);
+                    var lbl = $('#signalLabel');
+                    var id = lbl[0].innerText.split("Signal ");
+                    SetSignalID(id[1]);
+                    alert("Signal " + id[1] + " was imported.");
+                },
+                complete: function () {
+                    var startDate = $("#Start")[0].defaultValue;
+                    SetDatePicker();
+                    $("#Start").val(startDate);
+                },
+                statusCode: {
+                    404: function (content) { alert('cannot find resource'); },
+                    500: function (content) { alert(content.responseText); }
+                },
+                error: function (req, status, errorObj) {
+                }
+            });
+        }
+    }
+
+    input.click();
 }
 
 function CreateNewSignal() {
     var newSignalID = prompt("Please enter the new SignalID", "123456");
+
+    if (newSignalID == null) return;
+
     $.ajax({
         type: "POST",
         cache: false,
         async: true,
         url: urlpathCreateSignal + "/" + newSignalID,
         headers: GetRequestVerificationTokenObject(),
-        success: function(data) {
+        success: function (data) {
             $('#SignalEdit').html(data);
             SetSignalID(newSignalID);
         },
@@ -318,12 +373,11 @@ function CreateNewSignal() {
     });
 }
 
-function SetSignalID(newSignalID)
-{
+function SetSignalID(newSignalID) {
     $("#SignalID").val(newSignalID);
 }
 
-function CopySignal() {    
+function CopySignal() {
     var signalID = $("#SignalID").val();
     var newSignalID = prompt("Please enter the new SignalID", "123456");
 
@@ -335,7 +389,7 @@ function CopySignal() {
         cache: false,
         async: true,
         headers: GetRequestVerificationTokenObject(),
-        data:JSON.stringify({"id":signalID,"newID":newSignalID}),
+        data: JSON.stringify({ "id": signalID, "newID": newSignalID }),
         url: urlpathCopySignal,
         datatype: "json",
         contentType: "application/json; charset=utf-8",
@@ -356,8 +410,8 @@ function CopySignal() {
 function CopyApproach(approachID) {
     var parameters = {};
     parameters.approachID = approachID;
-   // parameters.id = $("#SignalID").val();
-    parameters.versionId =  $("#VersionID").val();
+    // parameters.id = $("#SignalID").val();
+    parameters.versionId = $("#VersionID").val();
     $.ajax({
         type: "POST",
         cache: false,
@@ -381,21 +435,19 @@ function CopyApproach(approachID) {
     });
 }
 
-function CheckForDuplicatChannels()
-{
-    if(IsDuplicateChannel())
-    {
+function CheckForDuplicatChannels() {
+    if (IsDuplicateChannel()) {
         alert("This is a duplicate channel");
     }
 }
 
 function IsDuplicateChannel() {
-    var channelArray=[];
+    var channelArray = [];
     $(".detectorChannel").each(function (i, obj) {
-        channelArray.push(obj.value);        
+        channelArray.push(obj.value);
     });
     var channelUniqueArray = unique(channelArray);
-    return (channelArray.length != channelUniqueArray.length);    
+    return (channelArray.length != channelUniqueArray.length);
 }
 
 function unique(array) {
@@ -406,7 +458,7 @@ function unique(array) {
 
 function CopyDetector(ID, approachID) {
     var signalID = $("#SignalID").val();
-    var versionId =  $("#VersionID").val();
+    var versionId = $("#VersionID").val();
     var approachIndex = $("#Index" + approachID).val();
     var metricPath = urlpathCreateDetector;
     $.ajax({
@@ -420,7 +472,7 @@ function CopyDetector(ID, approachID) {
             $('#DetectorsList_' + approachID).append(data);
             NewActionMessage("Detector Copy Successful! " + new Date().toLocaleString());
             $(".datepicker").attr('type', 'text');
-            $(".datepicker").datepicker();      
+            $(".datepicker").datepicker();
         },
         statusCode: {
             404: function (content) { alert('cannot find resource'); },
@@ -432,8 +484,7 @@ function CopyDetector(ID, approachID) {
     });
 }
 
-function GetRequestVerificationTokenObject()
-{
+function GetRequestVerificationTokenObject() {
     var headers = {};
     var token = $('[name=__RequestVerificationToken]').val();
     headers['__RequestVerificationToken'] = token;
@@ -442,55 +493,55 @@ function GetRequestVerificationTokenObject()
 
 function CreateNewApproach() {
     var signalID = $("#SignalID").val();
-    var versionId =  $("#VersionID").val();
-        var metricPath = urlpathCreateApproach;
-        $.ajax({
-            type: "POST",
-            cache: false,
-            async: true,
-            data: { "versionId": versionId },
-            headers: GetRequestVerificationTokenObject(),
-            url: metricPath,
-            success: function (data) { $('#ApproachesList').append(data); },
-            statusCode: {
-                404: function (content) { alert('cannot find resource'); },
-                500: function (content) { alert(content.responseText); }
-            },
-            error: function (req, status, errorObj) {
-            }
-        });
-    }
+    var versionId = $("#VersionID").val();
+    var metricPath = urlpathCreateApproach;
+    $.ajax({
+        type: "POST",
+        cache: false,
+        async: true,
+        data: { "versionId": versionId },
+        headers: GetRequestVerificationTokenObject(),
+        url: metricPath,
+        success: function (data) { $('#ApproachesList').append(data); },
+        statusCode: {
+            404: function (content) { alert('cannot find resource'); },
+            500: function (content) { alert(content.responseText); }
+        },
+        error: function (req, status, errorObj) {
+        }
+    });
+}
 
 
 function PostCreateApproach() {
     var tosend = {};
     tosend.SignalID = $("#SignalID").val();
-    tosend.DirectionTypeID= $("#DirectionTypeID").val();
+    tosend.DirectionTypeID = $("#DirectionTypeID").val();
     tosend.Description = $("#Description").val();
     tosend.MPH = $("#MPH").val();
     tosend.DecisionPoint = $("#DecisionPoint").val();
     tosend.MovementDelay = $("#MovementDelay").val();
     $.ajax({
-            type: "POST",
-            url: urlpathCreateApproach,
-            cache: false,
-            async: true,
-            datatype: "json",
-            contentType: "application/json; charset=utf-8",
-            headers: GetRequestVerificationTokenObject(),
-            data: JSON.stringify(tosend),
-            success: function (data) {
-                $('#NewApproach').html("");
-                $('#AddedApproach').html(data + $('#AddedComment').html());
-            },
-            statusCode: {
-                404: function (content) { alert('cannot find resource'); },
-                500: function (content) { alert('internal server error'); }
-            },
-            error: function (req, status, errorObj) {
-            }
-        });
-    
+        type: "POST",
+        url: urlpathCreateApproach,
+        cache: false,
+        async: true,
+        datatype: "json",
+        contentType: "application/json; charset=utf-8",
+        headers: GetRequestVerificationTokenObject(),
+        data: JSON.stringify(tosend),
+        success: function (data) {
+            $('#NewApproach').html("");
+            $('#AddedApproach').html(data + $('#AddedComment').html());
+        },
+        statusCode: {
+            404: function (content) { alert('cannot find resource'); },
+            500: function (content) { alert('internal server error'); }
+        },
+        error: function (req, status, errorObj) {
+        }
+    });
+
 }
 
 function DeleteDetector(detectorId, ID) {
@@ -499,7 +550,7 @@ function DeleteDetector(detectorId, ID) {
         detectorId + "?")) {
         $.ajax({
             type: "POST",
-            url: urlpathDeleteDetector+ "/" + ID,
+            url: urlpathDeleteDetector + "/" + ID,
             cache: false,
             async: true,
             datatype: "json",
@@ -533,7 +584,7 @@ function DeleteApproach(approachId, approachDescription) {
             success: function (data) {
                 LoadSignalEdit(SignalID = $("#editSignalID").val());
                 //$('#ApproachConfiguration_' + approachId).html("");
-                
+
             },
             statusCode: {
                 404: function (content) { alert('cannot find resource'); },
@@ -546,42 +597,44 @@ function DeleteApproach(approachId, approachDescription) {
 }
 
 function GetCreateNewDetector(approachID) {
-        var versionID =  $("#VersionID").val();
-        var approachIndex = $("#Index"+approachID).val();
-        var tosend = {};
-        tosend.signalID = $("#SignalID").val();
-        tosend.versionId = versionID;
-        tosend.approachID = approachID;
-        tosend.approachIndex = $("#Index" + approachID).val();
-        $.ajax({
-                type: "POST",
-                cache: false,
-                async: true,
-                datatype: "json",
-                url: urlpathCreateDetector,
-                headers: GetRequestVerificationTokenObject(),
-                data: tosend,
-                success: function (data) {
-                    $('#DetectorsList_' + approachID).append(data);
-                    $(".datepicker").attr('type', 'text');
-                    $(".datepicker").datepicker();
-                },
-                statusCode: {404: function (content) {alert('cannot find resource'); },
-                            500: function (content) { alert(content.responseText); }},
-                error: function (req, status, errorObj) {
-                }
-                });
+    var versionID = $("#VersionID").val();
+    var approachIndex = $("#Index" + approachID).val();
+    var tosend = {};
+    tosend.signalID = $("#SignalID").val();
+    tosend.versionId = versionID;
+    tosend.approachID = approachID;
+    tosend.approachIndex = $("#Index" + approachID).val();
+    $.ajax({
+        type: "POST",
+        cache: false,
+        async: true,
+        datatype: "json",
+        url: urlpathCreateDetector,
+        headers: GetRequestVerificationTokenObject(),
+        data: tosend,
+        success: function (data) {
+            $('#DetectorsList_' + approachID).append(data);
+            $(".datepicker").attr('type', 'text');
+            $(".datepicker").datepicker();
+        },
+        statusCode: {
+            404: function (content) { alert('cannot find resource'); },
+            500: function (content) { alert(content.responseText); }
+        },
+        error: function (req, status, errorObj) {
+        }
+    });
 }
 
 function SyncText(e, approachID) {
-    $(".mph_" + approachID).each(function() {
+    $(".mph_" + approachID).each(function () {
         $(this).val($(e).val());
     });
 }
 
-function ShowHideDetectionTypeOptions(e,ID) {
+function ShowHideDetectionTypeOptions(e, ID) {
     if ($(e).val() == 2) {
-        $(".DetectionTypes_"+ID).each(function (i, obj) {
+        $(".DetectionTypes_" + ID).each(function (i, obj) {
             if (obj.value == 3) {
                 ShowHideMPH(e, obj, ID);
             }
@@ -607,15 +660,12 @@ function ShowHideDetectionTypeOptions(e,ID) {
     //}
 }
 
-function ShowHideMPH(control1, control2, ID)
-{
+function ShowHideMPH(control1, control2, ID) {
     var mph = $("#MPHDiv_" + ID);
-    if ($(control1).is(':checked') || $(control2).is(':checked'))
-    {
+    if ($(control1).is(':checked') || $(control2).is(':checked')) {
         $(mph).removeClass("invisible");
     }
-    else if (!$(control1).is(':checked') && !$(control2).is(':checked'))
-    {
+    else if (!$(control1).is(':checked') && !$(control2).is(':checked')) {
         $(mph).addClass("invisible");
     }
 }
@@ -629,6 +679,62 @@ function ShowHideControl(obj, checked) {
     else {
         if (!$(obj).hasClass("invisible")) {
             $(obj).addClass("invisible");
+        }
+    }
+}
+
+function UpdatePedsare1to1() {
+    var pedchecked = document.getElementById('Pedsare1to1-value');
+    var pedphases = document.getElementsByClassName('ped-phase-value');
+    var protphases = document.getElementsByClassName('protected-phase-value');
+    var peddetectors = document.getElementsByClassName('ped-detectors-string');
+    var pedoverlap = document.getElementsByClassName('ped-overlap-checkbox');
+    //if All Peds are 1:1 is checked, then disable ped fields and set ped phase equal to protected phase
+    if (pedchecked.checked) {
+        for (var i = 0; i < pedphases.length; i++) {
+            pedphases[i].setAttribute("readonly", "readonly");
+            pedphases[i].value = protphases[i].value;
+            peddetectors[i].setAttribute("readonly", "readonly");
+            peddetectors[i].value = protphases[i].value;
+            //pedoverlap[i].setAttribute("readonly", "readonly");
+            pedoverlap[i].checked = false;
+            //pedoverlap[i].addClass("greycheckbox");
+        }
+    }
+    //if All Peds are 1:1 is not checked, then enable editing for ped fields and make them blank
+    else {
+        for (var i = 0; i < pedphases.length; i++) {
+            pedphases[i].removeAttribute("readonly");
+            pedphases[i].value = "";
+            peddetectors[i].removeAttribute("readonly");
+            peddetectors[i].value = "";
+            //pedoverlap[i].removeAttribute("readonly");
+            pedoverlap[i].checked = false;
+        }
+    }
+}
+
+function onProtectedPhaseNumberInput() {
+    var pedchecked = document.getElementById('Pedsare1to1-value');
+    var pedphases = document.getElementsByClassName('ped-phase-value');
+    var protphases = document.getElementsByClassName('protected-phase-value');
+    var peddetectors = document.getElementsByClassName('ped-detectors-string');
+
+    if (pedchecked.checked) {
+        for (let i = 0; i < pedphases.length; i++) {
+            pedphases[i].value = protphases[i].value
+            peddetectors[i].value = protphases[i].value
+        }
+    }
+}
+
+function CheckboxReadOnly() {
+    var pedchecked = document.getElementById('Pedsare1to1-value');
+    var pedoverlap = document.getElementsByClassName('ped-overlap-checkbox');
+    if (pedchecked.checked) {
+        // return false;
+        for (var i = 0; i < pedoverlap.length; i++) {
+            pedoverlap[i].checked = false;
         }
     }
 }

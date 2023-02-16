@@ -10,9 +10,9 @@ namespace MOE.Common.Business
     public static class PlanFactory
     {
         public static List<PlanPcd> GetPcdPlans(List<CyclePcd> cycles, DateTime startDate,
-            DateTime endDate, Approach approach)
+            DateTime endDate, Approach approach, SPM db)
         {
-            var planEvents = GetPlanEvents(startDate, endDate, approach.SignalID);
+            var planEvents = GetPlanEvents(startDate, endDate, approach.SignalID, db);
             var plans = new List<PlanPcd>();
             for (var i = 0; i < planEvents.Count; i++)
                 if (planEvents.Count - 1 == i)
@@ -38,31 +38,28 @@ namespace MOE.Common.Business
             return plans;
         }
 
-        public static List<Controller_Event_Log> GetPlanEvents(DateTime startDate, DateTime endDate, string signalId)
+        public static List<Controller_Event_Log> GetPlanEvents(DateTime startDate, DateTime endDate, string signalId, SPM db)
         {
-            var db = new SPM();
-            var celRepository = ControllerEventLogRepositoryFactory.Create(db);
-            var planEvents = new List<Controller_Event_Log>();
-            var firstPlanEvent = celRepository.GetFirstEventBeforeDate(signalId, 131, startDate);
-            if (firstPlanEvent != null)
+            IControllerEventLogRepository celRepository;
+            if (db == null)
             {
-                firstPlanEvent.Timestamp = startDate;
-                planEvents.Add(firstPlanEvent);
+                celRepository = ControllerEventLogRepositoryFactory.Create();
             }
             else
             {
-                firstPlanEvent = new Controller_Event_Log
-                {
-                    Timestamp = startDate,
-                    EventCode = 131,
-                    EventParam = 0,
-                    SignalID = signalId
-                };
-                planEvents.Add(firstPlanEvent);
+                celRepository = ControllerEventLogRepositoryFactory.Create(db);
             }
+            var planEvents = new List<Controller_Event_Log>();
             var tempPlanEvents = celRepository.GetSignalEventsByEventCode(signalId, startDate, endDate, 131)
                 .OrderBy(e => e.Timestamp).ToList();
-
+            if(tempPlanEvents.Any() &&  tempPlanEvents.First().Timestamp != startDate)
+            {
+                GetFirstPlan(startDate, signalId, celRepository, planEvents);
+            }
+            else if (!planEvents.Any())
+            {
+                GetFirstPlan(startDate, signalId, celRepository, planEvents);
+            }
             tempPlanEvents.Add(new Controller_Event_Log { SignalID = signalId, EventCode = 131, EventParam = 254, Timestamp = endDate });
 
             for (var x = 0; x < tempPlanEvents.Count(); x++)
@@ -90,9 +87,30 @@ namespace MOE.Common.Business
             return planEvents;
         }
 
-        public static List<Plan> GetBasicPlans(DateTime startDate, DateTime endDate, string signalId)
+        private static void GetFirstPlan(DateTime startDate, string signalId, IControllerEventLogRepository celRepository, List<Controller_Event_Log> planEvents)
         {
-            var planEvents = GetPlanEvents(startDate, endDate, signalId);
+            var firstPlanEvent = celRepository.GetFirstEventBeforeDate(signalId, 131, startDate);
+            if (firstPlanEvent != null)
+            {
+                firstPlanEvent.Timestamp = startDate;
+                planEvents.Add(firstPlanEvent);
+            }
+            else
+            {
+                firstPlanEvent = new Controller_Event_Log
+                {
+                    Timestamp = startDate,
+                    EventCode = 131,
+                    EventParam = 0,
+                    SignalID = signalId
+                };
+                planEvents.Insert(0,firstPlanEvent);
+            }
+        }
+
+        public static List<Plan> GetBasicPlans(DateTime startDate, DateTime endDate, string signalId, SPM db)
+        {
+            var planEvents = GetPlanEvents(startDate, endDate, signalId, db);
             var plans = new List<Plan>();
             for (var i = 0; i < planEvents.Count; i++)
                 if (planEvents.Count - 1 == i)
@@ -111,7 +129,7 @@ namespace MOE.Common.Business
 
         public static List<PlanSplitMonitor> GetSplitMonitorPlans(DateTime startDate, DateTime endDate, string signalId)
         {
-            var planEvents = GetPlanEvents(startDate, endDate, signalId);
+            var planEvents = GetPlanEvents(startDate, endDate, signalId, null);
             var plans = new List<PlanSplitMonitor>();
             for (var i = 0; i < planEvents.Count; i++)
                 if (planEvents.Count - 1 == i)
@@ -131,7 +149,7 @@ namespace MOE.Common.Business
         public static List<PlanSpeed> GetSpeedPlans(List<CycleSpeed> cycles, DateTime startDate,
             DateTime endDate, Approach approach)
         {
-            var planEvents = GetPlanEvents(startDate, endDate, approach.SignalID);
+            var planEvents = GetPlanEvents(startDate, endDate, approach.SignalID, null);
             var plans = new List<PlanSpeed>();
             for (var i = 0; i < planEvents.Count; i++)
                 if (planEvents.Count - 1 == i)
@@ -398,9 +416,9 @@ namespace MOE.Common.Business
 
         //}
         public static List<PlanSplitFail> GetSplitFailPlans(List<CycleSplitFail> cycles, SplitFailOptions options,
-            Approach approach)
+            Approach approach, SPM db)
         {
-            var planEvents = GetPlanEvents(options.StartDate, options.EndDate, approach.SignalID);
+            var planEvents = GetPlanEvents(options.StartDate, options.EndDate, approach.SignalID, db);
             var plans = new List<PlanSplitFail>();
             for (var i = 0; i < planEvents.Count; i++)
                 if (planEvents.Count - 1 == i)
