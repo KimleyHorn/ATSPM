@@ -111,7 +111,9 @@
             </div>
         </div>
     </div>
-  
+    <div id="WatchdogExclusionsListContainer" class="col-6 panel-min-width">
+    </div>
+
     <div class="form-group">
         @Html.LabelFor(model => model.MaxDegreeOfParallelism, htmlAttributes: new { @class = "control-label col-md-2" })
         <div class="col-md-10">
@@ -155,4 +157,9 @@
 
 @section Scripts {
     @Scripts.Render("~/bundles/jqueryval")
+    <script type="text/javascript" src="~/Scripts/WatchdogExclusions.js"></script>
+    <script type="text/javascript">
+        var urlFillExclusions = '@Url.Action("FillExclusions", "WatchDogApplicationSettings")';
+        var urlAddExclusion = '@Url.Action("AddExclusion", "WatchDogApplicationSettings")';
+    </script>
 }

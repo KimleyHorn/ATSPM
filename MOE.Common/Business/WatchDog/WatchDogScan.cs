@@ -32,12 +32,17 @@ namespace MOE.Common.Business.WatchDog
             ScanDate = scanDate;
             var settingsRepository = ApplicationSettingsRepositoryFactory.Create();
             Settings = settingsRepository.GetWatchDogSettings();
+
+            var exclusionsRepository = SPMWatchdogExclusionsRepositoryFactory.Create();
+            Exclusions = exclusionsRepository.GetSPMWatchdogExclusions();
         }
 
         public WatchDogApplicationSettings Settings { get; set; }
         public DateTime ScanDate { get; set; }
         public int ErrorCount { get; set; }
         //public List<SPMWatchDogErrorEvent> ErrorMessages = new List<SPMWatchDogErrorEvent>();
+        public List<SPMWatchdogExclusions> Exclusions { get; set; }
+
         public void StartScan()
         {
             if (!Settings.WeekdayOnly || Settings.WeekdayOnly && ScanDate.DayOfWeek != DayOfWeek.Saturday &&
@@ -46,6 +51,8 @@ namespace MOE.Common.Business.WatchDog
                var watchDogErrorEventRepository = SPMWatchDogErrorEventRepositoryFactory.Create();
                var signalRepository = SignalsRepositoryFactory.Create();
                var signals = signalRepository.EagerLoadAllSignals();
+               signals.RemoveAll(signal =>
+                   Exclusions.Exists(x => x.SignalID == signal.SignalID && x.TypeOfAlert == AlertType.All));
                 CheckForRecords(signals);
                 CheckAllSignals(signals);
                 CheckSignalsWithData();
@@ -56,7 +63,9 @@ namespace MOE.Common.Business.WatchDog
 
         private void CheckApplicationEvents(List<Models.Signal> signals)
         {
-            CheckFtpFromAllControllers(signals);
+            var signalsToCheck = signals.Where(signal =>
+                !Exclusions.Exists(x => x.SignalID == signal.SignalID && x.TypeOfAlert == AlertType.FTP)).ToList();
+            CheckFtpFromAllControllers(signalsToCheck);
         }
 
         private void CheckFtpFromAllControllers(List<Models.Signal> signals)
@@ -121,7 +130,12 @@ namespace MOE.Common.Business.WatchDog
                         {
                             try
                             {
-                                CheckForMaxOut(phase, signal);
+                                if (!Exclusions.Exists(x => 
+                                    x.SignalID == signal.SignalID && x.PhaseID != null && 
+                                    (int)x.PhaseID == phase.PhaseNumber && x.TypeOfAlert == AlertType.MaxOut))
+                                {
+                                    CheckForMaxOut(phase, signal);
+                                }
                             }
                             catch (Exception e)
                             {
@@ -131,8 +145,13 @@ namespace MOE.Common.Business.WatchDog
 
                             try
                             {
-
-                                CheckForForceOff(phase, signal);
+                                if (!Exclusions.Exists(x =>
+                                    x.SignalID == signal.SignalID && x.PhaseID != null &&
+                                    (int) x.PhaseID == phase.PhaseNumber && x.TypeOfAlert == AlertType.ForceOff))
+                                { 
+                                    CheckForForceOff(phase, signal);
+                                }
+                                
                             }
                             catch (Exception e)
                             {
@@ -142,7 +161,13 @@ namespace MOE.Common.Business.WatchDog
 
                             try
                             {
-                                CheckForStuckPed(phase, signal);
+                                if (!Exclusions.Exists(x =>
+                                    x.SignalID == signal.SignalID && x.PhaseID != null &&
+                                    (int) x.PhaseID == phase.PhaseNumber && x.TypeOfAlert == AlertType.PedActivation))
+                                {
+                                    CheckForStuckPed(phase, signal);
+                                }
+                                
                             }
                             catch (Exception e)
                             {
@@ -165,7 +190,11 @@ namespace MOE.Common.Business.WatchDog
             var options = new ParallelOptions();
             options.MaxDegreeOfParallelism = Settings.MaxDegreeOfParallelism;
 
-            Parallel.ForEach(SignalsWithRecords, options, signal => { CheckForLowDetectorHits(signal); }
+            var signalsToCheck = SignalsWithRecords.Where(signal =>
+                !Exclusions.Exists(x => x.SignalID == signal.SignalID && x.TypeOfAlert == AlertType.AdvancedDetection));
+            var concurrentSignalsToCheck = new ConcurrentBag<Signal>(signalsToCheck);
+
+            Parallel.ForEach(concurrentSignalsToCheck, options, signal => { CheckForLowDetectorHits(signal); }
             );
         }
 
@@ -174,7 +203,7 @@ namespace MOE.Common.Business.WatchDog
             var options = new ParallelOptions();
             //options.MaxDegreeOfParallelism = Settings.MaxDegreeOfParallelism;
            // Parallel.ForEach(signals, options, signal =>
-            foreach (var signal in signals)
+            foreach (var signal in signals.Where(sig => !Exclusions.Exists(x => x.SignalID == sig.SignalID && x.TypeOfAlert == AlertType.MinimumRecords)))
             {
                 try
                 {
