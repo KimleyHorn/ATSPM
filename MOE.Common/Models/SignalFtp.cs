@@ -965,7 +965,7 @@ namespace MOE.Common.Business
                 //string username = Signal.ControllerType.UserName;
                 //string password = Signal.ControllerType.Password;
                 string remoteDirectory = Signal.ControllerType.FTPDirectory;
-                string localDirectory = SignalFtpOptions.LocalDirectory;
+                string localDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID;
                 using (SftpClient sftp = new SftpClient(host, username, password))
                 {
                     try

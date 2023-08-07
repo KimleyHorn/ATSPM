@@ -129,7 +129,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ATSPM.Application.ReportsTe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParquetArchiver", "ParquetArchiver\ParquetArchiver.csproj", "{F6B5959B-3D44-43A7-AD98-E390904CC53D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STFPFromAllControllers", "STFPFromAllControllers\STFPFromAllControllers.csproj", "{2D4A8B4C-0F52-400F-9065-839C4F508032}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFTPFromAllControllers", "STFPFromAllControllers\SFTPFromAllControllers.csproj", "{2D4A8B4C-0F52-400F-9065-839C4F508032}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
