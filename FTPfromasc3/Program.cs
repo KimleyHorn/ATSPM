@@ -75,6 +75,10 @@ namespace FTPfromAllControllers
                                     "Error At Highest Level for signal " + signal.SignalID);
                             }
                         }
+                        else
+                        {
+                            Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable");
+                        }
                     }
                     catch (AggregateException ex)
                     {
