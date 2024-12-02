@@ -1,10 +1,12 @@
 ﻿//extern alias SharpSNMP; 
 
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -411,8 +413,8 @@ namespace MOE.Common.Business
             {
                 try
                 {
-                    ftpClient.DeleteFile(Signal.ControllerType.FTPDirectory + "/" + ftpFile);
-                    //Console.Write("For Signal {0], this file is deleted: {1}\r", Signal.SignalID, ftpFile); 
+                        ftpClient.DeleteFile(Signal.ControllerType.FTPDirectory + "/" + ftpFile);
+                        //Console.Write("For Signal {0], this file is deleted: {1}\r", Signal.SignalID, ftpFile); 
                 }
                 catch (AggregateException)
                 {
@@ -954,10 +956,20 @@ namespace MOE.Common.Business
                     password = reader.ReadLine();
                 }
             }
-            catch (IOException e)
+            catch (FileNotFoundException ex)
             {
-                Console.WriteLine("An error occurred while reading the file:");
-                Console.WriteLine(e.Message);
+                Console.WriteLine("Error: File not found.");
+                Console.WriteLine(ex.Message);
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine("Error: An I/O error occurred.");
+                Console.WriteLine(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("An unexpected error occurred.");
+                Console.WriteLine(ex.Message);
             }
 
             // run the sftp fetch operation async
@@ -1085,6 +1097,8 @@ namespace MOE.Common.Business
             var errorRepository = ApplicationEventRepositoryFactory.Create();
             try
             {
+                var finalFile = receivedFiles.OrderByDescending(x => x.FullName);
+                var mostRecentFile = finalFile.First();
                 foreach (var ret in receivedFiles)
                 {
                     // FullName will include full path in sFTP
@@ -1102,7 +1116,8 @@ namespace MOE.Common.Business
                         //remove file in remote directory
                         Console.WriteLine("deleting {0} in sFTP instance", remoteFileName);
                         //delete file in remote sFTP directory
-                        if (client.Exists(remoteFileName))
+                        if (client.Exists(remoteFileName) &&
+                            !(SignalFtpOptions.SkipCurrentLog && mostRecentFile == ret))
                         {
                             client.DeleteFile(remoteFileName);
                         }
@@ -1115,13 +1130,17 @@ namespace MOE.Common.Business
             catch (FtpException ex)
             {
                 //capture if there is any sFTP related exception
-                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles", ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
+                    ApplicationEvent.SeverityLevels.Medium,
+                    Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
                 Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
             }
             catch (IOException ex)
             {
                 //capture if there is any file IO exception
-                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles", ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
+                    ApplicationEvent.SeverityLevels.Medium,
+                    Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
                 Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
             }
         }
