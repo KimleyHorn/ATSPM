@@ -1021,6 +1021,7 @@ namespace MOE.Common.Business
                 //string username = Signal.ControllerType.UserName;
                 //string password = Signal.ControllerType.Password;
                 string remoteDirectory = Signal.ControllerType.FTPDirectory;
+                string UserName = Signal.ControllerType.UserName;
                 string localDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\";
 
                 try
@@ -1029,7 +1030,7 @@ namespace MOE.Common.Business
                     {
                         SshHostKeyFingerprint = fingerprint,
                         Protocol = Protocol.Sftp,
-                        UserName = "tester",
+                        UserName = UserName,
                         SshPrivateKeyPath = PPKLocation,
                         HostName = Signal.IPAddress
                     };
