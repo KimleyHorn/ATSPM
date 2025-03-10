@@ -1041,7 +1041,7 @@ namespace MOE.Common.Business
                     {
                         SshHostKeyFingerprint = fingerprint,
                         Protocol = Protocol.Sftp,
-                        UserName = "tester",
+                        UserName = Signal.ControllerType.UserName,
                         SshPrivateKeyPath = PPKLocation,
                         HostName = Signal.IPAddress
                     };
