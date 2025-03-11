@@ -91,7 +91,7 @@ namespace STFPFromAllControllers
             {
                 var signals = signalsRepository.GetLatestVersionOfAllSignalsForSftp();
                 Parallel.ForEach(signals.AsEnumerable(), options, signal =>
-                    //foreach (var signal in signals)
+                //foreach (var signal in signals)
                 {
                     try
                     {
@@ -118,19 +118,19 @@ namespace STFPFromAllControllers
                                     MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
                                     "Error At Highest Level for signal " + signal.SignalID);
                             }
+
+                        }
+                        else
+                        {
+                            Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable");
                         }
                     }
-                    else
+                    catch (AggregateException ex)
                     {
-                        Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable" );
-                    }
-                }
-                catch (AggregateException ex)
-                {
-                    Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-                    errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
-                        MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
-                        "Error At Highest Level for signal " + signal.SignalID);
+                        Console.WriteLine("Error At Highest Level for signal " + ex.Message);
+                        errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
+                            MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
+                            "Error At Highest Level for signal " + signal.SignalID);
                     }
 
                     //}
