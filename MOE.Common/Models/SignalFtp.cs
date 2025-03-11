@@ -195,6 +195,9 @@ namespace MOE.Common.Business
                 try
                 {
                     ftpClient.Connect();
+                    Console.WriteLine( "Setting the CWD");
+                    ftpClient.SetWorkingDirectory("/");
+                    Console.WriteLine("Set the CWD to " + ftpClient.GetWorkingDirectory());
                 }
                 catch (AggregateException)
                 {
@@ -304,11 +307,28 @@ namespace MOE.Common.Business
                     }
                     //ftp.Close(); 
                 }
-
                 else
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
+                    if (!ftpClient.IsConnected)
+                    {
+                        Console.WriteLine("ftp didn't connect!");
+                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot connect to FTP server");
+                    }
+                    else
+                    {
+                        var currentFtpDirectory = ftpClient.GetWorkingDirectory();
+                        Console.WriteLine("Directory doesn't exist");
+                        //list existing directories and create an error message and log it.
+                        var dirs = ftpClient.GetListing("/");
+                        var errorDescription = "Available Directories: ";
+                        foreach (var dir in dirs)
+                        {
+                            errorDescription += dir.Name + ", ";
+                        }
+                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory + " " + errorDescription + " Tested Directory: " + ".." + Signal.ControllerType.FTPDirectory + " CurrentWorkingDirectory: " + currentFtpDirectory);
+                    }
+                    //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
+                    //Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
                     return;
                 }
                 //Turn Logging off. 
