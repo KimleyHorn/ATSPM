@@ -120,13 +120,17 @@ namespace STFPFromAllControllers
                             }
                         }
                     }
-                    catch (AggregateException ex)
+                    else
                     {
-                        Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-                        errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
-                            MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
-                            "Error At Highest Level for signal " + signal.SignalID);
-
+                        Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable" );
+                    }
+                }
+                catch (AggregateException ex)
+                {
+                    Console.WriteLine("Error At Highest Level for signal " + ex.Message);
+                    errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
+                        MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
+                        "Error At Highest Level for signal " + signal.SignalID);
                     }
 
                     //}
