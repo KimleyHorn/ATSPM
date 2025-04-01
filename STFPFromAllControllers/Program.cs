@@ -64,7 +64,7 @@ namespace STFPFromAllControllers
                             try
                             {
                                 signalFtp.GetCubicFilesAsyncPpk(signalFtpOptions.PpkLocation,
-                                    signalFtpOptions.SshFingerprint);
+                                    true);
                             }
                             catch (AggregateException ex)
                             {

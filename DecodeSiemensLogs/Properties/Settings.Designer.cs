@@ -158,5 +158,11 @@ namespace DecodeSiemensLogs.Properties {
                 return ((string)(this["SPM"]));
             }
         }
+        
+        public int PerfLogOffset {
+            get {
+                return ((int)(this["PerfLogOffset"]));
+            }
+        }
     }
 }

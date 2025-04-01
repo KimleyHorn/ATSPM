@@ -443,6 +443,14 @@ namespace DecodeSiemensLogs
                 .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day) // Log to a file (optional)
                 .CreateLogger();
             new Program().FindFiles();
+            var offset = Properties.Settings.Default.PerfLogOffset;
+            //wait 30 seconds here and coutndown
+            for (int i = offset; i > 0; i--)
+            {
+                Console.WriteLine($"Waiting for {offset} seconds before saving events. " + i + " seconds remaining.");
+                Thread.Sleep(1000);
+            }
+            Thread.Sleep(15000);
             new Program().SaveEvents();
         }
 

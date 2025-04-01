@@ -1040,7 +1040,7 @@ namespace MOE.Common.Business
             
         }
 
-        public void GetCubicFilesAsyncPpk(string filePath, string fingerprint)
+        public void GetCubicFilesAsyncPpk(string filePath, bool acceptAnyFingerprint = false)
         {
             var errorRepository = ApplicationEventRepositoryFactory.Create();
             var PPKLocation = filePath;
@@ -1048,10 +1048,7 @@ namespace MOE.Common.Business
             // run the sftp fetch operation async
             Thread sftpFetch = new Thread(delegate ()
             {
-                // to-do: replace with common data access to access signal IP in batch from ATSPM DB
                 string host = Signal.IPAddress;
-                //string username = Signal.ControllerType.UserName;
-                //string password = Signal.ControllerType.Password;
                 string remoteDirectory = Signal.ControllerType.FTPDirectory;
                 string UserName = Signal.ControllerType.UserName;
                 string localDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\";
@@ -1060,12 +1057,56 @@ namespace MOE.Common.Business
                 {
                     WinSCP.SessionOptions sessionOptions = new WinSCP.SessionOptions
                     {
-                        SshHostKeyFingerprint = fingerprint,
                         Protocol = Protocol.Sftp,
                         UserName = Signal.ControllerType.UserName,
                         SshPrivateKeyPath = PPKLocation,
                         HostName = Signal.IPAddress
                     };
+
+                    // If we want to accept any fingerprint
+                    if (acceptAnyFingerprint)
+                    {
+                        // Accept any SSH host key
+                        sessionOptions.GiveUpSecurityAndAcceptAnySshHostKey = true;
+                    }
+                    // Otherwise, if we want to retrieve the fingerprint first
+                    else
+                    {
+                        try
+                        {
+                            using (WinSCP.Session tempSession = new WinSCP.Session())
+                            {
+                                // This will throw an exception with fingerprint information
+                                tempSession.Open(sessionOptions);
+                            }
+                        }
+                        catch (SessionRemoteException ex)
+                        {
+                            // Extract fingerprint from the exception message
+                            // The message typically contains "The server's host key was not found in the cache... fingerprint: xx:xx:xx:xx..."
+                            string exMessage = ex.Message;
+                            int fingerprintIndex = exMessage.IndexOf("fingerprint:");
+
+                            if (fingerprintIndex > 0)
+                            {
+                                // Extract the fingerprint part
+                                string fingerprint = exMessage.Substring(fingerprintIndex + "fingerprint:".Length).Trim();
+                                // Clean up the fingerprint (remove any extra text after it)
+                                fingerprint = fingerprint.Split(' ')[0];
+
+                                // Now use this fingerprint
+                                sessionOptions.SshHostKeyFingerprint = fingerprint;
+
+                                // Optionally, you could store this for future use
+                                Console.WriteLine($"Retrieved fingerprint: {fingerprint}");
+                            }
+                            else
+                            {
+                                throw new Exception("Could not extract SSH fingerprint from error message");
+                            }
+                        }
+                    }
+
                     sessionOptions.AddRawSettings("TryAgent", "0");
                     sessionOptions.AddRawSettings("AuthKI", "0");
                     sessionOptions.AddRawSettings("AuthGSSAPI", "0");
@@ -1074,13 +1115,10 @@ namespace MOE.Common.Business
                     using (WinSCP.Session session = new WinSCP.Session())
                     {
                         session.Open(sessionOptions);
-
                         TransferOptions transferOptions = new TransferOptions();
                         transferOptions.TransferMode = TransferMode.Binary;
-
                         TransferOperationResult transferResult;
-                        transferResult =
-                            session.GetFiles(remoteDirectory, localDirectory, false, transferOptions);
+                        transferResult = session.GetFiles(remoteDirectory, localDirectory, false, transferOptions);
 
                         // Throw on any error
                         transferResult.Check();
@@ -1090,7 +1128,6 @@ namespace MOE.Common.Business
                         {
                             Console.WriteLine("Download of {0} succeeded", transfer.FileName);
                         }
-
                     }
                 }
                 catch (Exception e)
@@ -1098,8 +1135,8 @@ namespace MOE.Common.Business
                     Console.WriteLine(e);
                     throw;
                 }
-
             });
+
             try
             {
                 sftpFetch.Start();
@@ -1109,7 +1146,6 @@ namespace MOE.Common.Business
                 Console.WriteLine(e);
                 throw;
             }
-
         }
 
         private void TransferCubicFiles(List<SftpFile> receivedFiles, string directory, SftpClient client)
