@@ -19,6 +19,7 @@ using Parquet;
 using Parquet.Data;
 using MailMessage = System.Net.Mail.MailMessage;
 using Google.Cloud.Storage.V1;
+using Serilog;
 
 namespace ParquetArchiver
 {
@@ -38,6 +39,7 @@ namespace ParquetArchiver
         private const string START_DATE = "StartDate";
         private const string END_DATE = "EndDate";
         private const string LOCAL_ARCHIVE_DIRECTORY = "LocalArchiveDirectory";
+        private const string LOG_PATH = "LogPath";
         private const string USE_START_AND_END_DATES = "UseStartAndEndDates";
         private const string DAYS_AGO_TO_RUN = "DaysAgoToRun";
         private const string SEND_COMPLETION_EMAIL = "SendCompletionEmail";
@@ -55,7 +57,10 @@ namespace ParquetArchiver
         {
             if (StorageLocation == "-1")
                 return;
-
+            Log.Logger = new LoggerConfiguration()
+                            .WriteTo.Console()
+                            .WriteTo.File(ParquetArchive.GetSetting(LOG_PATH) + "\\ParquetArchiveLog.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
+                            .CreateLogger();
             //var db = new SPM();
 
             //var signalsRepository = SignalsRepositoryFactory.Create(db);
@@ -70,7 +75,7 @@ namespace ParquetArchiver
             }
             catch (Exception)
             {
-                WriteToLog("UseStartAndEndDates was not a valid value. Values are 0 or 1.");
+                Log.Error("UseStartAndEndDates was not a valid value. Values are 0 or 1.");
                 return;
             }
 
@@ -82,7 +87,7 @@ namespace ParquetArchiver
                 }
                 catch (Exception)
                 {
-                    WriteToLog("StartDate not in a valid format. Format must be mm/dd/yyyy");
+                    Log.Error("StartDate not in a valid format. Format must be mm/dd/yyyy");
                     return;
                 }
 
@@ -92,7 +97,7 @@ namespace ParquetArchiver
                 }
                 catch (Exception)
                 {
-                    WriteToLog("EndDate not in a valid format. Format must be mm/dd/yyyy");
+                    Log.Error("EndDate not in a valid format. Format must be mm/dd/yyyy");
                     return;
                 }
             }
@@ -107,7 +112,7 @@ namespace ParquetArchiver
                 }
                 catch (Exception)
                 {
-                    WriteToLog("DaysToKeep was not a whole number");
+                    Log.Error("DaysToKeep was not a whole number");
                     return;
                 }
 
@@ -126,7 +131,7 @@ namespace ParquetArchiver
             await Archive(dateList, StorageLocation);
 
             totalWatch.Stop();
-            WriteToLog($"All data converted in {totalWatch.ElapsedMilliseconds / 1000} seconds");
+            Log.Information($"All data converted in {totalWatch.ElapsedMilliseconds / 1000} seconds");
 
             try
             {
@@ -134,12 +139,7 @@ namespace ParquetArchiver
             }
             catch (Exception ex)
             {
-                WriteToLog("Error sending email");
-                WriteToLog(ex.Message);
-                if (ex.InnerException?.Message != null)
-                {
-                    WriteToLog(ex.InnerException?.Message);
-                }
+                Log.Error(ex, "Error sending email");
             }
 
             if (Environment.UserInteractive)
@@ -154,10 +154,10 @@ namespace ParquetArchiver
             {
                 try
                 {
-                    WriteToLog("Getting distinct signals in event log table.");
+                    Log.Information("Getting distinct signals in event log table.");
                     var eventLogRepo = ControllerEventLogRepositoryFactory.Create();
                     var signalsToArchive = eventLogRepo.GetSignalIdsInControllerEventLog(date, date + TimeSpan.FromDays(1));
-                    WriteToLog($"{signalsToArchive.Count} signals found on {date.ToLongDateString()}.");
+                    Log.Information($"{signalsToArchive.Count} signals found on {date.ToLongDateString()}.");
                     
                     var tasks = signalsToArchive.Select(async signal =>
                     {
@@ -166,7 +166,7 @@ namespace ParquetArchiver
                         {
                             var watch = new Stopwatch();
                             watch.Start();
-                            Console.WriteLine(
+                            Log.Information(
                                 $"Started Writing {signal}: for {date.ToShortDateString()}");
 
                             var eventLogRepository = ControllerEventLogRepositoryFactory.Create();
@@ -188,18 +188,18 @@ namespace ParquetArchiver
                                         await SaveToAzure(signal, events, date);
                                         break;
                                     default:
-                                        Console.WriteLine("Invalid storage location specified, returning");
+                                        Log.Information("Invalid storage location specified, returning");
                                         return;
                                 }
                             }
 
                             watch.Stop();
-                            Console.WriteLine(
+                            Log.Information(
                                 $"Finished writing {signal}: for {date.ToShortDateString()} in {watch.ElapsedMilliseconds / 1000} seconds");
                         }
                         catch (Exception ex)
                         {
-                            WriteToLog($"Error archiving {signal} on {date.ToLongDateString()}: {ex.Message}");
+                            Log.Error($"Error archiving {signal} on {date.ToLongDateString()}: {ex.Message}");
                         }
                         finally
                         {
@@ -209,11 +209,11 @@ namespace ParquetArchiver
 
                     await Task.WhenAll(tasks);
 
-                    WriteToLog($"Data conversion complete for {date.ToLongDateString()}");
+                    Log.Information($"Data conversion complete for {date.ToLongDateString()}");
                 }
                 catch (Exception ex)
                 {
-                    WriteToLog($"Error archiving {date.ToLongDateString()}: {ex.Message}");
+                    Log.Error($"Error archiving {date.ToLongDateString()}: {ex.Message}");
                 }
             }
         }
@@ -266,13 +266,7 @@ namespace ParquetArchiver
                         catch (Exception ex)
                         {
                             //Sleep and retry
-                            WriteToLog(
-                                $"Initial save: Error saving {signal} on {date.ToShortDateString()}");
-                            WriteToLog($"{ex.Message}");
-                            if (ex.InnerException?.Message != null)
-                            {
-                                WriteToLog(ex.InnerException?.Message);
-                            }
+                            Log.Error(ex, $"Initial save: Error saving {signal} on {date.ToShortDateString()}");
 
                             Thread.Sleep(10000);
 
@@ -290,13 +284,7 @@ namespace ParquetArchiver
                             }
                             catch (Exception ex2)
                             {
-                                WriteToLog(
-                                    $"Retry: Error saving {signal} on {date.ToShortDateString()}");
-                                WriteToLog($"{ex2.Message}");
-                                if (ex2.InnerException?.Message != null)
-                                {
-                                    WriteToLog(ex2.InnerException?.Message);
-                                }
+                                Log.Error(ex, $"Retry: Error saving {signal} on {date.ToShortDateString()}");
                             }
                         }
                     }
@@ -304,7 +292,7 @@ namespace ParquetArchiver
             }
             catch (Exception ex)
             {
-                WriteToLog(ex.Message + "\n" + ex.InnerException?.Message);
+                Log.Error(ex.Message + "\n" + ex.InnerException?.Message);
             }
 
         }
@@ -329,12 +317,7 @@ namespace ParquetArchiver
             }
             catch (Exception ex)
             {
-                WriteToLog($"Error saving {signal} on {date.ToShortDateString()}");
-                WriteToLog($"{ex.Message}");
-                if (ex.InnerException?.Message != null)
-                {
-                    WriteToLog(ex.InnerException?.Message);
-                }
+                Log.Error(ex, $"Error saving {signal} on {date.ToShortDateString()}");
             }
         }
 
@@ -365,13 +348,7 @@ namespace ParquetArchiver
             }
             catch (Exception ex)
             {
-                WriteToLog(
-                $"Retry: Error saving {signal} on {date.ToShortDateString()}");
-                WriteToLog($"{ex.Message}");
-                if (ex.InnerException?.Message != null)
-                {
-                    WriteToLog(ex.InnerException?.Message);
-                }
+                Log.Error(ex, $"Retry: Error saving {signal} on {date.ToShortDateString()}");
             }
         }
 
@@ -393,13 +370,7 @@ namespace ParquetArchiver
             }
             catch (Exception ex)
             {
-                WriteToLog(
-                $"Retry: Error saving {signal} on {date.ToShortDateString()}");
-                WriteToLog($"{ex.Message}");
-                if (ex.InnerException?.Message != null)
-                {
-                    WriteToLog(ex.InnerException?.Message);
-                }
+                Log.Error(ex, $"Retry: Error saving {signal} on {date.ToShortDateString()}");
             }
         }
 
@@ -408,7 +379,7 @@ namespace ParquetArchiver
             var daysBackToCheck = int.Parse(ParquetArchive.GetSetting(DAYS_BACK_TO_CHECK));
             if (daysBackToCheck == 0)
                 return new List<DateTime>();
-            WriteToLog($"Going back {daysBackToCheck} for missing days");
+            Log.Information($"Going back {daysBackToCheck} for missing days");
             var dateRange = GetDateRange(start.AddDays(-daysBackToCheck), start.AddDays(-1));
             switch (StorageLocation)
             {
@@ -417,18 +388,39 @@ namespace ParquetArchiver
                 case "1":
                     return CheckGoogleMissingFiles(dateRange);
                 case "2":
-                    WriteToLog("Missing days for AWS Not implemented yet");
+                    Log.Error("Missing days for AWS Not implemented yet");
                     break;
                 case "3":
-                    WriteToLog("Missing days for Azure Not implemented yet");
-                    break;
+                    return CheckAzureMissingFiles(dateRange);
             }
             return new List<DateTime>();
         }
 
+        private static IEnumerable<DateTime> CheckAzureMissingFiles(IEnumerable<DateTime> dateRange)
+        {
+            Log.Information("Checking azure for missing days.");
+            var blobServiceClient = new BlobServiceClient(ConfigurationManager.AppSettings["AZURE_CONN_STRING"]);
+            var container = blobServiceClient.GetBlobContainerClient(Container);
+            var retVal = new List<DateTime>();
+            foreach (var date in dateRange)
+            {
+                var path = $"{FolderName}{FilePathPrefix}={date.Date:yyyy-MM-dd}";
+                var storageObjects = container.GetBlobs(prefix: path);
+                if (!storageObjects.Any())
+                {
+                    retVal.Add(date);
+                    _missingDaysStr += $"{date.ToLongDateString()}\n";
+                    _wereDaysMissing = true;
+                    Log.Information($"{date.ToLongDateString()} missing, adding to current run");
+                }
+            }
+            return retVal;
+        }
+
+
         private static List<DateTime> CheckLocalMissingFiles(IEnumerable<DateTime> dateRange)
         {
-            WriteToLog("Checking local storage for missing days.");
+            Log.Information("Checking local storage for missing days.");
             var localPath = ParquetArchive.GetSetting(LOCAL_ARCHIVE_DIRECTORY);
             var retVal = new List<DateTime>();
 
@@ -439,7 +431,7 @@ namespace ParquetArchiver
                     retVal.Add(date);
                     _missingDaysStr += $"{date.ToLongDateString()}\n";
                     _wereDaysMissing = true;
-                    WriteToLog($"{date.ToLongDateString()} missing, adding to current run");
+                    Log.Information($"{date.ToLongDateString()} missing, adding to current run");
                 }
             }
 
@@ -449,7 +441,7 @@ namespace ParquetArchiver
         private static List<DateTime> CheckGoogleMissingFiles(IEnumerable<DateTime> dateRange)
         {
             Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", ConfigurationManager.AppSettings["GoogleAppCredentialsLocation"]);
-            WriteToLog("Checking Google Cloud storage for missing days.");
+            Log.Information("Checking Google Cloud storage for missing days.");
             var storage = StorageClient.Create();
             var retVal = new List<DateTime>();
             foreach (var date in dateRange)
@@ -460,7 +452,7 @@ namespace ParquetArchiver
                     retVal.Add(date);
                     _missingDaysStr += $"{date.ToLongDateString()}\n";
                     _wereDaysMissing = true;
-                    WriteToLog($"{date.ToLongDateString()} missing, adding to current run");
+                    Log.Information($"{date.ToLongDateString()} missing, adding to current run");
                 }
             }
             return retVal;
@@ -530,14 +522,5 @@ namespace ParquetArchiver
             }
         }
 
-        private static void WriteToLog(string message)
-        {
-            var localPath = ParquetArchive.GetSetting(LOCAL_ARCHIVE_DIRECTORY);
-            using (var writer = File.AppendText($"{localPath}\\log.txt"))
-            {
-                writer.WriteLine($"{DateTime.Now}: {message}");
-            }
-            Console.WriteLine(message);
-        }
     }
 }
