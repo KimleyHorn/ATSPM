@@ -166,7 +166,7 @@ namespace ParquetArchiver
                         {
                             var watch = new Stopwatch();
                             watch.Start();
-                            Console.WriteLine(
+                            Log.Information(
                                 $"Started Writing {signal}: for {date.ToShortDateString()}");
 
                             var eventLogRepository = ControllerEventLogRepositoryFactory.Create();
@@ -188,13 +188,13 @@ namespace ParquetArchiver
                                         await SaveToAzure(signal, events, date);
                                         break;
                                     default:
-                                        Console.WriteLine("Invalid storage location specified, returning");
+                                        Log.Information("Invalid storage location specified, returning");
                                         return;
                                 }
                             }
 
                             watch.Stop();
-                            Console.WriteLine(
+                            Log.Information(
                                 $"Finished writing {signal}: for {date.ToShortDateString()} in {watch.ElapsedMilliseconds / 1000} seconds");
                         }
                         catch (Exception ex)
