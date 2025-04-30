@@ -680,20 +680,7 @@ namespace DecodeSiemensLogs
                     bool isDayligtSavings = localZone.IsDaylightSavingTime(currentDate);
                     bool isArizona = TimeZoneInfo.Local.Id == "US Mountain Standard Time" || TimeZoneInfo.Local.DisplayName.Contains("Arizona");
                     Console.WriteLine(dataFmt, "Daylight saving time?", isDayligtSavings);
-
                     //var dstOffset = Math.Abs(DateTimeOffset.Now.Offset.Hours);
-                    WriteToConsole("Starting signal " + dirname);
-                    // Get Eastern Time Zone
-                    //TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
-                    //DateTime currentDate = DateTime.Now;
-                    //const string dataFmt = "{0,-30}{1}";
-
-                    //// Check if Eastern timezone is in Daylight Saving Time
-                    //Console.WriteLine(dataFmt, "Daylight saving time?", easternZone.IsDaylightSavingTime(currentDate));
-
-                    //// Convert current time to Eastern time
-                    //DateTime easternTime = TimeZoneInfo.ConvertTime(currentDate, easternZone);
-                    //Console.WriteLine(dataFmt, "Eastern time:", easternTime.ToString());
 
                     WriteToConsole("Starting signal " + dirname);
                     var options1 = new ParallelOptions
