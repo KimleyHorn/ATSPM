@@ -1123,11 +1123,34 @@ namespace MOE.Common.Business
                         // Throw on any error
                         transferResult.Check();
 
-                        // Print results
-                        foreach (TransferEventArgs transfer in transferResult.Transfers)
+                        if (SignalFtpOptions.DeleteAfterFtp)
                         {
-                            Console.WriteLine("Download of {0} succeeded", transfer.FileName);
+                            foreach (TransferEventArgs transfer in transferResult.Transfers)
+                            {
+                                Console.WriteLine("Download of {0} succeeded", transfer.FileName);
+
+                                // Construct the full remote path
+                                string remoteFilePath = transfer.FileName;
+
+                                // Make sure we use proper path format based on the server OS
+                                remoteFilePath = remoteFilePath.Replace('\\', '/');
+
+                                // Delete the transferred file
+                                RemovalOperationResult removalResult = session.RemoveFiles(remoteFilePath);
+
+                                // Check for removal errors
+                                try
+                                {
+                                    removalResult.Check();
+                                    Console.WriteLine("Successfully deleted: {0}", remoteFilePath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine("Failed to delete {0}: {1}", remoteFilePath, ex.Message);
+                                }
+                            }
                         }
+                        // Print results and delete each file
                     }
                 }
                 catch (Exception e)

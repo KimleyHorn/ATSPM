@@ -674,7 +674,27 @@ namespace DecodeSiemensLogs
                     string[] strsplit = dir.Split(new char[] { '\\' });
                     string dirname = strsplit.Last();
                     string sigid = dirname;
-                    var dstOffset = Math.Abs(DateTimeOffset.Now.Offset.Hours);
+                    var localZone = TimeZone.CurrentTimeZone;
+                    DateTime currentDate = DateTime.Now;
+                    const string dataFmt = "{0,-30}{1}";
+                    bool isDayligtSavings = localZone.IsDaylightSavingTime(currentDate);
+                    bool isArizona = TimeZoneInfo.Local.Id == "US Mountain Standard Time" || TimeZoneInfo.Local.DisplayName.Contains("Arizona");
+                    Console.WriteLine(dataFmt, "Daylight saving time?", isDayligtSavings);
+
+                    //var dstOffset = Math.Abs(DateTimeOffset.Now.Offset.Hours);
+                    WriteToConsole("Starting signal " + dirname);
+                    // Get Eastern Time Zone
+                    //TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                    //DateTime currentDate = DateTime.Now;
+                    //const string dataFmt = "{0,-30}{1}";
+
+                    //// Check if Eastern timezone is in Daylight Saving Time
+                    //Console.WriteLine(dataFmt, "Daylight saving time?", easternZone.IsDaylightSavingTime(currentDate));
+
+                    //// Convert current time to Eastern time
+                    //DateTime easternTime = TimeZoneInfo.ConvertTime(currentDate, easternZone);
+                    //Console.WriteLine(dataFmt, "Eastern time:", easternTime.ToString());
+
                     WriteToConsole("Starting signal " + dirname);
                     var options1 = new ParallelOptions
                         { MaxDegreeOfParallelism = Convert.ToInt32(Properties.Settings.Default.MaxThreads) };
@@ -734,9 +754,17 @@ namespace DecodeSiemensLogs
                                 try
                                 {
                                     timeStamp = Convert.ToDateTime(lineSplit[0]);
-                                    //Siemens decoder is converting to local time from UTC, so convert back to local time
+                                    //Siemens decoder is converting to local time from UTC, so convert back to UTC time
                                     //Not perfect during DST transitions (at 2:00 AM twice per year)
-                                    timeStamp = timeStamp + TimeSpan.FromHours(dstOffset);
+                                    //timeStamp = timeStamp + TimeSpan.FromHours(dstOffset);
+                                    if (isDayligtSavings || isArizona)
+                                    {
+                                        timeStamp = timeStamp.AddHours(-1);
+                                    }
+                                    else
+                                    {
+                                        timeStamp = timeStamp.AddHours(-2);
+                                    }
                                     if (timeStamp < lastrecords[sigid])
                                     {
                                         skippedrecords++;
