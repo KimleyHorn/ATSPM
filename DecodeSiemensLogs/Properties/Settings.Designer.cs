@@ -158,7 +158,10 @@ namespace DecodeSiemensLogs.Properties {
                 return ((string)(this["SPM"]));
             }
         }
-        
+
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("180")]
         public int PerfLogOffset {
             get {
                 return ((int)(this["PerfLogOffset"]));
