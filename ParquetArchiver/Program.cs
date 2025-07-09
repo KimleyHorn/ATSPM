@@ -59,7 +59,7 @@ namespace ParquetArchiver
                 return;
             Log.Logger = new LoggerConfiguration()
                             .WriteTo.Console()
-                            .WriteTo.File(ParquetArchive.GetSetting(LOG_PATH) + "\\ParquetArchiveLog.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
+                            .WriteTo.File(ParquetArchive.GetSetting(LOG_PATH) + "\\ParquetArchiveLog.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
                             .CreateLogger();
             //var db = new SPM();
 
