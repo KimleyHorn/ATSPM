@@ -443,6 +443,14 @@ namespace DecodeSiemensLogs
                 .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day) // Log to a file (optional)
                 .CreateLogger();
             new Program().FindFiles();
+            var offset = Properties.Settings.Default.PerfLogOffset;
+            //wait 30 seconds here and coutndown
+            for (int i = offset; i > 0; i--)
+            {
+                Console.WriteLine($"Waiting for {offset} seconds before saving events. " + i + " seconds remaining.");
+                Thread.Sleep(1000);
+            }
+            Thread.Sleep(15000);
             new Program().SaveEvents();
         }
 
@@ -666,7 +674,14 @@ namespace DecodeSiemensLogs
                     string[] strsplit = dir.Split(new char[] { '\\' });
                     string dirname = strsplit.Last();
                     string sigid = dirname;
-                    var dstOffset = Math.Abs(DateTimeOffset.Now.Offset.Hours);
+                    var localZone = TimeZone.CurrentTimeZone;
+                    DateTime currentDate = DateTime.Now;
+                    const string dataFmt = "{0,-30}{1}";
+                    bool isDayligtSavings = localZone.IsDaylightSavingTime(currentDate);
+                    bool isArizona = TimeZoneInfo.Local.Id == "US Mountain Standard Time" || TimeZoneInfo.Local.DisplayName.Contains("Arizona");
+                    Console.WriteLine(dataFmt, "Daylight saving time?", isDayligtSavings);
+                    //var dstOffset = Math.Abs(DateTimeOffset.Now.Offset.Hours);
+
                     WriteToConsole("Starting signal " + dirname);
                     var options1 = new ParallelOptions
                         { MaxDegreeOfParallelism = Convert.ToInt32(Properties.Settings.Default.MaxThreads) };
@@ -726,9 +741,17 @@ namespace DecodeSiemensLogs
                                 try
                                 {
                                     timeStamp = Convert.ToDateTime(lineSplit[0]);
-                                    //Siemens decoder is converting to local time from UTC, so convert back to local time
+                                    //Siemens decoder is converting to local time from UTC, so convert back to UTC time
                                     //Not perfect during DST transitions (at 2:00 AM twice per year)
-                                    timeStamp = timeStamp + TimeSpan.FromHours(dstOffset);
+                                    //timeStamp = timeStamp + TimeSpan.FromHours(dstOffset);
+                                    if (isDayligtSavings || isArizona)
+                                    {
+                                        timeStamp = timeStamp.AddHours(-1);
+                                    }
+                                    else
+                                    {
+                                        timeStamp = timeStamp.AddHours(-2);
+                                    }
                                     if (timeStamp < lastrecords[sigid])
                                     {
                                         skippedrecords++;
