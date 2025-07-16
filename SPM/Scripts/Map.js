@@ -27,10 +27,10 @@
             })
             .then(style => {
                 // 4)  use the v2 Vector Tile endpoint
-                style.sources.vectorTiles.tiles = [
-                    // Vector Tile v2 URL
-                    `https://api.tomtom.com/map/2/tile/basic/{z}/{x}/{y}.pbf?key=${apiKey}`
-                ];
+                //style.sources.vectorTiles.tiles = [
+                //    // Vector Tile v2 URL
+                //    `https://api.tomtom.com/map/2/tile/basic/{z}/{x}/{y}.pbf?key=${apiKey}`
+                //];
                 style.glyphs =
                     `https://api.tomtom.com/maps/orbis/assets/fonts/0.*/{fontstack}/{range}.pbf` +
                     `?key=${apiKey}&apiVersion=1`;
@@ -53,7 +53,39 @@
                             return res.json();
                         })
                         .then(signals => {
-                            const features = signals.map(s => ({
+                            function toNum(v) {
+                                const n = parseFloat(v);
+                                return Number.isFinite(n) ? n : null;
+                            }
+                            function isValidCoord(lon, lat) {
+                                return (
+                                    lon !== null &&
+                                    lat !== null &&
+                                    lon >= -180 && lon <= 180 &&
+                                    lat >= -90 && lat <= 90
+                                );
+                            }
+                            const valid = [], invalid = [];
+                            signals.forEach(s => {
+                                const lon = toNum(s.Longitude);
+                                const lat = toNum(s.Latitude);
+                                if (!isValidCoord(lon, lat)) {
+                                    invalid.push({ id: s.SignalID, rawLon: s.Longitude, rawLat: s.Latitude });
+                                } else {
+                                    valid.push({
+                                        SignalID: s.SignalID,
+                                        PrimaryName: s.PrimaryName,
+                                        SecondaryName: s.SecondaryName,
+                                        Longitude: lon,
+                                        Latitude: lat
+                                    });
+                                }
+                            });
+                            if (invalid.length) {
+                                console.warn('Invalid signals (after parsing):', invalid);
+                            }
+
+                            const features = valid.map(s => ({
                                 type: 'Feature',
                                 properties: {
                                     signalId: s.SignalID,
