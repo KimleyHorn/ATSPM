@@ -103,6 +103,22 @@ namespace SPM.Controllers
             this.metricTypeRepository = metricTypeRepository;
         }
 
+        [HttpGet, AllowAnonymous]
+        public ActionResult GetSignalsForMap()
+        {
+            var signals = _signalsRepository.GetAllSignals()
+                .Select(x => new
+                {
+                    x.SignalID,
+                    x.PrimaryName,
+                    x.SecondaryName,
+                    x.Latitude,
+                    x.Longitude
+                });
+            
+            return Json(signals, JsonRequestBehavior.AllowGet);
+        }
+
         public ActionResult Index()
         {
             MOE.Common.Models.ViewModel.WebConfigTool.WebConfigToolViewModel wctv =
