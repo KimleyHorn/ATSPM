@@ -18,7 +18,7 @@
     function initMap() {
         const styleUrl =
             `https://api.tomtom.com/style/1/style/22.*/?` +
-            `key=${apiKey}&map=2/basic_street-dark`;
+            `key=${apiKey}&map=2/basic_street-light`;
 
         fetch(styleUrl)
             .then(res => {
