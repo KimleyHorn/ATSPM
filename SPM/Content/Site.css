@@ -563,6 +563,14 @@ caption {
     min-height:450px;
 }
 
+.MapDiv canvas {
+    cursor: default;
+}
+
+.MapDiv canvas.pointer-cursor {
+    cursor: pointer;
+}
+
 .Flexible-container {
     position: relative;
     padding-bottom: 56.25%;
