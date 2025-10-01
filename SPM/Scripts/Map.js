@@ -1,6 +1,6 @@
 ﻿// Map-TomTom.js
 (function (window, document) {
-    const apiKey = '';
+    const apiKey = 'J3L0PYtBvPci4B36q2aVL4712eohQbPD';
 
     // 1) Lazy-load MapLibre’s CSS & JS from unpkg
     const css = document.createElement('link');
@@ -19,6 +19,11 @@
         const styleUrl =
             `https://api.tomtom.com/style/1/style/22.*/?` +
             `key=${apiKey}&map=2/basic_street-light`;
+
+        const pathSegments = window.location.pathname.split('/');
+        // The first element after the domain is typically at index 1 (index 0 is an empty string for leading slash)
+        const firstPathElement = pathSegments[1];
+        console.log(firstPathElement); // Example: "blog" if the URL is "https://www.example.com/blog/article"
 
         fetch(styleUrl)
             .then(res => {
@@ -47,7 +52,14 @@
 
                 // **when the map’s style and sources are ready:**
                 map.on('load', () => {
-                    fetch('/Signals/GetSignalsForMap')
+                    const pathSegments = window.location.pathname.split('/');
+                    const firstPathElement = pathSegments[1];
+                    // Use origin to create an absolute URL
+                    const apiUrl = `${window.location.origin}/${firstPathElement}/Signals/GetSignalsForMap`;
+
+                    console.log('Loading signals from:', apiUrl);
+
+                    fetch(apiUrl)
                         .then(res => {
                             if (!res.ok) throw new Error(`Failed to load signals: ${res.status}`);
                             return res.json();
