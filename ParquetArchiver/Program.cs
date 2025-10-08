@@ -220,18 +220,45 @@ namespace ParquetArchiver
 
         private static void SaveToLocalStorage(string signal, List<Controller_Event_Log> events, DateTime date)
         {
+            const int maxRetries = 5;
+            const int retryDelayMs = 10000;
+
             try
             {
                 var localPath = ParquetArchive.GetSetting(LOCAL_ARCHIVE_DIRECTORY);
+                var safeSignal = string.Join("_", signal.Split(Path.GetInvalidFileNameChars()));
 
                 if (!Directory.Exists($"{localPath}\\{FilePathPrefix}={events.First().Timestamp.Date:yyyy-MM-dd}"))
                     Directory.CreateDirectory(
                         $"{localPath}\\{FilePathPrefix}={events.First().Timestamp.Date:yyyy-MM-dd}");
 
-                using (var stream =
-                       File.Create(
-                           $"{localPath}\\{FilePathPrefix}={events.First().Timestamp.Date:yyyy-MM-dd}\\{signal}_{events.First().Timestamp.Date:yyyy-MM-dd}.parquet")
-                      )
+                var filePath = $"{localPath}\\{FilePathPrefix}={events.First().Timestamp.Date:yyyy-MM-dd}\\{safeSignal}_{events.First().Timestamp.Date:yyyy-MM-dd}.parquet";
+
+                Stream stream = null;
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        stream = File.Create(filePath);
+                        Log.Information($"Successfully created file stream for {signal} on attempt {attempt}");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (attempt < maxRetries)
+                        {
+                            Log.Warning(ex, $"Attempt {attempt}/{maxRetries}: Error creating file for {signal} on {date.ToShortDateString()}. Retrying in {retryDelayMs}ms...");
+                            Thread.Sleep(retryDelayMs);
+                        }
+                        else
+                        {
+                            Log.Error(ex, $"Attempt {attempt}/{maxRetries}: Failed to create file for {signal} on {date.ToShortDateString()}. Max retries reached.");
+                            throw;
+                        }
+                    }
+                }
+
+                using (stream)
                 {
                     var parquetEvents = ConvertToParquetEventLogList(events);
 
@@ -249,42 +276,36 @@ namespace ParquetArchiver
 
                     var schema = new Schema(signalIdColumn.Field, dateColumn.Field, timestampColumn.Field,
                         eventCodeColumn.Field, eventParamColumn.Field);
+
                     using (var parquetWriter = new ParquetWriter(schema, stream))
                     {
-                        try
+                        for (int attempt = 1; attempt <= maxRetries; attempt++)
                         {
-                            //create a new row group in the file
-                            using (var groupWriter = parquetWriter.CreateRowGroup())
-                            {
-                                groupWriter.WriteColumn(signalIdColumn);
-                                groupWriter.WriteColumn(dateColumn);
-                                groupWriter.WriteColumn(timestampColumn);
-                                groupWriter.WriteColumn(eventCodeColumn);
-                                groupWriter.WriteColumn(eventParamColumn);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            //Sleep and retry
-                            Log.Error(ex, $"Initial save: Error saving {signal} on {date.ToShortDateString()}");
-
-                            Thread.Sleep(10000);
-
                             try
                             {
-                                // create a new row group in the file
-                                using (ParquetRowGroupWriter groupWriter2 = parquetWriter.CreateRowGroup())
+                                using (var groupWriter = parquetWriter.CreateRowGroup())
                                 {
-                                    groupWriter2.WriteColumn(signalIdColumn);
-                                    groupWriter2.WriteColumn(dateColumn);
-                                    groupWriter2.WriteColumn(timestampColumn);
-                                    groupWriter2.WriteColumn(eventCodeColumn);
-                                    groupWriter2.WriteColumn(eventParamColumn);
+                                    groupWriter.WriteColumn(signalIdColumn);
+                                    groupWriter.WriteColumn(dateColumn);
+                                    groupWriter.WriteColumn(timestampColumn);
+                                    groupWriter.WriteColumn(eventCodeColumn);
+                                    groupWriter.WriteColumn(eventParamColumn);
                                 }
+                                Log.Information($"Successfully wrote parquet data for {signal} on attempt {attempt}");
+                                break;
                             }
-                            catch (Exception ex2)
+                            catch (Exception ex)
                             {
-                                Log.Error(ex, $"Retry: Error saving {signal} on {date.ToShortDateString()}");
+                                if (attempt < maxRetries)
+                                {
+                                    Log.Warning(ex, $"Attempt {attempt}/{maxRetries}: Error writing parquet data for {signal} on {date.ToShortDateString()}. Retrying in {retryDelayMs}ms...");
+                                    Thread.Sleep(retryDelayMs);
+                                }
+                                else
+                                {
+                                    Log.Error(ex, $"Attempt {attempt}/{maxRetries}: Failed to write parquet data for {signal} on {date.ToShortDateString()}. Max retries reached.");
+                                    throw;
+                                }
                             }
                         }
                     }
@@ -292,10 +313,14 @@ namespace ParquetArchiver
             }
             catch (Exception ex)
             {
-                Log.Error(ex.Message + "\n" + ex.InnerException?.Message);
+                Log.Error(ex, $"Fatal error in SaveToLocalStorage for {signal} on {date.ToShortDateString()}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Log.Error(ex.InnerException, $"Inner exception: {ex.InnerException.Message}");
+                }
             }
-
         }
+
 
         private static async Task SaveToGoogleCloud(string signal, List<Controller_Event_Log> events, DateTime date)
         {
