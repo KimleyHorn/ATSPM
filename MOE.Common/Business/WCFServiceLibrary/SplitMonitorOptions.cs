@@ -661,10 +661,11 @@ namespace MOE.Common.Business.WCFServiceLibrary
                     plan.FillMissingSplits(highestSplit);
                     try
                     {
-                        chart.Series["Programed Split"].Points.AddXY(plan.StartTime, plan.Splits[phase.PhaseNumber]);
-                        chart.Series["Programed Split"].Points.AddXY(plan.EndTime, plan.Splits[phase.PhaseNumber]);
-                        if (plan.Splits[phase.PhaseNumber] > maxSplitLength)
-                            maxSplitLength = plan.Splits[phase.PhaseNumber];
+                        var currSplitLength = plan.Splits[phase.PhaseNumber];
+                        chart.Series["Programed Split"].Points.AddXY(plan.StartTime, currSplitLength);
+                        chart.Series["Programed Split"].Points.AddXY(plan.EndTime, currSplitLength);
+                        if (currSplitLength > maxSplitLength)
+                            maxSplitLength = currSplitLength;
                     }
                     catch
                     {
@@ -673,6 +674,9 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 }
                 foreach (var Cycle in phase.Cycles.Items)
                 {
+                    //check if the cycle length is greater than the max split length to set the y axis max
+                    if (Cycle.Duration.TotalSeconds > maxSplitLength)
+                        maxSplitLength = (int)(Cycle.Duration.TotalSeconds * 1.25);
                     if (Cycle.TerminationEvent == 4)
                         chart.Series["GapOut"].Points.AddXY(Cycle.StartTime, Cycle.Duration.TotalSeconds);
                     if (Cycle.TerminationEvent == 5)
@@ -703,17 +707,23 @@ namespace MOE.Common.Business.WCFServiceLibrary
             {
                 chart.ChartAreas[0].AxisY.Maximum = YAxisMax.Value;
             }
-            else if (maxSplitLength > 0)
-            {
-                if (maxSplitLength >= 50)
-                    chart.ChartAreas[0].AxisY.Maximum = 1.5 * maxSplitLength;
-                else
-                    chart.ChartAreas[0].AxisY.Maximum = 2.5 * maxSplitLength;
-            }
             else
             {
-                chart.ChartAreas[0].AxisY.Maximum = phase.Cycles.Items.Max(c => c.Duration).Seconds;
+                chart.ChartAreas[0].AxisY.Maximum = 1.25 * maxSplitLength;
             }
+            //else if (maxSplitLength > 0)
+            //{
+            //    if (maxSplitLength >= 50)
+            //        chart.ChartAreas[0].AxisY.Maximum = 1.5 * maxSplitLength;
+            //    else
+            //        chart.ChartAreas[0].AxisY.Maximum = 2.5 * maxSplitLength;
+            //}
+            //else
+            //{
+            //    chart.ChartAreas[0].AxisY.Maximum = phase.Cycles.Items.Max(c => c.Duration).Seconds;
+            //}
+
+
             if (chart.ChartAreas[0].AxisY.Maximum <= 50)
             {
                 chart.ChartAreas[0].AxisY.Interval = 10;
