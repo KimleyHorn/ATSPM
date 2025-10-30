@@ -52,10 +52,11 @@
 
                 // **when the map’s style and sources are ready:**
                 map.on('load', () => {
+
                     const pathSegments = window.location.pathname.split('/');
                     const firstPathElement = pathSegments[1];
                     // Use origin to create an absolute URL
-                    const apiUrl = `${window.location.origin}/${firstPathElement}/Signals/GetSignalsForMap`;
+                    const apiUrl = `${window.location.origin}/Signals/GetSignalsForMap`;
 
                     console.log('Loading signals from:', apiUrl);
 
@@ -184,7 +185,10 @@
                                     displayInfobox(e, map);
                                 }
                             });
-                            map.resize();
+
+                            setTimeout(() => {
+                                map.resize();
+                            }, 200);
                         });
                 })
             })

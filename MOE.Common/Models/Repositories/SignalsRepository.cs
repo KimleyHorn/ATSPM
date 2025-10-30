@@ -454,11 +454,10 @@ namespace MOE.Common.Models.Repositories
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionHardware)))
                 .Include(signal => signal.Approaches.Select(a => a.DirectionType)).ToList();
 
-            activeSignals
+            activeSignals = activeSignals
                 .GroupBy(r => r.SignalID)
                 .Select(g => g.OrderByDescending(r => r.Start).FirstOrDefault()).ToList();
             return activeSignals;
-
         }
 
         public IQueryable<Signal> GetLatestVersionOfAllSignalsAsQueryable()
