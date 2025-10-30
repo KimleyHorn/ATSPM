@@ -49,10 +49,13 @@
                 });
 
                 map.addControl(new maplibregl.NavigationControl());
-
+                $('#collapseTwoLink').on('click', function () {
+                    setTimeout(() => {
+                        map.resize();
+                    }, 100);
+                });
                 // **when the map’s style and sources are ready:**
                 map.on('load', () => {
-
                     const pathSegments = window.location.pathname.split('/');
                     const firstPathElement = pathSegments[1];
                     // Use origin to create an absolute URL
