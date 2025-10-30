@@ -189,9 +189,7 @@
                                 }
                             });
 
-                            setTimeout(() => {
-                                map.resize();
-                            }, 200);
+                            map.resize();
                         });
                 })
             })
