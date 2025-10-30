@@ -61,8 +61,6 @@
                     // Use origin to create an absolute URL
                     const apiUrl = `${window.location.origin}/Signals/GetSignalsForMap`;
 
-                    console.log('Loading signals from:', apiUrl);
-
                     fetch(apiUrl)
                         .then(res => {
                             if (!res.ok) throw new Error(`Failed to load signals: ${res.status}`);
