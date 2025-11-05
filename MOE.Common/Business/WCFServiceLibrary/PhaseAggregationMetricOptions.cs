@@ -80,7 +80,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                     foreach (var signal in Signals)
                     {
                         var availablePhaseNumbers = GetAvailablePhaseNumbers(signal);
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeXAxisApproachSeriesChart(signal, chart, availablePhaseNumbers);
                         if (ShowEventCount)
                         {
@@ -136,7 +136,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             SaveChartImage(chart);
         }
 
-        protected void GetTimeOfDayXAxisPhaseSeriesChart(Models.Signal signal, Chart chart)
+        protected void GetTimeOfDayXAxisPhaseSeriesChart(Models.ATSPM_Signals atspmSignals, Chart chart)
         {
             if (TimeOptions.TimeOfDayStartHour != null && TimeOptions.TimeOfDayStartMinute.Value != null)
                 chart.ChartAreas.FirstOrDefault().AxisX.Minimum =
@@ -144,12 +144,12 @@ namespace MOE.Common.Business.WCFServiceLibrary
                             TimeOptions.TimeOfDayStartHour.Value, TimeOptions.TimeOfDayStartMinute.Value, 0)
                         .AddHours(-1).ToOADate();
             var seriesList = new ConcurrentBag<Series>();
-            var availablePhaseNumbers = GetAvailablePhaseNumbers(signal);
+            var availablePhaseNumbers = GetAvailablePhaseNumbers(atspmSignals);
             try
             {
                 Parallel.For(0, availablePhaseNumbers.Count, i =>
                 {
-                    var binsContainers = GetBinsContainersByPhaseNumber(signal, availablePhaseNumbers[i]);
+                    var binsContainers = GetBinsContainersByPhaseNumber(atspmSignals, availablePhaseNumbers[i]);
                     var series = CreateSeries(i, "Phase " + availablePhaseNumbers[i].ToString());
                     SetTimeAggregateSeries(series, binsContainers);
                     seriesList.Add(series);
@@ -173,7 +173,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 case SeriesType.PhaseNumber:
                     foreach (var signal in Signals)
                     {
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeOfDayXAxisPhaseSeriesChart(signal, chart);
                         if (ShowEventCount)
                         {
@@ -204,10 +204,10 @@ namespace MOE.Common.Business.WCFServiceLibrary
         }
         
 
-        private void SetTimeofDayAxisSignalSeriesForEventCount(Models.Signal signal, Chart chart)
+        private void SetTimeofDayAxisSignalSeriesForEventCount(Models.ATSPM_Signals atspmSignals, Chart chart)
         {
             var eventCountOptions = new  SignalEventCountAggregationOptions(this);
-            var binsContainers = eventCountOptions.GetBinsContainersByRoute(new List<Models.Signal> { signal });
+            var binsContainers = eventCountOptions.GetBinsContainersByRoute(new List<Models.ATSPM_Signals> { atspmSignals });
             Series series = CreateEventCountSeries();
             eventCountOptions.SetTimeAggregateSeries(series, binsContainers);
             chart.Series.Add(series);
@@ -217,7 +217,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
 
 
-        protected void GetSignalsXAxisPhaseNumberSeriesChart(List<Models.Signal> signals, Chart chart)
+        protected void GetSignalsXAxisPhaseNumberSeriesChart(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var availablePhaseNumbers = new List<int>();
             foreach (var signal in signals)
@@ -233,7 +233,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
         }
 
-        public Series GetSignalXAxisPhaseNumberSeries(List<Models.Signal> signals, int colorCode, int phaseNumber, string seriesName)
+        public Series GetSignalXAxisPhaseNumberSeries(List<Models.ATSPM_Signals> signals, int colorCode, int phaseNumber, string seriesName)
         {
             var series = CreateSeries(colorCode, seriesName);
             foreach (var signal in signals)
@@ -253,25 +253,25 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
        
 
-        protected void GetPhaseXAxisChart(Models.Signal signal, Chart chart)
+        protected void GetPhaseXAxisChart(Models.ATSPM_Signals atspmSignals, Chart chart)
         {
-            Series series = GetPhaseXAxisPhaseSeries(signal, 0);
+            Series series = GetPhaseXAxisPhaseSeries(atspmSignals, 0);
             chart.Series.Add(series);
         }
 
-        public Series GetPhaseXAxisPhaseSeries(Models.Signal signal, int colorCode)
+        public Series GetPhaseXAxisPhaseSeries(Models.ATSPM_Signals atspmSignals, int colorCode)
         {
-            var series = CreateSeries(colorCode, signal.SignalDescription);
+            var series = CreateSeries(colorCode, atspmSignals.SignalDescription);
             var i = 1;
-            var phaseNumbers = signal.GetPhasesForSignal();
+            var phaseNumbers = atspmSignals.GetPhasesForSignal();
             foreach (var phaseNumber in phaseNumbers)
             {
                 var dataPoint = new DataPoint();
                 dataPoint.XValue = i;
                 if (SelectedAggregationType == AggregationType.Sum)
-                    dataPoint.SetValueY(GetSumByPhaseNumber(signal, phaseNumber));
+                    dataPoint.SetValueY(GetSumByPhaseNumber(atspmSignals, phaseNumber));
                 else
-                    dataPoint.SetValueY(GetAverageByPhaseNumber(signal, phaseNumber));
+                    dataPoint.SetValueY(GetAverageByPhaseNumber(atspmSignals, phaseNumber));
                 dataPoint.AxisLabel = "Phase " + phaseNumber;
                 dataPoint.Color = GetSeriesColorByNumber(i);
                 series.Points.Add(dataPoint);
@@ -280,27 +280,27 @@ namespace MOE.Common.Business.WCFServiceLibrary
             return series;
         }
 
-        protected void GetTimeXAxisApproachSeriesChart(Models.Signal signal, Chart chart, List<int> availablePhaseNumbers)
+        protected void GetTimeXAxisApproachSeriesChart(Models.ATSPM_Signals atspmSignals, Chart chart, List<int> availablePhaseNumbers)
         {
             var i = 1;
             foreach (var phase in availablePhaseNumbers)
             {
-                GetPhaseTimeSeries(chart, i, phase, signal);
+                GetPhaseTimeSeries(chart, i, phase, atspmSignals);
                 i++;
             }
         }
         
 
         private void GetPhaseTimeSeries(Chart chart, int i, int phaseNumber,
-            Models.Signal signal)
+            Models.ATSPM_Signals atspmSignals)
         {
-            Series series = GetTimeXAxisPhaseSeries(i, phaseNumber, signal);
+            Series series = GetTimeXAxisPhaseSeries(i, phaseNumber, atspmSignals);
             chart.Series.Add(series);
         }
 
-        private Series GetTimeXAxisPhaseSeries(int colorCode, int phaseNumber, Models.Signal signal)
+        private Series GetTimeXAxisPhaseSeries(int colorCode, int phaseNumber, Models.ATSPM_Signals atspmSignals)
         {
-            var binsContainers = GetBinsContainersByPhaseNumber(signal, phaseNumber);
+            var binsContainers = GetBinsContainersByPhaseNumber(atspmSignals, phaseNumber);
             var series = CreateSeries(colorCode, "Phase " + phaseNumber);
             if ((TimeOptions.SelectedBinSize == BinFactoryOptions.BinSize.Month ||
                  TimeOptions.SelectedBinSize == BinFactoryOptions.BinSize.Year) &&
@@ -325,38 +325,38 @@ namespace MOE.Common.Business.WCFServiceLibrary
         }
 
 
-        public virtual void SetApproachXAxisSignalSeriesForEventCount(Chart chart, Models.Signal signal)
+        public virtual void SetApproachXAxisSignalSeriesForEventCount(Chart chart, Models.ATSPM_Signals atspmSignals)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
-            Series series = eventCountOptions.GetSignalsXAxisSignalSeries(new List<Models.Signal>{signal}, signal.SignalDescription);
+            Series series = eventCountOptions.GetSignalsXAxisSignalSeries(new List<Models.ATSPM_Signals>{atspmSignals}, atspmSignals.SignalDescription);
             
             chart.Series.Add(SetEventCountSeries(series));
         }
 
 
-        public virtual void SetTimeXAxisSignalSeriesForEventCount(Chart chart, Models.Signal signal)
+        public virtual void SetTimeXAxisSignalSeriesForEventCount(Chart chart, Models.ATSPM_Signals atspmSignals)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
-            Series series = eventCountOptions.GetTimeXAxisSignalSeries(signal);
+            Series series = eventCountOptions.GetTimeXAxisSignalSeries(atspmSignals);
             
             chart.Series.Add(SetEventCountSeries(series));
         }
 
-        public override void SetSignalsXAxisSignalSeriesForEventCount(List<Models.Signal> signals, Chart chart)
+        public override void SetSignalsXAxisSignalSeriesForEventCount(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
             Series series = eventCountOptions.GetSignalsXAxisSignalSeries(signals, "Event Count");
             chart.Series.Add(SetEventCountSeries(series));
         }
 
-        public override void SetTimeXAxisRouteSeriesForEventCount(List<Models.Signal> signals, Chart chart)
+        public override void SetTimeXAxisRouteSeriesForEventCount(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
             Series series = eventCountOptions.GetTimeXAxisRouteSeries(signals);
             chart.Series.Add(SetEventCountSeries(series));
         }
 
-        public override void SetTimeOfDayAxisRouteSeriesForEventCount(List<Models.Signal> signals, Chart chart)
+        public override void SetTimeOfDayAxisRouteSeriesForEventCount(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
             Series eventCountSeries = CreateEventCountSeries();
@@ -365,10 +365,10 @@ namespace MOE.Common.Business.WCFServiceLibrary
             chart.Series.Add(eventCountSeries);
         }
 
-        protected abstract List<int> GetAvailablePhaseNumbers(Models.Signal signal);
-        protected abstract int GetAverageByPhaseNumber(Models.Signal signal, int phaseNumber);
-        protected abstract int GetSumByPhaseNumber(Models.Signal signal, int phaseNumber);
-        protected abstract List<BinsContainer> GetBinsContainersByPhaseNumber(Models.Signal signal, int phaseNumber);
+        protected abstract List<int> GetAvailablePhaseNumbers(Models.ATSPM_Signals atspmSignals);
+        protected abstract int GetAverageByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber);
+        protected abstract int GetSumByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber);
+        protected abstract List<BinsContainer> GetBinsContainersByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber);
 
     }
 }

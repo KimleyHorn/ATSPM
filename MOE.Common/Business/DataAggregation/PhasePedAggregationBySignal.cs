@@ -10,23 +10,23 @@ namespace MOE.Common.Business.DataAggregation
     {
 
         public List<PhasePedAggregationByPhase> PedAggregations { get; }
-        public PhasePedAggregationBySignal(PhasePedAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public PhasePedAggregationBySignal(PhasePedAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             PedAggregations = new List<PhasePedAggregationByPhase>();
-            GetPhasePedAggregationContainersForAllPhases(options, signal);
+            GetPhasePedAggregationContainersForAllPhases(options, atspmSignals);
             LoadBins(null, null);
         }
 
-        public PhasePedAggregationBySignal(PhasePedAggregationOptions options, Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+        public PhasePedAggregationBySignal(PhasePedAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             PedAggregations = new List<PhasePedAggregationByPhase>();
-            PedAggregations.Add(new PhasePedAggregationByPhase(signal, phaseNumber, options, options.SelectedAggregatedDataType));
+            PedAggregations.Add(new PhasePedAggregationByPhase(atspmSignals, phaseNumber, options, options.SelectedAggregatedDataType));
             LoadBins(null, null);
         }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -40,7 +40,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             {
@@ -55,22 +55,22 @@ namespace MOE.Common.Business.DataAggregation
         }
 
         private void GetPhasePedAggregationContainersForAllPhases(
-            PhasePedAggregationOptions options, Models.Signal signal)
+            PhasePedAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            List<int> availablePhases = GetAvailablePhasesForSignal(options, signal);
+            List<int> availablePhases = GetAvailablePhasesForSignal(options, atspmSignals);
             foreach (var phaseNumber in availablePhases)
             {
                 PedAggregations.Add(
-                    new PhasePedAggregationByPhase(signal, phaseNumber, options, options.SelectedAggregatedDataType));
+                    new PhasePedAggregationByPhase(atspmSignals, phaseNumber, options, options.SelectedAggregatedDataType));
             }
         }
 
-        private static List<int> GetAvailablePhasesForSignal(PhasePedAggregationOptions options, Models.Signal signal)
+        private static List<int> GetAvailablePhasesForSignal(PhasePedAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
             var phaseTerminationAggregationRepository =
                 Models.Repositories.PhasePedAggregationRepositoryFactory.Create();
             var availablePhases =
-                phaseTerminationAggregationRepository.GetAvailablePhaseNumbers(signal, options.StartDate,
+                phaseTerminationAggregationRepository.GetAvailablePhaseNumbers(atspmSignals, options.StartDate,
                     options.EndDate);
             return availablePhases;
         }

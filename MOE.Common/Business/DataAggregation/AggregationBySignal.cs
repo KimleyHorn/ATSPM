@@ -10,7 +10,7 @@ namespace MOE.Common.Business.DataAggregation
     public abstract class AggregationBySignal
     {
 
-        public Models.Signal Signal { get; }
+        public Models.ATSPM_Signals AtspmSignals { get; }
 
         public double Total
         {
@@ -33,14 +33,14 @@ namespace MOE.Common.Business.DataAggregation
             }
         }        
 
-        public AggregationBySignal(SignalAggregationMetricOptions options, Models.Signal signal)
+        public AggregationBySignal(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             BinsContainers = BinFactory.GetBins(options.TimeOptions);
-            Signal = signal;
+            AtspmSignals = atspmSignals;
         }
 
-        protected abstract void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal);
+        protected abstract void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals);
 
-        protected abstract void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal);
+        protected abstract void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals);
     }
 }

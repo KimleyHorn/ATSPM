@@ -74,7 +74,7 @@ namespace MOE.Common.Business
                 PhaseNumber = Approach.PermissivePhaseNumber??0;
             }
             IsOverlap = false;
-            SignalId = Approach.Signal.SignalID;
+            SignalId = Approach.AtspmSignals.SignalID;
 
 
             MOE.Common.Models.Repositories.IControllerEventLogRepository cer = MOE.Common.Models.Repositories.ControllerEventLogRepositoryFactory.Create();

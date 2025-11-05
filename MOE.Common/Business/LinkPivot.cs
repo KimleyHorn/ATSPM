@@ -127,10 +127,10 @@ namespace MOE.Common.Business
                         lpp.AogDownstreamBefore,
                         lpp.PaogUpstreamPredicted, lpp.PaogDownstreamPredicted, lpp.AogUpstreamPredicted,
                         lpp.AogDownstreamPredicted,
-                        lpp.SignalApproach.Signal.SignalDescription, lpp.DownSignalApproach.Signal.SignalID,
+                        lpp.SignalApproach.AtspmSignals.SignalDescription, lpp.DownSignalApproach.AtspmSignals.SignalID,
                         lpp.DownSignalApproach.DirectionType.Description,
                         lpp.SignalApproach.DirectionType.Description, lpp.ResultChartLocation,
-                        lpp.DownSignalApproach.Signal.SignalDescription,
+                        lpp.DownSignalApproach.AtspmSignals.SignalDescription,
                         lpp.AogTotalBefore, lpp.PaogTotalBefore,
                         lpp.AogTotalPredicted, lpp.PaogTotalPredicted, lpp.LinkNumber, lpp.TotalVolumeDownstream,
                         lpp.TotalVolumeUpstream);
@@ -142,7 +142,7 @@ namespace MOE.Common.Business
                     Adjustment.AddLinkPivotAdjustmentRow(route.RouteSignals.FirstOrDefault().SignalId, 0, 0, 0, 0, 0, 0,
                         0,
                         0, 0, 0,
-                        route.RouteSignals.FirstOrDefault().Signal.SignalDescription,
+                        route.RouteSignals.FirstOrDefault().AtspmSignals.SignalDescription,
                         "", "", "", "", "", 0, 0, 0, 0, 1, 0, 0);
                 else
                 {

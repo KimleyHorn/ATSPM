@@ -100,13 +100,13 @@ namespace MOE.Common.Business.WCFServiceLibrary
             return TmcInfo;
         }
 
-        private void CreateLaneTypeCharts(Models.Signal signal, string laneTypeDescription,
+        private void CreateLaneTypeCharts(Models.ATSPM_Signals atspmSignals, string laneTypeDescription,
             List<LaneType> laneTypes, List<MovementType> movementTypes,
             List<DirectionType> directions, List<Plan> plans, TMCInfo tmcInfo)
         {
             foreach (var direction in directions)
             {
-                var approaches = (from r in signal.Approaches
+                var approaches = (from r in atspmSignals.Approaches
                     where r.DirectionType.DirectionTypeID == direction.DirectionTypeID
                     select r).ToList();
 
@@ -151,7 +151,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                     if (DetectorsForChart.Count > 0)
                     {
                         var TMCchart =
-                            new TMCMetric(StartDate, EndDate, signal, direction,
+                            new TMCMetric(StartDate, EndDate, atspmSignals, direction,
                                 DetectorsForChart, lanetype, movementType, this, tmcInfo);
                         var chart = TMCchart.chart;
                         SetSimplePlanStrips(plans, chart, StartDate);

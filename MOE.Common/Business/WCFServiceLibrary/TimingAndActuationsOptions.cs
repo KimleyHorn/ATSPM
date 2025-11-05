@@ -129,7 +129,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
         public List<int> PhaseEventCodesList { get; set; }
         public List<int> PhaseFilterList { get; set; }
         public int GlobalEventCounter { get; set; }
-        public Models.Signal Signal { get; set; }
+        public Models.ATSPM_Signals AtspmSignals { get; set; }
         public int HeadTitleCounter { get; set; }
 
         public TimingAndActuationsOptions(string signalID, DateTime startDate, DateTime endDate)
@@ -151,7 +151,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
         {
             base.CreateMetric();
             var signalRepository = SignalsRepositoryFactory.Create();
-            Signal = signalRepository.GetVersionOfSignalByDateWithDetectionTypes(SignalID, StartDate);
+            AtspmSignals = signalRepository.GetVersionOfSignalByDateWithDetectionTypes(SignalID, StartDate);
             var chart = new Chart();
             HeadTitleCounter = 0;
             var timingAndActuationsForPhases = new List<TimingAndActuationsForPhase>();
@@ -160,7 +160,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             PhaseFilterList = ExtractListOfNumbers(PhaseFilter);
             if (ShowRawEventData)
             {
-                foreach(var approach in Signal.Approaches)
+                foreach(var approach in AtspmSignals.Approaches)
                 {
                     if (PhaseFilterList.Any() && PhaseFilterList.Contains(approach.ProtectedPhaseNumber) || PhaseFilterList.Count == 0)
                     {
@@ -184,9 +184,9 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
             else
             {
-                if (Signal.Approaches.Count > 0)
+                if (AtspmSignals.Approaches.Count > 0)
                 {
-                    foreach (var approach in Signal.Approaches)
+                    foreach (var approach in AtspmSignals.Approaches)
                     {
                         bool permissivePhase;
                         if (approach.PermissivePhaseNumber != null && approach.PermissivePhaseNumber > 0)

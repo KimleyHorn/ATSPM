@@ -25,7 +25,7 @@ namespace MOE.Common.Models.Repositories
             var signalRepository = Repositories.SignalsRepositoryFactory.Create();
             foreach (var routeSignal in route.RouteSignals)
             {
-                routeSignal.Signal = signalRepository.GetLatestVersionOfSignalBySignalID(routeSignal.SignalId);
+                routeSignal.AtspmSignals = signalRepository.GetLatestVersionOfSignalBySignalID(routeSignal.SignalId);
             }
             if (route != null)
                 return route;
@@ -50,7 +50,7 @@ namespace MOE.Common.Models.Repositories
             var signalRepository = Repositories.SignalsRepositoryFactory.Create();
             foreach (var routeSignal in route.RouteSignals)
             {
-                routeSignal.Signal = signalRepository.GetVersionOfSignalByDate(routeSignal.SignalId, startDate);
+                routeSignal.AtspmSignals = signalRepository.GetVersionOfSignalByDate(routeSignal.SignalId, startDate);
             }
             if (route != null)
                 return route;

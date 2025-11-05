@@ -128,18 +128,18 @@ namespace SPM.Controllers
             //{
             //    return Content("<h1>" +"No Signal Matches this SignalID" + "</h1>");
             //}
-            Signal signal = _signalsRepository.CopySignalToNewVersion(existingSignal, isImport, User.Identity.Name);
-            signal.VersionList = _signalsRepository.GetAllVersionsOfSignalBySignalID(signal.SignalID);
+            ATSPM_Signals atspmSignals = _signalsRepository.CopySignalToNewVersion(existingSignal, isImport, User.Identity.Name);
+            atspmSignals.VersionList = _signalsRepository.GetAllVersionsOfSignalBySignalID(atspmSignals.SignalID);
             try
             {
-                _signalsRepository.AddOrUpdate(signal);
+                _signalsRepository.AddOrUpdate(atspmSignals);
                 var commentRepository = MOE.Common.Models.Repositories.MetricCommentRepositoryFactory.Create();
                 foreach (var origVersionComment in existingSignal.Comments)
                 {
                     MetricComment metricComment = new MetricComment
                     {
                         CommentText = origVersionComment.CommentText,
-                        VersionID = signal.VersionID,
+                        VersionID = atspmSignals.VersionID,
                         SignalID = existingSignal.SignalID,
                         TimeStamp = origVersionComment.TimeStamp,
                     };
@@ -160,9 +160,9 @@ namespace SPM.Controllers
             }
             finally
             {
-                AddSelectListsToViewBag(signal);
+                AddSelectListsToViewBag(atspmSignals);
             }
-            return signal.VersionID;
+            return atspmSignals.VersionID;
         }
 
 
@@ -200,26 +200,26 @@ namespace SPM.Controllers
             }
         }
 
-        private string GetApproachIndex(Signal signal)
+        private string GetApproachIndex(ATSPM_Signals atspmSignals)
         {
-            if (signal.Approaches != null)
+            if (atspmSignals.Approaches != null)
             {
-                return "Approaches[" + signal.Approaches.Count.ToString() + "].";
+                return "Approaches[" + atspmSignals.Approaches.Count.ToString() + "].";
             }
-            signal.Approaches = new List<Approach>();
+            atspmSignals.Approaches = new List<Approach>();
             return "Approaches[0]";
         }
 
-        private Approach GetNewApproach(Signal signal)
+        private Approach GetNewApproach(ATSPM_Signals atspmSignals)
         {
             Approach approach = new Approach();
             approach.Detectors = new List<Detector>();
             approach.ApproachID = 0;
-            approach.SignalID = signal.SignalID;
+            approach.SignalID = atspmSignals.SignalID;
             approach.Description = "New Phase/Direction";
-            approach.Index = GetApproachIndex(signal);
+            approach.Index = GetApproachIndex(atspmSignals);
             approach.DirectionTypeID = 1;
-            approach.VersionID = signal.VersionID;
+            approach.VersionID = atspmSignals.VersionID;
             approach.IsProtectedPhaseOverlap = false;
 
             return approach;
@@ -230,14 +230,14 @@ namespace SPM.Controllers
         [Authorize(Roles = "Admin, Configuration")]
         public ActionResult AddDetector(int versionId, int approachID, string approachIndex)
         {
-            Signal signal = _signalsRepository.GetSignalVersionByVersionId(versionId);
-            if (signal.Approaches.Count == 0)
+            ATSPM_Signals atspmSignals = _signalsRepository.GetSignalVersionByVersionId(versionId);
+            if (atspmSignals.Approaches.Count == 0)
             {
-                signal.Approaches = _approachRepository.GetAllApproaches().Where(a => a.VersionID == signal.VersionID).ToList();
+                atspmSignals.Approaches = _approachRepository.GetAllApproaches().Where(a => a.VersionID == atspmSignals.VersionID).ToList();
             }
-            var approach = signal.Approaches.Where(s => s.ApproachID == approachID).First();
-            Detector detector = CreateNewDetector(approach, approachIndex, signal.SignalID);
-            AddSelectListsToViewBag(signal);
+            var approach = atspmSignals.Approaches.Where(s => s.ApproachID == approachID).First();
+            Detector detector = CreateNewDetector(approach, approachIndex, atspmSignals.SignalID);
+            AddSelectListsToViewBag(atspmSignals);
             return PartialView(detector);
         }
 
@@ -247,8 +247,8 @@ namespace SPM.Controllers
         public ActionResult CopyDetector(int ID, int versionId, int approachID, string approachIndex)
         {
             Detector newDetector = Detector.CopyDetector(ID, true); //need to increase DetChannel if not copying the whole signal.
-            Signal signal = _signalsRepository.GetSignalVersionByVersionId(versionId);
-            Approach approach = signal.Approaches.Where(s => s.ApproachID == approachID).First();
+            ATSPM_Signals atspmSignals = _signalsRepository.GetSignalVersionByVersionId(versionId);
+            Approach approach = atspmSignals.Approaches.Where(s => s.ApproachID == approachID).First();
             newDetector.ApproachID = approach.ApproachID;
             newDetector.Index = approachIndex + "Detectors[" + approach.Detectors.Count.ToString() + "].";
             MOE.Common.Models.Repositories.IDetectorRepository detectorRepository =
@@ -256,7 +256,7 @@ namespace SPM.Controllers
             detectorRepository.Add(newDetector);  //Do the Repository Add FOR detectors AT the detector leve.
             newDetector.Approach = approach;  //????do not associate up!!! Add from top down!
             //approach.Detectors.Add(newDetector);
-            AddSelectListsToViewBag(signal);
+            AddSelectListsToViewBag(atspmSignals);
             return PartialView("AddDetector", newDetector);
         }
 
@@ -342,30 +342,30 @@ namespace SPM.Controllers
 
         }
 
-        private void ImportSignal(ExcelWorksheet signalInformation, Signal signal)
+        private void ImportSignal(ExcelWorksheet signalInformation, ATSPM_Signals atspmSignals)
         {
             var controllerType =
                     _controllerTypeRepository.GetControllerTypeByDesc(signalInformation.GetValue<string>(4, 8));
-            signal.PrimaryName = signalInformation.GetValue<string>(4, 4);
-            signal.SecondaryName = signalInformation.GetValue<string>(4, 6);
+            atspmSignals.PrimaryName = signalInformation.GetValue<string>(4, 4);
+            atspmSignals.SecondaryName = signalInformation.GetValue<string>(4, 6);
             if (controllerType != null)
-                signal.ControllerTypeID = controllerType.ControllerTypeID;
-            signal.Latitude = signalInformation.GetValue<string>(5, 2) != null ? signalInformation.GetValue<string>(5, 2) : "0";
-            signal.Longitude = signalInformation.GetValue<string>(5, 4) != null ? signalInformation.GetValue<string>(5, 4) : "0"; ;
-            signal.IPAddress = signalInformation.GetValue<string>(5, 6) != null ? signalInformation.GetValue<string>(5, 2) : "1.1.1.1";;
+                atspmSignals.ControllerTypeID = controllerType.ControllerTypeID;
+            atspmSignals.Latitude = signalInformation.GetValue<string>(5, 2) != null ? signalInformation.GetValue<string>(5, 2) : "0";
+            atspmSignals.Longitude = signalInformation.GetValue<string>(5, 4) != null ? signalInformation.GetValue<string>(5, 4) : "0"; ;
+            atspmSignals.IPAddress = signalInformation.GetValue<string>(5, 6) != null ? signalInformation.GetValue<string>(5, 2) : "1.1.1.1";;
             // if the lat long or IP are null, give them default values
-            signal.VersionList = new List<Signal> { signal };
-            _signalsRepository.AddOrUpdate(signal);
+            atspmSignals.VersionList = new List<ATSPM_Signals> { atspmSignals };
+            _signalsRepository.AddOrUpdate(atspmSignals);
         }
 
-        private void ImportApproachesAndDetectors(ExcelPackage package, Signal signal)
+        private void ImportApproachesAndDetectors(ExcelPackage package, ATSPM_Signals atspmSignals)
         {
             for (var i = 1; i < 9; i++)
             {
                 var sheet = package.Workbook.Worksheets[$"Approach {i}"];
                 if (sheet != null)
                 {
-                    var approach = GetNewApproach(signal);
+                    var approach = GetNewApproach(atspmSignals);
                     var directionType = _directionTypeRepository.GetByAbbreviation(sheet.GetValue<string>(4, 2));
                     if (directionType == null)
                         continue;
@@ -405,7 +405,7 @@ namespace SPM.Controllers
                             DateAdded = DateTime.Now,
                             DetChannel = detChannel
                         };
-                        detector.DetectorID = signal.SignalID + detector.DetChannel.ToString("D2");
+                        detector.DetectorID = atspmSignals.SignalID + detector.DetChannel.ToString("D2");
 
                         var hardware =
                             _detectionHardwareRepository.GetDetectionHardwareByName(
@@ -491,11 +491,11 @@ namespace SPM.Controllers
             var existingSignal = _signalsRepository.GetLatestVersionOfSignalBySignalID(id);
             if (existingSignal == null)
             {
-                Signal signal = CreateNewSignal(id);
+                ATSPM_Signals atspmSignals = CreateNewSignal(id);
                 try
                 {
-                    _signalsRepository.AddOrUpdate(signal);
-                    signal.VersionList = new List<Signal> { signal };
+                    _signalsRepository.AddOrUpdate(atspmSignals);
+                    atspmSignals.VersionList = new List<ATSPM_Signals> { atspmSignals };
                 }
                 catch (Exception ex)
                 {
@@ -503,34 +503,34 @@ namespace SPM.Controllers
                 }
                 finally
                 {
-                    AddSelectListsToViewBag(signal);
+                    AddSelectListsToViewBag(atspmSignals);
                 }
-                return PartialView("Edit", signal);
+                return PartialView("Edit", atspmSignals);
             }
             return Content("<h1>Signal Already Exists</h1>");
         }
 
 
         [Authorize(Roles = "Admin, Configuration")]
-        private Signal CreateNewSignal(string id)
+        private ATSPM_Signals CreateNewSignal(string id)
         {
-            Signal signal = new Signal();
-            signal.SignalID = id;
-            signal.PrimaryName = "ChangeMe";
-            signal.SecondaryName = "ChangeMe";
-            signal.IPAddress = "10.10.10.10";
-            signal.Latitude = "0";
-            signal.Longitude = "0";
-            signal.RegionID = 1;
-            signal.ControllerTypeID = 1;
-            signal.Start = DateTime.Today;
-            signal.Note = "Create New";
-            signal.Enabled = true;
-            signal.Pedsare1to1 = true;
-            signal.VersionList = new List<Signal>();
-            signal.VersionActionId = 1;
-            signal.JurisdictionId = 1;
-            return signal;
+            ATSPM_Signals atspmSignals = new ATSPM_Signals();
+            atspmSignals.SignalID = id;
+            atspmSignals.PrimaryName = "ChangeMe";
+            atspmSignals.SecondaryName = "ChangeMe";
+            atspmSignals.IPAddress = "10.10.10.10";
+            atspmSignals.Latitude = "0";
+            atspmSignals.Longitude = "0";
+            atspmSignals.RegionID = 1;
+            atspmSignals.ControllerTypeID = 1;
+            atspmSignals.Start = DateTime.Today;
+            atspmSignals.Note = "Create New";
+            atspmSignals.Enabled = true;
+            atspmSignals.Pedsare1to1 = true;
+            atspmSignals.VersionList = new List<ATSPM_Signals>();
+            atspmSignals.VersionActionId = 1;
+            atspmSignals.JurisdictionId = 1;
+            return atspmSignals;
         }
 
         // POST: Signals/Copy
@@ -539,23 +539,23 @@ namespace SPM.Controllers
         [Authorize(Roles = "Admin, Configuration")]
         public ActionResult Copy(string id, string newId)
         {
-            Signal newSignal = new Signal();
+            ATSPM_Signals newAtspmSignals = new ATSPM_Signals();
             if (id == null)
             {
                 return Content("<h1>A signal ID is required</h1>");
             }
-            Signal signal = _signalsRepository.GetLatestVersionOfSignalBySignalID(id);
-            if (signal != null)
+            ATSPM_Signals atspmSignals = _signalsRepository.GetLatestVersionOfSignalBySignalID(id);
+            if (atspmSignals != null)
             {
-                newSignal = Signal.CopySignal(signal, newId);
-                newSignal.VersionActionId = 1;
-                newSignal.Start = DateTime.Now;
-                newSignal.Note = "Copy of Signal " + id;
-                newSignal.VersionList = new List<Signal> { newSignal };
+                newAtspmSignals = ATSPM_Signals.CopySignal(atspmSignals, newId);
+                newAtspmSignals.VersionActionId = 1;
+                newAtspmSignals.Start = DateTime.Now;
+                newAtspmSignals.Note = "Copy of Signal " + id;
+                newAtspmSignals.VersionList = new List<ATSPM_Signals> { newAtspmSignals };
             }
             try
             {
-                _signalsRepository.AddOrUpdate(newSignal);
+                _signalsRepository.AddOrUpdate(newAtspmSignals);
             }
             catch (Exception ex)
             {
@@ -563,43 +563,43 @@ namespace SPM.Controllers
             }
             finally
             {
-                AddSelectListsToViewBag(newSignal);
+                AddSelectListsToViewBag(newAtspmSignals);
             }
-            return PartialView("Edit", newSignal);
+            return PartialView("Edit", newAtspmSignals);
         }
 
         [HttpPost]
         [ValidateJsonAntiForgeryToken]
         [Authorize(Roles = "Admin, Configuration")]
-        public ActionResult CopyVersion(Signal signal)
+        public ActionResult CopyVersion(ATSPM_Signals atspmSignals)
         {
 
             //originalSignalVersion = SetDetectionTypes(originalSignalVersion);
             //MOE.Common.Models.Repositories.ISignalsRepository repository =
             //    MOE.Common.Models.Repositories.SignalsRepositoryFactory.Create();
             //repository.AddOrUpdate(originalSignalVersion);
-            Signal copyVersion = new Signal();
+            ATSPM_Signals copyVersion = new ATSPM_Signals();
 
-            Signal originalSignalVersion = _signalsRepository.GetLatestVersionOfSignalBySignalID(signal.SignalID);
-            if (originalSignalVersion != null)
+            ATSPM_Signals originalAtspmSignalsVersion = _signalsRepository.GetLatestVersionOfSignalBySignalID(atspmSignals.SignalID);
+            if (originalAtspmSignalsVersion != null)
             {
-                copyVersion = Signal.CopyVersion(originalSignalVersion);
+                copyVersion = ATSPM_Signals.CopyVersion(originalAtspmSignalsVersion);
                 copyVersion.VersionActionId = 4;
                 copyVersion.Start = DateTime.Now;
-                copyVersion.IPAddress = originalSignalVersion.IPAddress;
-                copyVersion.Note = "Copy of Version " + originalSignalVersion.Note;
+                copyVersion.IPAddress = originalAtspmSignalsVersion.IPAddress;
+                copyVersion.Note = "Copy of Version " + originalAtspmSignalsVersion.Note;
             }
             try
             {
                 _signalsRepository.AddOrUpdate(copyVersion);
                 var commentRepository = MOE.Common.Models.Repositories.MetricCommentRepositoryFactory.Create();
-                foreach (var origVersionComment in originalSignalVersion.Comments)
+                foreach (var origVersionComment in originalAtspmSignalsVersion.Comments)
                 {
                     MetricComment metricComment = new MetricComment
                     {
                         CommentText = origVersionComment.CommentText,
                         VersionID = copyVersion.VersionID,
-                        SignalID = originalSignalVersion.SignalID,
+                        SignalID = originalAtspmSignalsVersion.SignalID,
                         TimeStamp = origVersionComment.TimeStamp,
                     };
                     if (origVersionComment.MetricTypes != null)
@@ -637,30 +637,30 @@ namespace SPM.Controllers
             {
                 return Content("<h1>A signal ID is required</h1>");
             }
-            Signal signal = _signalsRepository.GetLatestVersionOfSignalBySignalID(id);
-            signal.Approaches = signal.Approaches.OrderBy(a => a.ProtectedPhaseNumber).ThenBy(a => a.DirectionType.Description).ToList();
-            signal.Areas = signal.Areas.OrderBy(a => a.AreaName).ToList();
+            ATSPM_Signals atspmSignals = _signalsRepository.GetLatestVersionOfSignalBySignalID(id);
+            atspmSignals.Approaches = atspmSignals.Approaches.OrderBy(a => a.ProtectedPhaseNumber).ThenBy(a => a.DirectionType.Description).ToList();
+            atspmSignals.Areas = atspmSignals.Areas.OrderBy(a => a.AreaName).ToList();
 
-            if (signal.Approaches == null)
+            if (atspmSignals.Approaches == null)
             {
-                signal.Approaches = new List<Approach>();
+                atspmSignals.Approaches = new List<Approach>();
             }
 
 
-            foreach (Approach approach in signal.Approaches)
+            foreach (Approach approach in atspmSignals.Approaches)
             {
                 approach.Detectors = approach.Detectors.OrderBy(d => d.DetectorID).ToList();
             }
 
-            if (signal != null)
+            if (atspmSignals != null)
             {
-                if (signal.Note == null)
+                if (atspmSignals.Note == null)
                 {
-                    signal.Note = "";
+                    atspmSignals.Note = "";
                 }
 
                 List<DetectionType> allDetectionTypes = _detectionTypeRepository.GetAllDetectionTypesNoBasic();
-                foreach (Approach a in signal.Approaches)
+                foreach (Approach a in atspmSignals.Approaches)
                 {
                     foreach (Detector gd in a.Detectors)
                     {
@@ -673,21 +673,21 @@ namespace SPM.Controllers
                             gd.DetectionTypeIDs.Add(dt.DetectionTypeID);
                         }
                     }
-                    a.Index = "Approaches[" + signal.Approaches.ToList().FindIndex(app => app.ApproachID == a.ApproachID).ToString() + "].";
+                    a.Index = "Approaches[" + atspmSignals.Approaches.ToList().FindIndex(app => app.ApproachID == a.ApproachID).ToString() + "].";
                 }
-                if (signal == null)
+                if (atspmSignals == null)
                 {
                     return HttpNotFound();
                 }
 
-                signal.Comments = signal.Comments.OrderByDescending(s => s.TimeStamp).ToList();
-                AddSelectListsToViewBag(signal);
+                atspmSignals.Comments = atspmSignals.Comments.OrderByDescending(s => s.TimeStamp).ToList();
+                AddSelectListsToViewBag(atspmSignals);
                 //foreach (MOE.Common.Models.MetricComment c in signal.Comments)
                 //{
                 //    c.MetricTypes = _metricTypeRepository.GetMetricTypesByMetricComment(c);
                 //}
             }
-            return PartialView(signal);
+            return PartialView(atspmSignals);
         }
 
         // GET: Signals/Edit/5
@@ -698,24 +698,24 @@ namespace SPM.Controllers
             {
                 return Content("<h1>A Version ID is required</h1>");
             }
-            Signal signal = _signalsRepository.GetSignalVersionByVersionId(Convert.ToInt32(Id));
-            signal.Approaches = signal.Approaches.OrderBy(a => a.ProtectedPhaseNumber).ThenBy(a => a.DirectionType.Description).ToList();
-            if (signal.Approaches == null)
+            ATSPM_Signals atspmSignals = _signalsRepository.GetSignalVersionByVersionId(Convert.ToInt32(Id));
+            atspmSignals.Approaches = atspmSignals.Approaches.OrderBy(a => a.ProtectedPhaseNumber).ThenBy(a => a.DirectionType.Description).ToList();
+            if (atspmSignals.Approaches == null)
             {
-                signal.Approaches = new List<Approach>();
+                atspmSignals.Approaches = new List<Approach>();
             }
-            foreach (Approach approach in signal.Approaches)
+            foreach (Approach approach in atspmSignals.Approaches)
             {
                 approach.Detectors = approach.Detectors.OrderBy(d => d.DetectorID).ToList();
             }
-            if (signal != null)
+            if (atspmSignals != null)
             {
-                if (signal.Note == null)
+                if (atspmSignals.Note == null)
                 {
-                    signal.Note = "";
+                    atspmSignals.Note = "";
                 }
                 List<DetectionType> allDetectionTypes = _detectionTypeRepository.GetAllDetectionTypesNoBasic();
-                foreach (Approach a in signal.Approaches)
+                foreach (Approach a in atspmSignals.Approaches)
                 {
                     foreach (Detector gd in a.Detectors)
                     {
@@ -728,13 +728,13 @@ namespace SPM.Controllers
                             gd.DetectionTypeIDs.Add(dt.DetectionTypeID);
                         }
                     }
-                    a.Index = "Approaches[" + signal.Approaches.ToList().FindIndex(app => app.ApproachID == a.ApproachID).ToString() + "].";
+                    a.Index = "Approaches[" + atspmSignals.Approaches.ToList().FindIndex(app => app.ApproachID == a.ApproachID).ToString() + "].";
                 }
-                signal.Comments = signal.Comments.OrderByDescending(s => s.TimeStamp).ToList();
-                signal.VersionList = _signalsRepository.GetAllVersionsOfSignalBySignalID(signal.SignalID);
-                AddSelectListsToViewBag(signal);
+                atspmSignals.Comments = atspmSignals.Comments.OrderByDescending(s => s.TimeStamp).ToList();
+                atspmSignals.VersionList = _signalsRepository.GetAllVersionsOfSignalBySignalID(atspmSignals.SignalID);
+                AddSelectListsToViewBag(atspmSignals);
             }
-            return PartialView("Edit", signal);
+            return PartialView("Edit", atspmSignals);
         }
 
         [AllowAnonymous]
@@ -744,16 +744,16 @@ namespace SPM.Controllers
             {
                 return Content("<h1>A signal ID is required</h1>");
             }
-            Signal signal = _signalsRepository.GetLatestVersionOfSignalBySignalID(id);
-            signal.Approaches = signal.Approaches.OrderBy(a => a.ProtectedPhaseNumber).ThenBy(a => a.DirectionType.Description).ToList();
-            foreach (Approach approach in signal.Approaches)
+            ATSPM_Signals atspmSignals = _signalsRepository.GetLatestVersionOfSignalBySignalID(id);
+            atspmSignals.Approaches = atspmSignals.Approaches.OrderBy(a => a.ProtectedPhaseNumber).ThenBy(a => a.DirectionType.Description).ToList();
+            foreach (Approach approach in atspmSignals.Approaches)
             {
                 approach.Detectors = approach.Detectors.OrderBy(d => d.DetectorID).ToList();
             }
-            if (signal != null)
+            if (atspmSignals != null)
             {
                 List<DetectionType> allDetectionTypes = _detectionTypeRepository.GetAllDetectionTypesNoBasic();
-                foreach (Approach a in signal.Approaches)
+                foreach (Approach a in atspmSignals.Approaches)
                 {
                     foreach (Detector gd in a.Detectors)
                     {
@@ -766,21 +766,21 @@ namespace SPM.Controllers
                             gd.DetectionTypeIDs.Add(dt.DetectionTypeID);
                         }
                     }
-                    a.Index = "Approaches[" + signal.Approaches.ToList().FindIndex(app => app.ApproachID == a.ApproachID).ToString() + "].";
+                    a.Index = "Approaches[" + atspmSignals.Approaches.ToList().FindIndex(app => app.ApproachID == a.ApproachID).ToString() + "].";
                 }
-                if (signal == null)
+                if (atspmSignals == null)
                 {
                     return HttpNotFound();
                 }
 
-                signal.Comments = signal.Comments.OrderByDescending(s => s.TimeStamp).ToList();
-                AddSelectListsToViewBag(signal);
+                atspmSignals.Comments = atspmSignals.Comments.OrderByDescending(s => s.TimeStamp).ToList();
+                AddSelectListsToViewBag(atspmSignals);
                 //foreach (MOE.Common.Models.MetricComment c in signal.Comments)
                 //{
                 //    c.MetricTypes = _metricTypeRepository.GetMetricTypesByMetricComment(c);
                 //}
             }
-            return PartialView(signal);
+            return PartialView(atspmSignals);
         }
 
         // POST: Signals/Edit/5
@@ -789,24 +789,24 @@ namespace SPM.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin, Configuration")]
-        public ActionResult Edit(Signal signal)
+        public ActionResult Edit(ATSPM_Signals atspmSignals)
         {
             try
             {
                 ModelState.Clear();
-                signal = SetDetectionTypes(signal);
+                atspmSignals = SetDetectionTypes(atspmSignals);
 
                 //var modelStateErrors = this.ModelState.Keys.SelectMany(key => this.ModelState[key].Errors);
 
-                if (TryValidateModel(signal))
+                if (TryValidateModel(atspmSignals))
                 {
                     MOE.Common.Models.Repositories.ISignalsRepository signalRepository =
                         MOE.Common.Models.Repositories.SignalsRepositoryFactory.Create();
-                    signalRepository.AddOrUpdate(signal);
-                    AddSelectListsToViewBag(signal);
-                    if (signal.Approaches != null)
+                    signalRepository.AddOrUpdate(atspmSignals);
+                    AddSelectListsToViewBag(atspmSignals);
+                    if (atspmSignals.Approaches != null)
                     {
-                        foreach (var approach in signal.Approaches)
+                        foreach (var approach in atspmSignals.Approaches)
                         {
                             if (TryValidateModel(approach))
                             {
@@ -833,11 +833,11 @@ namespace SPM.Controllers
             }
         }
 
-        private Signal SetDetectionTypes(Signal signal)
+        private ATSPM_Signals SetDetectionTypes(ATSPM_Signals atspmSignals)
         {
-            if (signal.Approaches != null)
+            if (atspmSignals.Approaches != null)
             {
-                foreach (Approach a in signal.Approaches)
+                foreach (Approach a in atspmSignals.Approaches)
                 {
                     if (a.Detectors != null)
                     {
@@ -859,23 +859,23 @@ namespace SPM.Controllers
                     }
                 }
             }
-            return signal;
+            return atspmSignals;
         }
 
-        private void AddSelectListsToViewBag(Signal signal)
+        private void AddSelectListsToViewBag(ATSPM_Signals atspmSignals)
         {
             var ids = new List<int>();
-            if (signal.Areas != null && signal.Areas.FirstOrDefault() != null)
+            if (atspmSignals.Areas != null && atspmSignals.Areas.FirstOrDefault() != null)
             {
-                foreach (var a in signal.Areas)
+                foreach (var a in atspmSignals.Areas)
                 {
                     ids.Add(a.Id);
                 }
             }
             ViewBag.AreaIds = ids;
-            ViewBag.ControllerType = new SelectList(_controllerTypeRepository.GetControllerTypes(), "ControllerTypeID", "Description", signal.ControllerTypeID);
-            ViewBag.Region = new SelectList(_regionRepository.GetAllRegions(), "ID", "Description", signal.RegionID);
-            ViewBag.Areas = new MultiSelectList(_areaRepository.GetAllAreas(), "Id", "AreaName", _areaRepository.GetListOfAreasForSignal(signal.SignalID));
+            ViewBag.ControllerType = new SelectList(_controllerTypeRepository.GetControllerTypes(), "ControllerTypeID", "Description", atspmSignals.ControllerTypeID);
+            ViewBag.Region = new SelectList(_regionRepository.GetAllRegions(), "ID", "Description", atspmSignals.RegionID);
+            ViewBag.Areas = new MultiSelectList(_areaRepository.GetAllAreas(), "Id", "AreaName", _areaRepository.GetListOfAreasForSignal(atspmSignals.SignalID));
             ViewBag.DirectionType = new SelectList(_directionTypeRepository.GetAllDirections(), "DirectionTypeID", "Abbreviation");
             ViewBag.MovementType = new SelectList(_movementTypeRepository.GetAllMovementTypes(), "MovementTypeID", "Description");
             ViewBag.LaneType = new SelectList(_laneTypeRepository.GetAllLaneTypes(), "LaneTypeID", "Description");
@@ -915,16 +915,16 @@ namespace SPM.Controllers
         public ActionResult DeleteVersion(string versionId)
         {
             int _vid = Convert.ToInt32(versionId);
-            Signal signal = _signalsRepository.GetSignalVersionByVersionId(_vid);
+            ATSPM_Signals atspmSignals = _signalsRepository.GetSignalVersionByVersionId(_vid);
 
-            if (signal == null)
+            if (atspmSignals == null)
             {
                 return Content("<h1>" + "No Version with this ID can be found " + "</h1>");
             }
 
-            string sigId = signal.SignalID;
+            string sigId = atspmSignals.SignalID;
 
-            Signal mostRecentVersion;
+            ATSPM_Signals mostRecentVersion;
 
             try
             {

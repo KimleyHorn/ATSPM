@@ -11,18 +11,18 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class PhaseTerminationAggregationByPhase : AggregationByPhase
     {
-        public PhaseTerminationAggregationByPhase(Models.Signal signal, int phaseNumber, PhaseTerminationAggregationOptions options, AggregatedDataType dataType) 
-            : base(signal, phaseNumber, options, dataType)
+        public PhaseTerminationAggregationByPhase(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhaseTerminationAggregationOptions options, AggregatedDataType dataType) 
+            : base(atspmSignals, phaseNumber, options, dataType)
         {
-            LoadBins(signal, phaseNumber, options, dataType);
+            LoadBins(atspmSignals, phaseNumber, options, dataType);
         }
 
-        protected override void LoadBins(Models.Signal signal, int phaseNumber, PhaseAggregationMetricOptions options,
+        protected override void LoadBins(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhaseAggregationMetricOptions options,
             AggregatedDataType dataType)
         {
             var phaseTerminationAggregationRepository = PhaseTerminationAggregationRepositoryFactory.Create();
             var splitFails = phaseTerminationAggregationRepository.GetPhaseTerminationsAggregationBySignalIdPhaseNumberAndDateRange(
-                signal.SignalID, phaseNumber, options.StartDate, options.EndDate);
+                atspmSignals.SignalID, phaseNumber, options.StartDate, options.EndDate);
             if (splitFails != null)
             {
                 var concurrentBinContainers = new ConcurrentBag<BinsContainer>();

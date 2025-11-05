@@ -38,7 +38,7 @@ namespace SPM.Controllers
         {
             var routeRepository = MOE.Common.Models.Repositories.RouteRepositoryFactory.Create();
             var route = routeRepository.GetRouteByID(id);
-            List <MOE.Common.Models.Signal> signals = new List<Signal>();
+            List <MOE.Common.Models.ATSPM_Signals> signals = new List<ATSPM_Signals>();
             var signalRepository = MOE.Common.Models.Repositories.SignalsRepositoryFactory.Create();
             foreach (var routeSignal in route.RouteSignals)
             {

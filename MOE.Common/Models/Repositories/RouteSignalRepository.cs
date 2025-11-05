@@ -72,7 +72,7 @@ namespace MOE.Common.Models.Repositories
             var signalRepository = SignalsRepositoryFactory.Create();
             if (routeSignal == null)
                 return routeSignal;
-            routeSignal.Signal = signalRepository.GetLatestVersionOfSignalBySignalID(routeSignal.SignalId);
+            routeSignal.AtspmSignals = signalRepository.GetLatestVersionOfSignalBySignalID(routeSignal.SignalId);
             return routeSignal;
         }
 

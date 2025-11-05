@@ -21,11 +21,11 @@ namespace MOE.Common.Models.ViewModel.Chart
         public List<MetricType> MetricTypes { get; set; }
         public string SignalID { get; set; }
 
-        private void SetDescription(Signal signal)
+        private void SetDescription(ATSPM_Signals atspmSignals)
         {
-            if (signal != null && signal.PrimaryName != null &&signal.SecondaryName != null)
+            if (atspmSignals != null && atspmSignals.PrimaryName != null &&atspmSignals.SecondaryName != null)
             {
-                Description = signal.PrimaryName + " " + signal.SecondaryName;
+                Description = atspmSignals.PrimaryName + " " + atspmSignals.SecondaryName;
             }
             else
             {
@@ -33,16 +33,16 @@ namespace MOE.Common.Models.ViewModel.Chart
             }
         }
 
-        private void SetMetrics(Signal signal)
+        private void SetMetrics(ATSPM_Signals atspmSignals)
         {
-            MetricTypes = signal.GetAvailableMetrics();
+            MetricTypes = atspmSignals.GetAvailableMetrics();
         }
 
-        private void SetTitle(Signal signal)
+        private void SetTitle(ATSPM_Signals atspmSignals)
         {
-            if (SignalID != null && signal.PrimaryName != null && signal.SecondaryName != null)
+            if (SignalID != null && atspmSignals.PrimaryName != null && atspmSignals.SecondaryName != null)
             {
-                Title = signal.SignalID + " - " + signal.PrimaryName + " " + signal.SecondaryName;
+                Title = atspmSignals.SignalID + " - " + atspmSignals.PrimaryName + " " + atspmSignals.SecondaryName;
             }
             else
             {

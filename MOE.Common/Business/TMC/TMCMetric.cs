@@ -13,7 +13,7 @@ namespace MOE.Common.Business.TMC
         public Chart chart;
 
         public TMCMetric(DateTime graphStartDate, DateTime graphEndDate,
-            Models.Signal signal, DirectionType direction, List<Models.Detector> detectorsByDirection,
+            Models.ATSPM_Signals atspmSignals, DirectionType direction, List<Models.Detector> detectorsByDirection,
             LaneType laneType, MovementType movementType,
             TMCOptions options, TMCInfo tmcInfo)
         {

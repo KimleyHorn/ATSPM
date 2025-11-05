@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Web.UI.DataVisualization.Charting;
 using System.Linq;
 using MOE.Common.Business.WCFServiceLibrary;
+using MOE.Common.Models;
 
 namespace MOE.Common.Business.PEDDelay
 {
@@ -97,6 +99,62 @@ namespace MOE.Common.Business.PEDDelay
             SetPlanStrips();
         }
 
+        public PEDDelayChart(PedDelayOptions options, PlotlyObject pedDelayChart, PedPhase pedPhase, List<RedToRedCycle> redCycles, TimeZoneInfo tz)
+        {
+            // ----- Layout: title, legend, margins -----
+            var layout = pedDelayChart.Layout;
+
+            layout.Title.Text = $"Pedestrian Delay — Phase {pedPhase?.PhaseNumber}";
+            layout.Title.Pad.T = Math.Max(layout.Title.Pad.T, 10);
+            layout.Title.Pad.B = Math.Max(layout.Title.Pad.B, 10);
+
+            layout.Legend.Orientation = "v";
+            layout.Legend.X = 0;
+            layout.Legend.XAnchor = "left";
+            layout.Legend.Y = 1;
+
+            layout.Margin.L = Math.Max(layout.Margin.L, 90);
+            layout.Margin.T = Math.Max(layout.Margin.T, 80);
+
+            // ----- Axes -----
+            // X (time)
+            layout.XAxis.Type = "date";
+            layout.XAxis.TickFormat = "%-m/%-d %-I:%M %p";
+            layout.XAxis.AutoMargin = true;
+
+            // Y (seconds)
+            layout.YAxis.Title.Text = "Pedestrian Delay per Ped Requests (seconds)";
+            layout.YAxis.Title.Standoff = Math.Max(layout.YAxis.Title.Standoff, 50);
+            layout.YAxis.AutoMargin = true;
+            layout.YAxis.DTick = 30;
+            layout.YAxis.Range.Clear();
+            layout.YAxis.Range.Add("0");
+            if (options?.YAxisMax != null)
+            {
+                layout.YAxis.Range.Add(options.YAxisMax.Value.ToString(CultureInfo.InvariantCulture));
+            }
+
+            // Y2 (%)
+            layout.YAxis2.Title.Text = "% Delay by Cycle Length";
+            layout.YAxis2.AutoMargin = true;
+            layout.YAxis2.DTick = 20;
+            // If your Axis supports these (recommended for y2 on the right):
+            layout.YAxis2.Overlaying = "y";
+            layout.YAxis2.Side = "right";
+
+            // (Optional) light gray grid like your WinForms chart (add GridColor to Axis if needed)
+            // layout.XAxis.GridColor = "#D3D3D3";
+            // layout.YAxis.GridColor = "#D3D3D3";
+
+            // ----- Traces -----
+
+            pedDelayChart.Data.AddRange(AddData()); 
+            // ----- Populate data -----
+
+            // If you previously had plan strips/annotations, add them here:
+            // pedDelayChart.Layout.Shapes.Add(...);
+            // pedDelayChart.Layout.Annotations.Add(...);
+        }
         private void SetChartTitle(Chart chart, PedPhase pedPhase, PedDelayOptions options)
         {
             chart.Titles.Add(ChartTitleFactory.GetChartName(options.MetricTypeID));
@@ -165,6 +223,94 @@ namespace MOE.Common.Business.PEDDelay
                                     .AddXY(cycle.Key, cycle.Value);
                 }
             }
+        }
+
+        public List<Trace> AddData()
+        {
+            var allTraces = new List<Trace>();
+            int currentRedToRedCycle = 0;
+            var delayByCycleLengthDataPoints = new Dictionary<PedCycle, double>();
+            var cycleLength = new Trace("Cycle Length")
+            {
+                Type = "scatter",
+                Mode = "lines"
+            };
+            cycleLength.Line.Color = "red";
+
+            var pedDelay = new Trace("Pedestrian Delay per Ped Requests")
+            {
+                Type = "bar",
+                Mode = "markers" // ignored for bars
+            };
+            pedDelay.Marker.Color = "blue";
+
+            var pedWalk = new Trace("Start of Begin Walk")
+            {
+                Type = "scatter",
+                Mode = "markers"
+            };
+            pedWalk.Marker.Color = "orange";
+            pedWalk.Marker.Size = 5;
+
+            var pctDelay = new Trace("% Delay By Cycle Length")
+            {
+                Type = "scatter",
+                Mode = "lines",
+                YAxisRef = "y2" // <- uses the secondary axis
+            };
+            pctDelay.Line.Color = "rgba(51,153,255,1)"; // #3399FF
+            pctDelay.Line.Width = 1;
+            pctDelay.Line.Dash = "dash";
+            pctDelay.Line.Shape = "hv"; // step-like
+
+            foreach (var pedPlan in PedPhase.Plans)
+            {
+                foreach (var pedCycle in pedPlan.Cycles)
+                {
+                    pedDelay.AddXY(pedCycle.BeginWalk, pedCycle.Delay);
+
+                    if (Options.ShowPedBeginWalk)
+                    {
+                        pedWalk.AddXY(pedCycle.BeginWalk, pedCycle.Delay); //add ped walk to top of delay
+                    }
+
+                    if (Options.ShowPercentDelay)
+                    {
+                        AddDelayByCycleLengthDataPoint(pedCycle, ref currentRedToRedCycle, delayByCycleLengthDataPoints);
+                    }
+                }
+            }
+
+            if (Options.ShowCycleLength)
+            {
+                foreach (var cycle in RedToRedCycles)
+                {
+                    cycleLength.AddXY(cycle.EndTime, cycle.RedLineY);
+                }
+            }
+
+            if (Options.ShowPedBeginWalk)
+            {
+                foreach (var e in PedPhase.PedBeginWalkEvents)
+                {
+                    pedWalk.AddXY(e.Timestamp, 0);
+                }
+            }
+
+            if (Options.ShowPercentDelay)
+            {
+                CreateDelayByCycleLengthStepChart(delayByCycleLengthDataPoints);
+                foreach (var cycle in DelayByCycleLengthStepChart)
+                {
+                    pctDelay.AddXY(cycle.Key, cycle.Value);
+                }
+            }
+            allTraces.Add(cycleLength);
+            allTraces.Add(pedDelay);
+            allTraces.Add(pedWalk);
+            allTraces.Add(pctDelay);
+            allTraces = allTraces.Where(t => t.X.Any() && t.Y.Any()).ToList();
+            return allTraces;
         }
 
         protected void AddDelayByCycleLengthDataPoint(PedCycle pc, ref int currentRedToRedCycle, 
@@ -320,5 +466,7 @@ namespace MOE.Common.Business.PEDDelay
                 backGroundColor++;
             }
         }
+
+
     }
 }

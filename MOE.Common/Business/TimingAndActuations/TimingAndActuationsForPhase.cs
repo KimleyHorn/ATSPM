@@ -481,8 +481,8 @@ namespace MOE.Common.Business.TimingAndActuations
         {
             PedestrianEvents = new Dictionary<string, List<Controller_Event_Log>>();
 
-            if (Approach.Signal.Pedsare1to1 && Approach.IsProtectedPhaseOverlap 
-                || !Approach.Signal.Pedsare1to1 && Approach.PedestrianPhaseNumber.HasValue 
+            if (Approach.AtspmSignals.Pedsare1to1 && Approach.IsProtectedPhaseOverlap 
+                || !Approach.AtspmSignals.Pedsare1to1 && Approach.PedestrianPhaseNumber.HasValue 
                 && String.IsNullOrEmpty(Approach.PedestrianDetectors)) 
                 return;
 

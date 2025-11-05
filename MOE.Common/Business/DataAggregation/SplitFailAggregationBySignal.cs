@@ -9,19 +9,19 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class SplitFailAggregationBySignal : AggregationBySignal
     {
-        public SplitFailAggregationBySignal(ApproachSplitFailAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public SplitFailAggregationBySignal(ApproachSplitFailAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             ApproachSplitFailures = new List<SplitFailAggregationByApproach>();
-            GetApproachSplitFailAggregationContainersForAllApporaches(options, signal);
+            GetApproachSplitFailAggregationContainersForAllApporaches(options, atspmSignals);
             LoadBins(null, null);
         }
 
-        public SplitFailAggregationBySignal(ApproachSplitFailAggregationOptions options, Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+        public SplitFailAggregationBySignal(ApproachSplitFailAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             ApproachSplitFailures = new List<SplitFailAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.ProtectedPhaseNumber == phaseNumber)
                 {
                     ApproachSplitFailures.Add(
@@ -37,11 +37,11 @@ namespace MOE.Common.Business.DataAggregation
             LoadBins(null, null);
         }
 
-        public SplitFailAggregationBySignal(ApproachSplitFailAggregationOptions options, Models.Signal signal,
-            DirectionType direction) : base(options, signal)
+        public SplitFailAggregationBySignal(ApproachSplitFailAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            DirectionType direction) : base(options, atspmSignals)
         {
             ApproachSplitFailures = new List<SplitFailAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.DirectionType.DirectionTypeID == direction.DirectionTypeID)
                 {
                     ApproachSplitFailures.Add(
@@ -59,7 +59,7 @@ namespace MOE.Common.Business.DataAggregation
 
         public List<SplitFailAggregationByApproach> ApproachSplitFailures { get; }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -73,7 +73,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             {
@@ -89,9 +89,9 @@ namespace MOE.Common.Business.DataAggregation
         }
 
         private void GetApproachSplitFailAggregationContainersForAllApporaches(
-            ApproachSplitFailAggregationOptions options, Models.Signal signal)
+            ApproachSplitFailAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 ApproachSplitFailures.Add(
                     new SplitFailAggregationByApproach(approach, options, options.TimeOptions.Start,

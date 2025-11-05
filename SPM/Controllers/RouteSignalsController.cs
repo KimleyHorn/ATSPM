@@ -41,7 +41,7 @@ namespace SPM.Controllers
         {
             var routeSignalRepository = MOE.Common.Models.Repositories.RouteSignalsRepositoryFactory.Create();
             List<RouteSignal> routeSignals = routeSignalRepository.GetByRouteID(id);
-            List<Signal> signals = new List<Signal>();
+            List<ATSPM_Signals> signals = new List<ATSPM_Signals>();
             var signalRepository = MOE.Common.Models.Repositories.SignalsRepositoryFactory.Create();
             foreach (var routeSignal in routeSignals)
             {
@@ -95,7 +95,7 @@ namespace SPM.Controllers
             {
                 return Content("Signal Not Found");
             }
-            if (routeSignal.Signal.Approaches == null)
+            if (routeSignal.AtspmSignals.Approaches == null)
             {
                 return Content("Approaches Not Found");
             }

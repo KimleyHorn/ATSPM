@@ -57,7 +57,7 @@ namespace MOE.Common.Business
             var pedEvents = FindPedEvents(CycleEventsTable, phasenumber);
             var phaseEvents = FindPhaseEvents(CycleEventsTable, phasenumber);
             Cycles = new AnalysisPhaseCycleCollection(phasenumber, SignalID, phaseEvents, pedEvents);
-            var approach = signal.Approaches.FirstOrDefault(a => a.ProtectedPhaseNumber == phasenumber);
+            var approach = signal != null ? signal.Approaches.FirstOrDefault(a => a.ProtectedPhaseNumber == phasenumber) : null;
             Direction = approach != null ? approach.DirectionType.Description : "Unknown";
         }
 

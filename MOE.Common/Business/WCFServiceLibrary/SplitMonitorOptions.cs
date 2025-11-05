@@ -2,28 +2,34 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Text.Json;
 using System.Web.Mvc;
 using System.Web.UI.DataVisualization.Charting;
+using Amazon.S3.Model;
+using MOE.Common.Models;
 using MOE.Common.Models.Custom;
 using MOE.Common.Models.Repositories;
+using Annotation = MOE.Common.Models.Annotation;
 
 namespace MOE.Common.Business.WCFServiceLibrary
 {
     [DataContract]
     public class SplitMonitorOptions : MetricOptions
     {
-        public SplitMonitorOptions(string signalID, double? yAxisMax, int metricTypeID,
-            DateTime startDate, DateTime endDate,
+        public SplitMonitorOptions(string signalID, double? yAxisMax,
+            DateTime startDate, DateTime endDate, string zone,
             int percentileSplit, bool showPlanStripes, bool showPedActivity,
-            bool showAverageSplit, bool showPercentMaxOutForceOff, bool showPercentGapOuts, bool showPercentSkip)
+            bool showAverageSplit, bool showPercentMaxOutForceOff, bool showPercentGapOuts, bool showPercentSkip, int storageLoc, string connString)
         {
             SignalID = signalID;
             YAxisMax = yAxisMax;
-            MetricTypeID = metricTypeID;
+            //MetricTypeID = metricTypeID;
             StartDate = startDate;
             EndDate = endDate;
+            Zone = TimeZoneInfo.FindSystemTimeZoneById(zone);
             SelectedPercentileSplit = percentileSplit;
             ShowPlanStripes = showPlanStripes;
             ShowPedActivity = showPedActivity;
@@ -31,7 +37,8 @@ namespace MOE.Common.Business.WCFServiceLibrary
             ShowPercentMaxOutForceOff = showPercentMaxOutForceOff;
             ShowPercentGapOuts = showPercentGapOuts;
             ShowPercentSkip = showPercentSkip;
-            MetricType.ChartName = "SplitMonitor";
+            //MetricType.ChartName = "SplitMonitor";
+            Settings = new MOEService(storageLoc, connString);
         }
 
         public SplitMonitorOptions()
@@ -39,7 +46,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             SetPercentSplitsList();
             SetDefaults();
         }
-
+        public TimeZoneInfo Zone { get; set; } // set this from ctor/options
         [DataMember]
         [Display(Name = "Percentile Split")]
         public int? SelectedPercentileSplit { get; set; }
@@ -72,6 +79,209 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
         [Display(Name = "Adjust Y Axis")]
         public bool AdjustYAxis { get; set; }
+
+        public PlotlyObject SplitMonitorPlotlyObject { get; set; }
+
+        public List<PlotlyObject> SplitMonitorCharts { get; set; }
+
+        public MOEService Settings { get; set; }
+
+        public string CreateTractionMetric()
+        {
+            
+            var analysisPhaseCollection = new AnalysisPhaseCollection(SignalID, StartDate, EndDate, Settings);
+            SplitMonitorCharts = new List<PlotlyObject>();
+            if (analysisPhaseCollection.Items.Count > 0)
+            {
+                foreach (var plan in analysisPhaseCollection.Plans)
+                {
+                    plan.SetProgrammedSplits(SignalID);
+                    plan.SetHighCycleCount(analysisPhaseCollection);
+                }
+                var phasesInOrder = (analysisPhaseCollection.Items.Select(r => r)).OrderBy(r => r.PhaseNumber);
+                
+                foreach (var phase in phasesInOrder)
+                {
+                    SplitMonitorPlotlyObject = new PlotlyObject();
+                    ConfigureGraph(SplitMonitorPlotlyObject, StartDate, EndDate, 3600000, 5, Zone);
+
+                    SplitMonitorPlotlyObject.Data.AddRange(AddSplitMonitorEventData(analysisPhaseCollection, phase, Zone));
+                    SplitMonitorCharts.Add(SplitMonitorPlotlyObject);
+                }
+                return JsonSerializer.Serialize(SplitMonitorCharts, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping, WriteIndented = true });
+            }
+
+            return "No Data Available";
+
+        }
+
+
+
+        public List<Trace> AddSplitMonitorEventData(AnalysisPhaseCollection analysisPhaseCollection, AnalysisPhase currentPhase, TimeZoneInfo tz)
+        {
+            var allTraces = new List<Trace>();
+            var termEventList = new List<int>[4, 5, 6, 0];
+            
+            var programmedSplit = new Trace("Programmed Split");
+
+            programmedSplit.Marker.Color = "orangered";
+
+            if (ShowPlanStripes)
+            {
+                SetSimplePlanStripes(analysisPhaseCollection.Plans, StartDate, EndDate, tz);
+                SetSplitMonitorStats(analysisPhaseCollection.Plans, currentPhase, SplitMonitorPlotlyObject);
+            }
+
+            //Table 
+            if (currentPhase.Cycles.Items.Count > 0)
+            {
+                var maxSplitLength = 0;
+                foreach (var plan in analysisPhaseCollection.Plans)
+                {
+                    var highestSplit = plan.FindHighestRecordedSplitPhase();
+                    plan.FillMissingSplits(highestSplit);
+                    try
+                    {
+                        programmedSplit.AddXY(plan.StartTime, plan.Splits[currentPhase.PhaseNumber], tz);
+                        programmedSplit.AddXY(plan.EndTime, plan.Splits[currentPhase.PhaseNumber], tz);
+                        if (plan.Splits[currentPhase.PhaseNumber] > maxSplitLength)
+                            maxSplitLength = plan.Splits[currentPhase.PhaseNumber];
+                    }
+                    catch
+                    {
+                        //System.Windows.MessageBox.Show(ex.ToString());
+                    }
+                }
+
+                var maxOut = new Trace("Max Out")
+                {
+                    Marker = {Color = "red"}
+                };
+                var forceOff = new Trace("Force Off")
+                {
+                    Marker = {Color = "mediumblue"}
+                };
+                var unknown = new Trace("Unknown Termination Cause")
+                {
+                    Marker = {Color="black"}
+                };
+                var pedAct = new Trace("Pedestrian Activity")
+                {
+                    Mode = "line",
+                    Line = {Color = "darkgoldenrod"}
+                };
+
+
+                var gapOut = new Trace("Gap Out")
+                {
+
+                    Marker = { Color = "olivedrab" }
+                };
+
+                foreach (var Cycle in currentPhase.Cycles.Items)
+                {
+
+                    if(IsDataInPhaseCycle(currentPhase, 4))
+                    {
+                        gapOut.AddXY(Cycle.StartTime, Cycle.Duration.TotalSeconds, tz);
+                    };
+                       
+                    if (IsDataInPhaseCycle(currentPhase, 5))
+                    {
+                        
+                        maxOut.AddXY(Cycle.StartTime, Cycle.Duration.TotalSeconds, tz);
+                    }
+
+                    if (IsDataInPhaseCycle(currentPhase, 6))
+                    {
+                        forceOff.AddXY(Cycle.StartTime, Cycle.Duration.TotalSeconds, tz);
+                    }
+
+                    if (IsDataInPhaseCycle(currentPhase, 0))
+                    {
+                        unknown.AddXY(Cycle.StartTime, Cycle.Duration.TotalSeconds, tz);
+                    }
+                        
+                    if (Cycle.HasPed && ShowPedActivity)
+                    {
+                        if (Cycle.PedDuration == 0)
+                        {
+                            if (Cycle.PedStartTime == DateTime.MinValue)
+                                Cycle.SetPedStart(Cycle.StartTime);
+                            if (Cycle.PedEndTime == DateTime.MinValue)
+                                Cycle.SetPedEnd(Cycle.YellowEvent);
+                        }
+                        pedAct.AddXY(Cycle.PedStartTime, Cycle.PedDuration, tz);
+                    }
+                }
+                allTraces.Add(gapOut);
+                allTraces.Add(maxOut);
+                allTraces.Add(forceOff);
+                allTraces.Add(programmedSplit);
+                allTraces.Add(pedAct);
+                allTraces.Add(unknown);
+                allTraces = allTraces.Where(t => t.X.Any() && t.Y.Any()).ToList();
+                SetYAxisMaxAndInterval(SplitMonitorPlotlyObject, currentPhase, maxSplitLength);
+            }
+            
+            
+            
+
+            return allTraces;
+        }
+
+        bool IsDataInPhaseCycle(AnalysisPhase currentPhase, int termEvent)
+        {
+            return currentPhase.Cycles.Items.Any(x => x.TerminationEvent == termEvent && x.Duration.TotalSeconds > 0);
+        }
+
+        public void SetSimplePlanStripes(List<PlanSplitMonitor> plans, DateTime graphStartDate, DateTime graphEndDate, TimeZoneInfo tz)
+        {
+            var backGroundColor = 1;
+            foreach (PlanSplitMonitor plan in plans)
+            {
+                var startLocal = TimeZoneInfo.ConvertTime(plan.StartTime, Zone);
+                var endLocal = TimeZoneInfo.ConvertTime(plan.EndTime, Zone);
+                var stripLine = new Shape();
+                //Creates alternating backcolor to distinguish the plans
+                if (backGroundColor % 2 == 0)
+
+                    stripLine.FillColor = RgbaFromColor(Color.LightSeaGreen);
+                else
+                    stripLine.FillColor = RgbaFromColor(Color.LightSteelBlue);
+
+                stripLine.X0 = startLocal.ToString("o");
+                stripLine.X1 = endLocal.ToString("o");
+
+                var midpoint = new DateTime((startLocal.Ticks + endLocal.Ticks) / 2, startLocal.Kind);
+                var annotation = new Annotation
+                {
+                    Font = {Size = 12},
+                    X = midpoint.ToString("yyyy-MM-ddTHH:mm"),
+                    ShowArrow = false
+                };
+                switch (plan.PlanNumber)
+                {
+                    case 254:
+                        annotation.Text = "Free";
+                        break;
+                    case 255:
+                        annotation.Text = "Flash";
+                        break;
+                    case 0:
+                        annotation.Text = "Unknown";
+                        break;
+                    default:
+                        annotation.Text = "Plan " + plan.PlanNumber;
+                        break;
+                }
+                SplitMonitorPlotlyObject.Layout.Shapes.Add(stripLine);
+                SplitMonitorPlotlyObject.Layout.Annotations.Add(annotation);
+                backGroundColor++;
+            }
+        }
+
+
 
         private void SetPercentSplitsList()
         {
@@ -335,7 +545,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
         private void SetSplitMonitorStatistics(List<PlanSplitMonitor> plans, AnalysisPhase phase, Chart chart)
         {
-            //find the phase Cycles that occure during the plan.
+            //find the phase Cycles that occur during the plan.
             foreach (var plan in plans)
             {
                 var Cycles = from cycle in phase.Cycles.Items
@@ -503,6 +713,220 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 }
             }
         }
+        
+        private void SetSplitMonitorStats(List<PlanSplitMonitor> plans, AnalysisPhase phase, PlotlyObject chart)
+        {
+            //find the phase Cycles that occur during the plan.
+            foreach (var plan in plans)
+            {
+                var startLocal = TimeZoneInfo.ConvertTime(plan.StartTime, Zone);
+                var endLocal = TimeZoneInfo.ConvertTime(plan.EndTime, Zone);
+                var heightAdd = .03;
+                var heightMult = 1;
+                var annoFontSize = 12;
+                var defaultY = new Annotation().Y;
+                var Cycles = from cycle in phase.Cycles.Items
+                             where cycle.StartTime >= plan.StartTime && cycle.EndTime < plan.EndTime
+                             orderby cycle.Duration
+                             select cycle;
+                var midpoint = new DateTime((startLocal.Ticks + endLocal.Ticks) / 2, plan.StartTime.Kind);
+
+                // find % Skips
+                if (ShowPercentSkip)
+                    if (plan.CycleCount > 0)
+                    {
+                        double CycleCount = plan.CycleCount;
+                        double SkippedPhases = plan.CycleCount - Cycles.Count();
+                        double SkipPercent = 0;
+                        if (CycleCount > 0)
+                            SkipPercent = SkippedPhases / CycleCount;
+                        
+                        var skipText = $"{SkipPercent:0.0%} Skips";
+                        
+                        chart.Layout.Annotations.Add(new Annotation
+                        {
+                            Text = skipText,
+                            Font =
+                            {
+                                Size = annoFontSize,
+                                Color = "gainsboro"
+                            },
+                            Y = defaultY + (heightMult * heightAdd),
+                            ShowArrow = false,
+                            X = midpoint.ToString("o")
+
+                        });
+                        heightMult++;
+                    }
+
+                // find % GapOuts
+                if (ShowPercentGapOuts)
+                {
+                    var GapOuts = from cycle in Cycles
+                                  where cycle.TerminationEvent == 4
+                                  select cycle;
+
+                    double CycleCount = plan.CycleCount;
+                    double gapouts = GapOuts.Count();
+                    double GapPercent = 0;
+                    if (CycleCount > 0)
+                        GapPercent = gapouts / CycleCount;
+
+                    var gapText = string.Format("{0:0.0%} GapOuts", GapPercent);
+
+                    chart.Layout.Annotations.Add(new Annotation
+                    {
+                        Text = gapText,
+                        Font =
+                        {
+                            Size = annoFontSize,
+                            Color = "olivedrab"
+                        },
+                        Y = defaultY + (heightMult * heightAdd),
+                        ShowArrow = false,
+                        X = midpoint.ToString("o")
+                    });
+                    heightMult++;
+
+                }
+
+                //Set Max Out
+                if (ShowPercentMaxOutForceOff && plan.PlanNumber == 254)
+                {
+                    var MaxOuts = from cycle in Cycles
+                                  where cycle.TerminationEvent == 5
+                                  select cycle;
+
+                    double CycleCount = plan.CycleCount;
+                    double maxouts = MaxOuts.Count();
+                    double MaxPercent = 0;
+                    if (CycleCount > 0)
+                        MaxPercent = maxouts / CycleCount;
+
+                    var maxText = string.Format("{0:0.0%} MaxOuts", MaxPercent);
+
+
+                    chart.Layout.Annotations.Add(new Annotation
+                    {
+                        Font =
+                        {
+                            Size = annoFontSize,
+                            Color = "red"
+                        },
+                        Y = defaultY + (heightMult * heightAdd),
+                        Text = maxText,
+                        ShowArrow = false,
+                        X = midpoint.ToString("o")
+                    });
+                    heightMult++;
+                }
+
+                // Set Force Off
+                if (ShowPercentMaxOutForceOff && plan.PlanNumber != 254
+                )
+                {
+                    var ForceOffs = from cycle in Cycles
+                                    where cycle.TerminationEvent == 6
+                                    select cycle;
+
+                    double CycleCount = plan.CycleCount;
+                    double forceoffs = ForceOffs.Count();
+                    double ForcePercent = 0;
+                    if (CycleCount > 0)
+                        ForcePercent = forceoffs / CycleCount;
+
+
+                    var forceText = string.Format("{0:0.0%} ForceOffs", ForcePercent);
+
+                    chart.Layout.Annotations.Add(new Annotation
+                    {
+                        Font =
+                        {
+                            Size = annoFontSize,
+                            Color = "lightblue"
+                        },
+                        Y = defaultY + (heightMult * heightAdd),
+                        Text = forceText,
+                        ShowArrow = false,
+                        X = midpoint.ToString("o")
+                    });
+                    heightMult++;
+                }
+
+                //Average Split
+                if (ShowAverageSplit)
+                {
+                    double runningTotal = 0;
+                    double averageSplits = 0;
+                    foreach (var Cycle in Cycles)
+                        runningTotal = runningTotal + Cycle.Duration.TotalSeconds;
+
+                    if (Cycles.Count() > 0)
+                        averageSplits = runningTotal / Cycles.Count();
+
+                    var avgText = string.Format("{0: 0.0} Avg. Split", averageSplits);
+                    chart.Layout.Annotations.Add(new Annotation
+                    {
+                        Text = avgText,
+                        Font =
+                        {
+                            Size = annoFontSize,
+                            Color = "gainsboro"
+                        },
+                        ShowArrow = false,
+                        Y = defaultY + (heightMult * heightAdd),
+                        X = midpoint.ToString("o")
+                    });
+                    heightMult++;
+                    //chart.ChartAreas[0].AxisX2.CustomLabels.Add(avgLabel);
+
+                    //Percentile Split
+                    if (SelectedPercentileSplit != null && Cycles.Count() > 2)
+                    {
+                        double percentileResult = 0;
+                        var Percentile = Convert.ToDouble(SelectedPercentileSplit) / 100;
+                        var setCount = Cycles.Count();
+
+
+                        var PercentilIndex = Percentile * setCount;
+                        if (PercentilIndex % 1 == 0)
+                        {
+                            percentileResult = Cycles.ElementAt(Convert.ToInt16(PercentilIndex) - 1).Duration
+                                .TotalSeconds;
+                        }
+                        else
+                        {
+                            var indexMod = PercentilIndex % 1;
+                            //subtracting .5 leaves just the integer after the convert.
+                            //There was probably another way to do that, but this is easy.
+                            int indexInt = Convert.ToInt16(PercentilIndex - .5);
+
+                            var step1 = Cycles.ElementAt(Convert.ToInt16(indexInt) - 1).Duration.TotalSeconds;
+                            var step2 = Cycles.ElementAt(Convert.ToInt16(indexInt)).Duration.TotalSeconds;
+                            var stepDiff = step2 - step1;
+                            var step3 = stepDiff * indexMod;
+                            percentileResult = step1 + step3;
+                        }
+
+
+                        var percText = string.Format("{0: 0.0} - {1} Percentile Split", percentileResult,
+                            Convert.ToDouble(SelectedPercentileSplit));
+
+                        chart.Layout.Annotations.Add(new Annotation
+                        {
+                            Font = { Size = annoFontSize,Color = "plum" },
+                            Text = percText,
+                            ShowArrow = false,
+                            X = midpoint.ToString("o"),
+                            Y = defaultY + (heightMult * heightAdd),
+                        });
+                        heightMult++;
+                        //chart.ChartAreas[0].AxisX2.CustomLabels.Add(percentileLabel);
+                    }
+                }
+            }
+        }
+
 
         private void SetSimplePlanStrips(List<PlanSplitMonitor> plans, Chart chart, DateTime graphStartDate)
         {
@@ -620,7 +1044,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             //var testSeries = new Series();
             //testSeries.IsVisibleInLegend = false;
             //testSeries.ChartType = SeriesChartType.Point;
-            //testSeries.Color = Color.White;
+            //testSeries.Color = Color.gainsboro;
             //testSeries.Name = "Posts";
             //testSeries.XValueType = ChartValueType.DateTime;
 
@@ -693,38 +1117,46 @@ namespace MOE.Common.Business.WCFServiceLibrary
                         chart.Series["PedActivity"].Points.AddXY(Cycle.PedStartTime, Cycle.PedDuration);
                     }
                 }
-                SetYAxisMaxAndInterval(chart, phase, maxSplitLength);
+                //SetYAxisMaxAndInterval(chart, phase, maxSplitLength);
             }
         }
 
-        private void SetYAxisMaxAndInterval(Chart chart, AnalysisPhase phase, int maxSplitLength)
+        private void SetYAxisMaxAndInterval(PlotlyObject chart, AnalysisPhase phase, int maxSplitLength)
         {
+            
+            if (YAxisMax.Value == 0)
+            {
+                chart.Layout.YAxis.Range.Add( null);
+                chart.Layout.YAxis.Range.Add( null);
+                return;
+            }
+            chart.Layout.YAxis.Range.Add( "0");
             if (YAxisMax != null)
             {
-                chart.ChartAreas[0].AxisY.Maximum = YAxisMax.Value;
+                chart.Layout.YAxis.Range.Add(YAxisMax.Value.ToString("N0"));
             }
             else if (maxSplitLength > 0)
             {
                 if (maxSplitLength >= 50)
-                    chart.ChartAreas[0].AxisY.Maximum = 1.5 * maxSplitLength;
+                    chart.Layout.YAxis.Range.Add((1.5 * maxSplitLength).ToString("N0"));
                 else
-                    chart.ChartAreas[0].AxisY.Maximum = 2.5 * maxSplitLength;
+                    chart.Layout.YAxis.Range.Add((2.5 * maxSplitLength).ToString("N0"));
             }
             else
             {
-                chart.ChartAreas[0].AxisY.Maximum = phase.Cycles.Items.Max(c => c.Duration).Seconds;
+                chart.Layout.YAxis.Range.Add(phase.Cycles.Items.Max(c => c.Duration).Seconds.ToString());
             }
-            if (chart.ChartAreas[0].AxisY.Maximum <= 50)
+            if (int.Parse(chart.Layout.YAxis.Range[1]) <= 50)
             {
-                chart.ChartAreas[0].AxisY.Interval = 10;
+                chart.Layout.YAxis.DTick = 10;
             }
-            else if (chart.ChartAreas[0].AxisY.Maximum > 50 && chart.ChartAreas[0].AxisY.Maximum <= 200)
+            else if (int.Parse(chart.Layout.YAxis.Range[1]) > 50 && int.Parse(chart.Layout.YAxis.Range[1]) <= 200)
             {
-                chart.ChartAreas[0].AxisY.Interval = 20;
+                chart.Layout.YAxis.DTick = 20;
             }
             else
             {
-                chart.ChartAreas[0].AxisY.Interval = 50;
+                chart.Layout.YAxis.DTick = 50;
             }
         }
     }

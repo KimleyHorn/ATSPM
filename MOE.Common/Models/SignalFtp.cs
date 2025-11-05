@@ -31,7 +31,7 @@ namespace MOE.Common.Business
 {
     public class SignalFtp
     {
-        private Models.Signal Signal { get; set; }
+        private Models.ATSPM_Signals AtspmSignals { get; set; }
         private SignalFtpOptions SignalFtpOptions { get; set; }
         private string FileToBeDeleted { get; set; }
         public static FtpSslValidation OnValidateCertificate { get; private set; }
@@ -40,18 +40,18 @@ namespace MOE.Common.Business
         {
             if (obj == null || GetType() != obj.GetType()) return false;
             var y = (SignalFtp)obj;
-            return this != null && y != null && Signal.SignalID == y.Signal.SignalID;
+            return this != null && y != null && AtspmSignals.SignalID == y.AtspmSignals.SignalID;
         }
 
         public override int GetHashCode()
         {
-            return this == null ? 0 : Signal.SignalID.GetHashCode();
+            return this == null ? 0 : AtspmSignals.SignalID.GetHashCode();
         }
 
 
         public override string ToString()
         {
-            var signalName = Signal.SignalID + " : " + Signal.PrimaryName + " @ " + Signal.SecondaryName;
+            var signalName = AtspmSignals.SignalID + " : " + AtspmSignals.PrimaryName + " @ " + AtspmSignals.SecondaryName;
 
             return signalName;
             //return base.ToString(); 
@@ -62,9 +62,9 @@ namespace MOE.Common.Business
 
         }
 
-        public SignalFtp(Models.Signal signal, SignalFtpOptions signalFtpOptions)
+        public SignalFtp(Models.ATSPM_Signals atspmSignals, SignalFtpOptions signalFtpOptions)
         {
-            Signal = signal;
+            AtspmSignals = atspmSignals;
             SignalFtpOptions = signalFtpOptions;
         }
 
@@ -80,19 +80,19 @@ namespace MOE.Common.Business
                 {
                     Directory.CreateDirectory(SignalFtpOptions.LocalDirectory);
                 }
-                if (SignalFtpOptions.RenameDuplicateFiles && File.Exists(SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\" + ftpListItem.Name))
+                if (SignalFtpOptions.RenameDuplicateFiles && File.Exists(SignalFtpOptions.LocalDirectory + AtspmSignals.SignalID + @"\" + ftpListItem.Name))
                 {
                     char[] fileExtension = new[] { '.', 'd', 'a', 't' };
                     string tempFileName = localFileName.TrimEnd(fileExtension);
                     localFileName = tempFileName + "-" + Convert.ToInt32(DateTime.Now.TimeOfDay.TotalSeconds) + ".dat";
                     FileToBeDeleted = localFileName;
                 }
-                if (!ftpClient.DownloadFile(SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\" + localFileName, ".." + Signal.ControllerType.FTPDirectory + @"/" + ftpListItem.Name))
+                if (!ftpClient.DownloadFile(SignalFtpOptions.LocalDirectory + AtspmSignals.SignalID + @"\" + localFileName, ".." + AtspmSignals.ControllerType.FTPDirectory + @"/" + ftpListItem.Name))
                 {
-                    Console.WriteLine(@"Unable to download file " + Signal.ControllerType.FTPDirectory + @"/" + ftpListItem.Name);
+                    Console.WriteLine(@"Unable to download file " + AtspmSignals.ControllerType.FTPDirectory + @"/" + ftpListItem.Name);
                     var errorLog = ApplicationEventRepositoryFactory.Create();
                     errorLog.QuickAdd("FTPFromAllControllers",
-                        "MOE.Common.Business.SignalFTP", "TransferFile", ApplicationEvent.SeverityLevels.High, Signal.ControllerType.FTPDirectory + " @ " + Signal.IPAddress + " - " + "Unable to download file " + Signal.ControllerType.FTPDirectory + @"/" + ftpListItem.Name);
+                        "MOE.Common.Business.SignalFTP", "TransferFile", ApplicationEvent.SeverityLevels.High, AtspmSignals.ControllerType.FTPDirectory + " @ " + AtspmSignals.IPAddress + " - " + "Unable to download file " + AtspmSignals.ControllerType.FTPDirectory + @"/" + ftpListItem.Name);
                     return false;
                 }
                 return true;
@@ -102,8 +102,8 @@ namespace MOE.Common.Business
                 Console.WriteLine(e);
                 var errorLog = ApplicationEventRepositoryFactory.Create();
                 errorLog.QuickAdd("FTPFromAllControllers",
-                    "MOE.Common.Business.SignalFTP", "TransferFile", ApplicationEvent.SeverityLevels.High, "SignalID " + Signal.SignalID + " > " + Signal.ControllerType.FTPDirectory + @"/" + ftpListItem.Name + " File can't be downloaded. Error Mesage " + e.Message);
-                File.Delete(SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\" + FileToBeDeleted);
+                    "MOE.Common.Business.SignalFTP", "TransferFile", ApplicationEvent.SeverityLevels.High, "SignalID " + AtspmSignals.SignalID + " > " + AtspmSignals.ControllerType.FTPDirectory + @"/" + ftpListItem.Name + " File can't be downloaded. Error Mesage " + e.Message);
+                File.Delete(SignalFtpOptions.LocalDirectory + AtspmSignals.SignalID + @"\" + FileToBeDeleted);
                 return false;
             }
         }
@@ -175,11 +175,11 @@ namespace MOE.Common.Business
         {
 
             var errorRepository = ApplicationEventRepositoryFactory.Create();
-            FtpClient ftpClient = new FtpClient(Signal.IPAddress);
-            ftpClient.Credentials = new NetworkCredential(Signal.ControllerType.UserName, Signal.ControllerType.Password);
+            FtpClient ftpClient = new FtpClient(AtspmSignals.IPAddress);
+            ftpClient.Credentials = new NetworkCredential(AtspmSignals.ControllerType.UserName, AtspmSignals.ControllerType.Password);
             ftpClient.ConnectTimeout = SignalFtpOptions.FtpConectionTimeoutInSeconds * 1000;
             ftpClient.ReadTimeout = SignalFtpOptions.FtpReadTimeoutInSeconds * 1000;
-            if (Signal.ControllerType.ActiveFTP)
+            if (AtspmSignals.ControllerType.ActiveFTP)
             {
                 //    ftpClient.DataConnectionType = FtpDataConnectionType.AutoActive; 
                 ftpClient.DataConnectionType = FtpDataConnectionType.AutoActive;
@@ -187,7 +187,7 @@ namespace MOE.Common.Business
 
             var filePattern = ".dat";
             var maximumFilesToTransfer = SignalFtpOptions.MaximumNumberOfFilesTransferAtOneTime;
-            if (Signal.ControllerTypeID == 9)
+            if (AtspmSignals.ControllerTypeID == 9)
             {
                 filePattern = ".datZ";
                 maximumFilesToTransfer *= 12;
@@ -203,34 +203,34 @@ namespace MOE.Common.Business
                 }
                 catch (AggregateException)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Connection Failure - One or more errors occured");
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Connection Failure - One or more errors occured before connection established");
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Connection Failure - One or more errors occured");
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Connection Failure - One or more errors occured before connection established");
                     return;
                 }
                 catch (SocketException ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                     return;
                 }
                 catch (IOException ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                     return;
                 }
                 catch (Exception ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                     return;
                 }
                 //var dirs = ftpClient.GetListing("/set1");
-                if (ftpClient.IsConnected && ftpClient.DirectoryExists(".." + Signal.ControllerType.FTPDirectory))
+                if (ftpClient.IsConnected && ftpClient.DirectoryExists(".." + AtspmSignals.ControllerType.FTPDirectory))
                 {
                     try
                     {
-                        FtpListItem[] remoteFiles = ftpClient.GetListing(".." + Signal.ControllerType.FTPDirectory);
+                        FtpListItem[] remoteFiles = ftpClient.GetListing(".." + AtspmSignals.ControllerType.FTPDirectory);
                         var retrievedFiles = new List<string>();
                         if (remoteFiles != null)
                         {
@@ -263,15 +263,15 @@ namespace MOE.Common.Business
                                         errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal",
                                             "GetCurrentRecords_TransferFiles",
                                             Models.ApplicationEvent.SeverityLevels.Medium,
-                                            Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Transfer Task Timed Out");
+                                            AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Transfer Task Timed Out");
                                         break;
                                     }
                                     catch (Exception ex)
                                     {
                                         string errorMessage =
                                             "Exception:" + ex.Message + " While Transfering file: " + ftpFile +
-                                            " from signal" + Signal.SignalID + " @ " + Signal.ControllerType.FTPDirectory + " on " + Signal.IPAddress + " to " +
-                                            SignalFtpOptions.LocalDirectory + Signal.SignalID;
+                                            " from signal" + AtspmSignals.SignalID + " @ " + AtspmSignals.ControllerType.FTPDirectory + " on " + AtspmSignals.IPAddress + " to " +
+                                            SignalFtpOptions.LocalDirectory + AtspmSignals.SignalID;
                                         Console.WriteLine(errorMessage);
                                         errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal",
                                             "GetCurrentRecords_TransferFiles",
@@ -286,11 +286,11 @@ namespace MOE.Common.Business
                             //Delete the files we downloaded.  We don't want to have to deal with the file more than once.  If we delete the file form the controller once we capture it, it will reduce redundancy. 
                             if (SignalFtpOptions.DeleteAfterFtp)
                             {
-                                if (Signal.ControllerTypeID == 9)
+                                if (AtspmSignals.ControllerTypeID == 9)
 
                                 {
                                     ftpClient.Disconnect();
-                                    DeleteAllEosFiles(Signal, retrievedFiles);
+                                    DeleteAllEosFiles(AtspmSignals, retrievedFiles);
                                 }
                                 else
                                 {
@@ -304,8 +304,8 @@ namespace MOE.Common.Business
                     {
                         errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_RetrieveFiles",
                             Models.ApplicationEvent.SeverityLevels.Medium,
-                            Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                        Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                            AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                        Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                     }
                     //ftp.Close(); 
                 }
@@ -314,7 +314,7 @@ namespace MOE.Common.Business
                     if (!ftpClient.IsConnected)
                     {
                         Console.WriteLine("ftp didn't connect!");
-                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot connect to FTP server");
+                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Cannot connect to FTP server");
                     }
                     else
                     {
@@ -327,7 +327,7 @@ namespace MOE.Common.Business
                         {
                             errorDescription += dir.Name + ", ";
                         }
-                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory + " " + errorDescription + " Tested Directory: " + ".." + Signal.ControllerType.FTPDirectory + " CurrentWorkingDirectory: " + currentFtpDirectory);
+                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Cannot find directory " + AtspmSignals.ControllerType.FTPDirectory + " " + errorDescription + " Tested Directory: " + ".." + AtspmSignals.ControllerType.FTPDirectory + " CurrentWorkingDirectory: " + currentFtpDirectory);
                     }
                     //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
                     //Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
@@ -362,26 +362,26 @@ namespace MOE.Common.Business
             }
         }
 
-        private void DeleteAllEosFiles(Signal signal, List<string> retrievedFiles)
+        private void DeleteAllEosFiles(ATSPM_Signals atspmSignals, List<string> retrievedFiles)
         {
             //Console.WriteLine(); 
             Console.WriteLine(); 
             Console.WriteLine(); 
             Console.WriteLine("Start of DeleteAllEosFIles"); 
-            Console.WriteLine("The Host is {0}", signal.IPAddress.ToString()); 
+            Console.WriteLine("The Host is {0}", atspmSignals.IPAddress.ToString()); 
             FtpClient sftpEos = new FtpClient
             {
-                Credentials = new NetworkCredential(signal.ControllerType.UserName, signal.ControllerType.Password),
+                Credentials = new NetworkCredential(atspmSignals.ControllerType.UserName, atspmSignals.ControllerType.Password),
                 DataConnectionType = FtpDataConnectionType.PASV,
                 DataConnectionEncryption = true,
                 SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
                 EnableThreadSafeDataConnections = true,
                 EncryptionMode = FtpEncryptionMode.None
             };
-            sftpEos.Host = signal.IPAddress.ToString();
+            sftpEos.Host = atspmSignals.IPAddress.ToString();
             sftpEos.Connect();
             Console.WriteLine("After Connection for {0} signalId {1} is connected ",
-                signal.IPAddress.ToString(), signal.SignalID, sftpEos.IsConnected.ToString());
+                atspmSignals.IPAddress.ToString(), atspmSignals.SignalID, sftpEos.IsConnected.ToString());
             var errorRepository = ApplicationEventRepositoryFactory.Create();
             var filePattern = ".datZ";
             var remotePWD = sftpEos.GetWorkingDirectory();
@@ -394,28 +394,28 @@ namespace MOE.Common.Business
                     {
                         try
                         {
-                            sftpEos.DeleteFile("../" + Signal.ControllerType.FTPDirectory + "/" + ftpFileName);
+                            sftpEos.DeleteFile("../" + AtspmSignals.ControllerType.FTPDirectory + "/" + ftpFileName);
                             // Console.Write(" This file is deleted -> ..{0}/{1}\r", Signal.ControllerType.FTPDirectory, ftpFileName); 
                         }
                         catch (AggregateException)
                         {
-                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
-                            Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
+                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
+                            Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
                         }
                         catch (SocketException ex)
                         {
-                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                             Console.WriteLine(ex.Message);
                         }
                         catch (IOException ex)
                         {
-                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                             Console.WriteLine(ex.Message);
                         }
                         catch (Exception ex)
                         {
-                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                            Console.WriteLine("Exception:" + ex.Message + " While Deleting file: " + ftpFileName + " from " + Signal.ControllerType.FTPDirectory + " on " + Signal.IPAddress);
+                            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                            Console.WriteLine("Exception:" + ex.Message + " While Deleting file: " + ftpFileName + " from " + AtspmSignals.ControllerType.FTPDirectory + " on " + AtspmSignals.IPAddress);
                         }
                         if (SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds > 0)
                             Thread.Sleep(SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds);
@@ -433,28 +433,28 @@ namespace MOE.Common.Business
             {
                 try
                 {
-                        ftpClient.DeleteFile(Signal.ControllerType.FTPDirectory + "/" + ftpFile);
+                        ftpClient.DeleteFile(AtspmSignals.ControllerType.FTPDirectory + "/" + ftpFile);
                         //Console.Write("For Signal {0], this file is deleted: {1}\r", Signal.SignalID, ftpFile); 
                 }
                 catch (AggregateException)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + "Connection Failure one or more errors occured deleting the file via FTP");
                 }
                 catch (SocketException ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                     Console.WriteLine(ex.Message);
                 }
                 catch (IOException ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
                     Console.WriteLine(ex.Message);
                 }
                 catch (Exception ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine("Exception:" + ex.Message + " While Deleting file: " + ftpFile + " from " + Signal.ControllerType.FTPDirectory + " on " + Signal.IPAddress);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "DeleteFilesFromFTPServer", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine("Exception:" + ex.Message + " While Deleting file: " + ftpFile + " from " + AtspmSignals.ControllerType.FTPDirectory + " on " + AtspmSignals.IPAddress);
                 }
                 if (SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds > 0)
                     Thread.Sleep(SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds);
@@ -469,23 +469,23 @@ namespace MOE.Common.Business
             {
                 try
                 {
-                    SmnpSet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i", SignalFtpOptions.SnmpPort);
+                    SmnpSet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i", SignalFtpOptions.SnmpPort);
                 }
                 catch (SnmpException ex)
                 {
                     errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", " TurnOffASC3LoggingOverSNMP",
-                        ApplicationEvent.SeverityLevels.Medium, Signal.IPAddress + " " + ex.Message);
+                        ApplicationEvent.SeverityLevels.Medium, AtspmSignals.IPAddress + " " + ex.Message);
                     Console.WriteLine(ex);
                 }
                 var snmpState = 10;
                 try
                 {
-                    snmpState = SnmpGet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i");
+                    snmpState = SnmpGet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i");
                 }
                 catch (SnmpException ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "TurnOffASC3LoggingOverSNMP_Get", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "TurnOffASC3LoggingOverSNMP_Get", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex);
                 }
                 if (snmpState == 0)
                     break;
@@ -501,22 +501,22 @@ namespace MOE.Common.Business
             {
                 try
                 {
-                    SmnpSet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i", SignalFtpOptions.SnmpPort);
+                    SmnpSet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i", SignalFtpOptions.SnmpPort);
                 }
                 catch (Exception ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", " TurnOnASC3LoggingOverSNMP_Set", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", " TurnOnASC3LoggingOverSNMP_Set", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex);
                 }
                 var snmpState = 10;
                 try
                 {
-                    snmpState = SnmpGet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i");
+                    snmpState = SnmpGet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i");
                 }
                 catch (Exception ex)
                 {
-                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", " TurnOnASC3LoggingOverSNMP_Get", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex);
+                    errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", " TurnOnASC3LoggingOverSNMP_Get", Models.ApplicationEvent.SeverityLevels.Medium, AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex);
                 }
                 if (snmpState == 1)
                     break;
@@ -534,15 +534,15 @@ namespace MOE.Common.Business
                 int snmpState = 10;
                 try
                 {
-                    snmpState = SnmpGet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i");
+                    snmpState = SnmpGet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i");
                 }
                 catch (Exception ex)
                 {
 
                     errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", " CheckASC3LoggingOverSNMP_Get",
                         Models.ApplicationEvent.SeverityLevels.Medium,
-                        Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex);
+                        AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                    Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex);
                 }
                 if (snmpState == 1)
                 {
@@ -911,20 +911,20 @@ namespace MOE.Common.Business
             {
                 try
                 {
-                    SmnpSet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i", SignalFtpOptions.SnmpPort);
+                    SmnpSet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i", SignalFtpOptions.SnmpPort);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(Signal.IPAddress + " - " + ex);
+                    Console.WriteLine(AtspmSignals.IPAddress + " - " + ex);
                 }
                 var snmpState = 10;
                 try
                 {
-                    snmpState = SnmpGet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i");
+                    snmpState = SnmpGet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "0", "i");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(Signal.IPAddress + " - " + ex);
+                    Console.WriteLine(AtspmSignals.IPAddress + " - " + ex);
                 }
                 if (snmpState == 0)
                     break;
@@ -938,21 +938,21 @@ namespace MOE.Common.Business
             {
                 try
                 {
-                    SmnpSet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i", SignalFtpOptions.SnmpPort);
+                    SmnpSet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i", SignalFtpOptions.SnmpPort);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(Signal.IPAddress + " - " + ex);
+                    Console.WriteLine(AtspmSignals.IPAddress + " - " + ex);
                 }
 
                 var snmpState = 10;
                 try
                 {
-                    snmpState = SnmpGet(Signal.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i");
+                    snmpState = SnmpGet(AtspmSignals.IPAddress, "1.3.6.1.4.1.1206.3.5.2.9.17.1.0", "1", "i");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(Signal.IPAddress + " - " + ex);
+                    Console.WriteLine(AtspmSignals.IPAddress + " - " + ex);
                 }
                 if (snmpState == 1)
                     break;
@@ -996,18 +996,18 @@ namespace MOE.Common.Business
             Thread sftpFetch = new Thread(delegate ()
             {
                 // to-do: replace with common data access to access signal IP in batch from ATSPM DB
-                string host = Signal.IPAddress;
+                string host = AtspmSignals.IPAddress;
                 //string username = Signal.ControllerType.UserName;
                 //string password = Signal.ControllerType.Password;
-                string remoteDirectory = Signal.ControllerType.FTPDirectory;
-                string localDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\";
+                string remoteDirectory = AtspmSignals.ControllerType.FTPDirectory;
+                string localDirectory = SignalFtpOptions.LocalDirectory + AtspmSignals.SignalID + @"\";
                 using (SftpClient sftp = new SftpClient(host, username, password))
                 {
                     try
                     {
-                        Console.WriteLine($"Trying to connect to {Signal.SignalID}");
+                        Console.WriteLine($"Trying to connect to {AtspmSignals.SignalID}");
                         sftp.Connect();
-                        Console.WriteLine($"Connected to {Signal.SignalID}");
+                        Console.WriteLine($"Connected to {AtspmSignals.SignalID}");
 
                         var files = sftp.ListDirectory(remoteDirectory);
                         var cubicFiles = files.Where(x => x.FullName.Contains(".dat") || x.FullName.Contains(".datZ")).ToList();
@@ -1023,7 +1023,7 @@ namespace MOE.Common.Business
                         Console.WriteLine(ex.Message);
                         errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsync",
                             ApplicationEvent.SeverityLevels.Medium,
-                            Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                            AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
 
                     }
                 }
@@ -1048,19 +1048,19 @@ namespace MOE.Common.Business
             // run the sftp fetch operation async
             Thread sftpFetch = new Thread(delegate ()
             {
-                string host = Signal.IPAddress;
-                string remoteDirectory = Signal.ControllerType.FTPDirectory;
-                string UserName = Signal.ControllerType.UserName;
-                string localDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\";
+                string host = AtspmSignals.IPAddress;
+                string remoteDirectory = AtspmSignals.ControllerType.FTPDirectory;
+                string UserName = AtspmSignals.ControllerType.UserName;
+                string localDirectory = SignalFtpOptions.LocalDirectory + AtspmSignals.SignalID + @"\";
 
                 try
                 {
                     WinSCP.SessionOptions sessionOptions = new WinSCP.SessionOptions
                     {
                         Protocol = Protocol.Sftp,
-                        UserName = Signal.ControllerType.UserName,
+                        UserName = AtspmSignals.ControllerType.UserName,
                         SshPrivateKeyPath = PPKLocation,
-                        HostName = Signal.IPAddress
+                        HostName = AtspmSignals.IPAddress
                     };
 
                     // If we want to accept any fingerprint
@@ -1188,16 +1188,16 @@ namespace MOE.Common.Business
                 //capture if there is any sFTP related exception
                 errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
                     ApplicationEvent.SeverityLevels.Medium,
-                    Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                    AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
             }
             catch (IOException ex)
             {
                 //capture if there is any file IO exception
                 errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
                     ApplicationEvent.SeverityLevels.Medium,
-                    Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                    AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
+                Console.WriteLine(AtspmSignals.SignalID + " @ " + AtspmSignals.IPAddress + " - " + ex.Message);
             }
         }
     }

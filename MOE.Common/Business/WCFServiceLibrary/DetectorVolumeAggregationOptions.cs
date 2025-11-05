@@ -51,56 +51,56 @@ namespace MOE.Common.Business.WCFServiceLibrary
                                                  @"(\B[A-Z]+?(?=[A-Z][^A-Z])|\B[A-Z]+?(?=[^A-Z]))", " $1") + " " +
                                              TimeOptions.SelectedBinSize + " bins";
 
-        protected override int GetAverageByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override int GetAverageByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var detectorAggregationBySignal =
-                new DetectorAggregationBySignal(this, signal);
+                new DetectorAggregationBySignal(this, atspmSignals);
             return detectorAggregationBySignal.Average;
         }
 
-        protected override double GetSumByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override double GetSumByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var detectorAggregationBySignal =
-                new DetectorAggregationBySignal(this, signal);
+                new DetectorAggregationBySignal(this, atspmSignals);
             return detectorAggregationBySignal.Total;
         }
 
-        protected override int GetAverageByDirection(Models.Signal signal, DirectionType direction)
+        protected override int GetAverageByDirection(Models.ATSPM_Signals atspmSignals, DirectionType direction)
         {
             var detectorAggregationBySignal =
-                new DetectorAggregationBySignal(this, signal, direction);
+                new DetectorAggregationBySignal(this, atspmSignals, direction);
             return detectorAggregationBySignal.Average;
         }
 
-        protected override double GetSumByDirection(Models.Signal signal, DirectionType direction)
+        protected override double GetSumByDirection(Models.ATSPM_Signals atspmSignals, DirectionType direction)
         {
             var detectorAggregationByDetector =
-                new DetectorAggregationBySignal(this, signal, direction);
+                new DetectorAggregationBySignal(this, atspmSignals, direction);
             return detectorAggregationByDetector.Total;
         }
 
-        protected override List<BinsContainer> GetBinsContainersBySignal(Models.Signal signal)
+        protected override List<BinsContainer> GetBinsContainersBySignal(Models.ATSPM_Signals atspmSignals)
         {
-            var detectorAggregationByDetector = new DetectorAggregationBySignal(this, signal);
+            var detectorAggregationByDetector = new DetectorAggregationBySignal(this, atspmSignals);
             return detectorAggregationByDetector.BinsContainers;
         }
 
         protected override List<BinsContainer> GetBinsContainersByDirection(DirectionType directionType,
-            Models.Signal signal)
+            Models.ATSPM_Signals atspmSignals)
         {
             var detectorAggregationBySignal =
-                new DetectorAggregationBySignal(this, signal, directionType);
+                new DetectorAggregationBySignal(this, atspmSignals, directionType);
             return detectorAggregationBySignal.BinsContainers;
         }
 
-        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var detectorAggregationBySignal =
-                new DetectorAggregationBySignal(this, signal, phaseNumber);
+                new DetectorAggregationBySignal(this, atspmSignals, phaseNumber);
             return detectorAggregationBySignal.BinsContainers;
         }
 
-        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.Signal> signals)
+        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.ATSPM_Signals> signals)
         {
             var aggregations = new ConcurrentBag<DetectorAggregationBySignal>();
             Parallel.ForEach(signals, signal => { aggregations.Add(new DetectorAggregationBySignal(this, signal)); });

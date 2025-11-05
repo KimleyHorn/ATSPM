@@ -34,7 +34,7 @@ namespace MOE.Common.Business.CustomReport
             else
                 PhaseNumber = Approach.PermissivePhaseNumber ?? 0;
             IsOverlap = false;
-            SignalID = Approach.Signal.SignalID;
+            SignalID = Approach.AtspmSignals.SignalID;
             var cer = ControllerEventLogRepositoryFactory.Create();
             Events = cer.GetEventsByEventCodesParam(SignalID, startDate, endDate, eventCodes, PhaseNumber);
             GetCycles(StartofCycleEvent);

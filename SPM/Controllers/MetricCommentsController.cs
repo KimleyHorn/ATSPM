@@ -26,11 +26,11 @@ namespace SPM.Controllers
         {
             MOE.Common.Models.Repositories.ISignalsRepository signalsRepository =
                 MOE.Common.Models.Repositories.SignalsRepositoryFactory.Create();
-            Signal signal = signalsRepository.GetSignalVersionByVersionId(Convert.ToInt32(versionId));
+            ATSPM_Signals atspmSignals = signalsRepository.GetSignalVersionByVersionId(Convert.ToInt32(versionId));
             List<MOE.Common.Models.MetricType> allMetricTypes = metricTyperepository.GetAllToDisplayMetrics();
             MOE.Common.Models.MetricComment mc =
                 new MetricComment();
-            mc.Signal = signal;
+            mc.AtspmSignals = atspmSignals;
             mc.AllMetricTypes = allMetricTypes;
             if (mc.MetricTypeIDs != null)
             {

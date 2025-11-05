@@ -24,13 +24,13 @@ namespace MOE.Common.Business.WCFServiceLibrary
                                                  @"(\B[A-Z]+?(?=[A-Z][^A-Z])|\B[A-Z]+?(?=[^A-Z]))", " $1") + " " +
                                              TimeOptions.SelectedBinSize + " bins";
 
-        protected override List<BinsContainer> GetBinsContainersBySignal(Models.Signal signal)
+        protected override List<BinsContainer> GetBinsContainersBySignal(Models.ATSPM_Signals atspmSignals)
         {
-            var aggregationBySignal = new PreemptionAggregationBySignal(this, signal);
+            var aggregationBySignal = new PreemptionAggregationBySignal(this, atspmSignals);
             return aggregationBySignal.BinsContainers;
         }
 
-        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.Signal> signals)
+        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.ATSPM_Signals> signals)
         {
             var binsContainers = BinFactory.GetBins(TimeOptions);
             foreach (var signal in signals)

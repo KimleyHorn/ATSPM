@@ -8,7 +8,7 @@ namespace MOE.Common.Models.Repositories
         PhasePedAggregation Add(PhasePedAggregation pedAggregation);
         void Update(PhasePedAggregation pedAggregation);
         void Remove(PhasePedAggregation pedAggregation);
-        List<int> GetAvailablePhaseNumbers(Signal signal, DateTime startDate, DateTime endDate);
+        List<int> GetAvailablePhaseNumbers(ATSPM_Signals atspmSignals, DateTime startDate, DateTime endDate);
         List<PhasePedAggregation> GetPhasePedsAggregationBySignalIdPhaseNumberAndDateRange(string signalId, int phaseNumber, DateTime startDate, DateTime endDate);
     }
 }

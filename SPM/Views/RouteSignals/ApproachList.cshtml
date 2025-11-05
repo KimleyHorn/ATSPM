@@ -2,11 +2,11 @@
 
 <table class="table-condensed table-striped">
     
-    <tr><th colspan="5">@Model.Signal.SignalDescription</th></tr>
+    <tr><th colspan="5">@Model.AtspmSignals.SignalDescription</th></tr>
     <tr><th>Dir.</th><th class="col-centered">Phase</th><th><label id="OverlapHeader">Overlap</label></th><th><label id="PrimaryHeader">Primary</label></th><th><label id="OpposingHeader">Opposing</label></th></tr>
-    @if (Model.Signal.Approaches != null)
+    @if (Model.AtspmSignals.Approaches != null)
     {
-        foreach (var approach in Model.Signal.Approaches)
+        foreach (var approach in Model.AtspmSignals.Approaches)
         {
             var routePhaseDirectiton = Model.PhaseDirections.FirstOrDefault(p => p.IsOverlap == approach.IsProtectedPhaseOverlap
                 && p.Phase == approach.ProtectedPhaseNumber

@@ -6,19 +6,19 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class DetectorAggregationBySignal : AggregationBySignal
     {
-        public DetectorAggregationBySignal(DetectorVolumeAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public DetectorAggregationBySignal(DetectorVolumeAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             ApproachDetectorVolumes = new List<DetectorAggregationByApproach>();
-            GetApproachDetectorVolumeAggregationContainersForAllApporaches(options, signal);
+            GetApproachDetectorVolumeAggregationContainersForAllApporaches(options, atspmSignals);
             LoadBins(null, null);
         }
 
-        public DetectorAggregationBySignal(DetectorVolumeAggregationOptions options, Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+        public DetectorAggregationBySignal(DetectorVolumeAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             ApproachDetectorVolumes = new List<DetectorAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.ProtectedPhaseNumber == phaseNumber)
                 {
                     ApproachDetectorVolumes.Add(
@@ -29,11 +29,11 @@ namespace MOE.Common.Business.DataAggregation
             LoadBins(null, null);
         }
 
-        public DetectorAggregationBySignal(DetectorVolumeAggregationOptions options, Models.Signal signal,
-            DirectionType direction) : base(options, signal)
+        public DetectorAggregationBySignal(DetectorVolumeAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            DirectionType direction) : base(options, atspmSignals)
         {
             ApproachDetectorVolumes = new List<DetectorAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.DirectionType.DirectionTypeID == direction.DirectionTypeID)
                 {
                     ApproachDetectorVolumes.Add(
@@ -47,7 +47,7 @@ namespace MOE.Common.Business.DataAggregation
 
         public List<DetectorAggregationByApproach> ApproachDetectorVolumes { get; }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
                 for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -61,7 +61,7 @@ namespace MOE.Common.Business.DataAggregation
                 }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -79,9 +79,9 @@ namespace MOE.Common.Business.DataAggregation
         }
 
         private void GetApproachDetectorVolumeAggregationContainersForAllApporaches(
-            DetectorVolumeAggregationOptions options, Models.Signal signal)
+            DetectorVolumeAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 ApproachDetectorVolumes.Add(
                     new DetectorAggregationByApproach(approach, options, true));

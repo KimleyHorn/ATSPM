@@ -8,19 +8,19 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class SpeedAggregationBySignal : AggregationBySignal
     {
-        public SpeedAggregationBySignal(ApproachSpeedAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public SpeedAggregationBySignal(ApproachSpeedAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             ApproachSpeedEvents = new List<SpeedAggregationByApproach>();
-            GetApproachSpeedEventsAggregationContainersForAllApporaches(options, signal);
+            GetApproachSpeedEventsAggregationContainersForAllApporaches(options, atspmSignals);
             LoadBins(null, null);
         }
 
-        public SpeedAggregationBySignal(ApproachSpeedAggregationOptions options, Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+        public SpeedAggregationBySignal(ApproachSpeedAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             ApproachSpeedEvents = new List<SpeedAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.ProtectedPhaseNumber == phaseNumber)
                 {
                     ApproachSpeedEvents.Add(
@@ -36,11 +36,11 @@ namespace MOE.Common.Business.DataAggregation
             LoadBins(null, null);
         }
 
-        public SpeedAggregationBySignal(ApproachSpeedAggregationOptions options, Models.Signal signal,
-            DirectionType direction) : base(options, signal)
+        public SpeedAggregationBySignal(ApproachSpeedAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            DirectionType direction) : base(options, atspmSignals)
         {
             ApproachSpeedEvents = new List<SpeedAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.DirectionType.DirectionTypeID == direction.DirectionTypeID)
                 {
                     ApproachSpeedEvents.Add(
@@ -58,7 +58,7 @@ namespace MOE.Common.Business.DataAggregation
 
         public List<SpeedAggregationByApproach> ApproachSpeedEvents { get; }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -70,7 +70,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -83,9 +83,9 @@ namespace MOE.Common.Business.DataAggregation
         }
 
         private void GetApproachSpeedEventsAggregationContainersForAllApporaches(
-            ApproachSpeedAggregationOptions options, Models.Signal signal)
+            ApproachSpeedAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 ApproachSpeedEvents.Add(
                     new SpeedAggregationByApproach(approach, options, options.StartDate,

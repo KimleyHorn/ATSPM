@@ -8,19 +8,19 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class PcdAggregationBySignal : AggregationBySignal
     {
-        public PcdAggregationBySignal(ApproachPcdAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public PcdAggregationBySignal(ApproachPcdAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             ApproachPcds = new List<PcdAggregationByApproach>();
-            GetApproachPcdAggregationContainersForAllApporaches(options, signal);
+            GetApproachPcdAggregationContainersForAllApporaches(options, atspmSignals);
             LoadBins(null, null);
         }
 
-        public PcdAggregationBySignal(ApproachPcdAggregationOptions options, Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+        public PcdAggregationBySignal(ApproachPcdAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             ApproachPcds = new List<PcdAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.ProtectedPhaseNumber == phaseNumber)
                 {
                     ApproachPcds.Add(
@@ -36,11 +36,11 @@ namespace MOE.Common.Business.DataAggregation
             LoadBins(null, null);
         }
 
-        public PcdAggregationBySignal(ApproachPcdAggregationOptions options, Models.Signal signal,
-            DirectionType direction) : base(options, signal)
+        public PcdAggregationBySignal(ApproachPcdAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            DirectionType direction) : base(options, atspmSignals)
         {
             ApproachPcds = new List<PcdAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.DirectionType.DirectionTypeID == direction.DirectionTypeID)
                 {
                     ApproachPcds.Add(
@@ -58,7 +58,7 @@ namespace MOE.Common.Business.DataAggregation
 
         public List<PcdAggregationByApproach> ApproachPcds { get; }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             {
@@ -72,7 +72,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             {
@@ -88,9 +88,9 @@ namespace MOE.Common.Business.DataAggregation
 
 
         private void GetApproachPcdAggregationContainersForAllApporaches(
-            ApproachPcdAggregationOptions options, Models.Signal signal)
+            ApproachPcdAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 ApproachPcds.Add(
                     new PcdAggregationByApproach(approach, options, options.StartDate,

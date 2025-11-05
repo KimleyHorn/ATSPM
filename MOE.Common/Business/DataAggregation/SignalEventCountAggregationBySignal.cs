@@ -9,13 +9,13 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class SignalEventCountAggregationBySignal : AggregationBySignal
     {
-        public SignalEventCountAggregationBySignal(SignalEventCountAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public SignalEventCountAggregationBySignal(SignalEventCountAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
-            LoadBins(options, signal);
+            LoadBins(options, atspmSignals);
         }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             var signalEventCountAggregationRepository = SignalEventCountAggregationRepositoryFactory
                 .Create();
@@ -27,7 +27,7 @@ namespace MOE.Common.Business.DataAggregation
             }
             var signalEventCounts =
                 signalEventCountAggregationRepository.GetSignalEventCountAggregationBySignalIdAndDateRange(
-                    signal.SignalID, BinsContainers.Min(b => b.Start), selectionEndDate);
+                    atspmSignals.SignalID, BinsContainers.Min(b => b.Start), selectionEndDate);
             if (signalEventCounts != null)
             {
                 var concurrentBinContainers = new ConcurrentBag<BinsContainer>();
@@ -79,7 +79,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             throw new System.NotImplementedException();
         }

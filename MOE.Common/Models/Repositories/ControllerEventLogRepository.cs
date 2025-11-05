@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Internal;
+using MOE.Common.Business;
 using MOE.Common.Business.Parquet;
 
 namespace MOE.Common.Models.Repositories
@@ -13,8 +14,9 @@ namespace MOE.Common.Models.Repositories
         private readonly SPM _db = new SPM();
         private const string LOCAL_ARCHIVE_DIRECTORY = "LocalArchiveDirectory";
         private readonly string _localPath = ParquetArchive.GetSetting(LOCAL_ARCHIVE_DIRECTORY);
+        private MOEService _settings;
 
-        public ControllerEventLogRepository(SPM db)
+        public ControllerEventLogRepository(SPM db, MOEService settings = null)
         {
             _db = db;
             //var i = 0;
@@ -38,8 +40,9 @@ namespace MOE.Common.Models.Repositories
             //    }
             //}
         }
-        public ControllerEventLogRepository()
+        public ControllerEventLogRepository(MOEService settings = null)
         {
+            _settings = settings;
             //_db.Database.CommandTimeout = 180;
             //_db.Database.ExecuteSqlCommand("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
             //_db.Configuration.AutoDetectChangesEnabled = false;
@@ -372,7 +375,7 @@ namespace MOE.Common.Models.Repositories
                     endTime = minTime;
                 }
 
-                var logs = ParquetArchive.GetDataFromArchive(_localPath, signalId, startTime, endTime);
+                var logs = ParquetArchive.GetDataFromArchive(_localPath, signalId, startTime, endTime, _settings);
                 logs = (from s in logs
                         where s.SignalID == signalId &&
                               s.Timestamp >= startTime &&
@@ -403,6 +406,7 @@ namespace MOE.Common.Models.Repositories
         {
             try
             {
+                Console.WriteLine(_db.Database.Connection.ConnectionString);
                 var events = (from s in _db.Controller_Event_Log
                               where s.SignalID == signalId &&
                                     s.Timestamp >= startTime &&
@@ -418,7 +422,7 @@ namespace MOE.Common.Models.Repositories
                     endTime = minTime;
                 }
 
-                var logs = ParquetArchive.GetDataFromArchive(_localPath, signalId, startTime, endTime);
+                var logs = ParquetArchive.GetDataFromArchive(_localPath, signalId, startTime, endTime, _settings);
                 logs = (from s in logs
                         where s.SignalID == signalId &&
                               s.Timestamp >= startTime &&

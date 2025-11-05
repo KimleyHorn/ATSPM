@@ -24,8 +24,8 @@ namespace MOE.Common.Business.WatchDog
         public ConcurrentBag<SPMWatchDogErrorEvent> MissingRecords = new ConcurrentBag<SPMWatchDogErrorEvent>();
         public ConcurrentBag<SPMWatchDogErrorEvent> CannotFtpFiles = new ConcurrentBag<SPMWatchDogErrorEvent>();
         public List<SPMWatchDogErrorEvent> RecordsFromTheDayBefore = new List<SPMWatchDogErrorEvent>();
-        public ConcurrentBag<Models.Signal> SignalsNoRecords = new ConcurrentBag<Models.Signal>();
-        public ConcurrentBag<Models.Signal> SignalsWithRecords = new ConcurrentBag<Models.Signal>();
+        public ConcurrentBag<Models.ATSPM_Signals> SignalsNoRecords = new ConcurrentBag<Models.ATSPM_Signals>();
+        public ConcurrentBag<Models.ATSPM_Signals> SignalsWithRecords = new ConcurrentBag<Models.ATSPM_Signals>();
         public ConcurrentBag<SPMWatchDogErrorEvent> StuckPedErrors = new ConcurrentBag<SPMWatchDogErrorEvent>();
 
         public WatchDogScan(DateTime scanDate, bool hideIp)
@@ -63,14 +63,14 @@ namespace MOE.Common.Business.WatchDog
             }
         }
 
-        private void CheckApplicationEvents(List<Models.Signal> signals)
+        private void CheckApplicationEvents(List<Models.ATSPM_Signals> signals)
         {
             var signalsToCheck = signals.Where(signal =>
                 !Exclusions.Exists(x => x.SignalID == signal.SignalID && x.TypeOfAlert == AlertType.FTP)).ToList();
             CheckFtpFromAllControllers(signalsToCheck);
         }
 
-        private void CheckFtpFromAllControllers(List<Models.Signal> signals)
+        private void CheckFtpFromAllControllers(List<Models.ATSPM_Signals> signals)
         {
             var startHour = new TimeSpan(Settings.ScanDayStartHour, 0, 0);
             var endHour = new TimeSpan(Settings.ScanDayEndHour, 0, 0);
@@ -101,7 +101,7 @@ namespace MOE.Common.Business.WatchDog
             });
         }
 
-        private void CheckAllSignals(List<Models.Signal> signals)
+        private void CheckAllSignals(List<Models.ATSPM_Signals> signals)
         {
             var startHour = new TimeSpan(Settings.ScanDayStartHour, 0, 0);
             var endHour = new TimeSpan(Settings.ScanDayEndHour, 0, 0);
@@ -193,12 +193,12 @@ namespace MOE.Common.Business.WatchDog
 
             var signalsToCheck = SignalsWithRecords.Where(signal =>
                 !Exclusions.Exists(x => x.SignalID == signal.SignalID && x.TypeOfAlert == AlertType.AdvancedDetection));
-            var concurrentSignalsToCheck = new ConcurrentBag<Signal>(signalsToCheck);
+            var concurrentSignalsToCheck = new ConcurrentBag<ATSPM_Signals>(signalsToCheck);
 
             Parallel.ForEach(concurrentSignalsToCheck, options, signal => { CheckForLowDetectorHits(signal); });
         }
 
-        private void CheckForRecords(List<Models.Signal> signals)
+        private void CheckForRecords(List<Models.ATSPM_Signals> signals)
         {
             var options = new ParallelOptions();
             //options.MaxDegreeOfParallelism = Settings.MaxDegreeOfParallelism;
@@ -216,28 +216,28 @@ namespace MOE.Common.Business.WatchDog
             }//);
         }
 
-        private void GetRecordCountForWeekDayAndWeekend(Signal signal)
+        private void GetRecordCountForWeekDayAndWeekend(ATSPM_Signals atspmSignals)
         {
             if (Settings.WeekdayOnly && ScanDate.DayOfWeek == DayOfWeek.Monday)
-                CheckSignalRecordCount(ScanDate.AddDays(-2), signal);
+                CheckSignalRecordCount(ScanDate.AddDays(-2), atspmSignals);
             else
-                CheckSignalRecordCount(ScanDate, signal);
+                CheckSignalRecordCount(ScanDate, atspmSignals);
         }
 
-        private void CheckSignalRecordCount(DateTime dateToCheck, Models.Signal signal)
+        private void CheckSignalRecordCount(DateTime dateToCheck, Models.ATSPM_Signals atspmSignals)
         {
             var controllerEventLogRepository = ControllerEventLogRepositoryFactory.Create();
-            if (controllerEventLogRepository.GetRecordCount(signal.SignalID, dateToCheck.AddDays(-1), dateToCheck) > Settings.MinimumRecords)
+            if (controllerEventLogRepository.GetRecordCount(atspmSignals.SignalID, dateToCheck.AddDays(-1), dateToCheck) > Settings.MinimumRecords)
             {
-                Console.WriteLine("Signal " + signal.SignalID + " Has Current records");
-                SignalsWithRecords.Add(signal);
+                Console.WriteLine("Signal " + atspmSignals.SignalID + " Has Current records");
+                SignalsWithRecords.Add(atspmSignals);
             }
             else
             {
-                Console.WriteLine("Signal " + signal.SignalID + " Does Not Have Current records");
-                SignalsNoRecords.Add(signal);
+                Console.WriteLine("Signal " + atspmSignals.SignalID + " Does Not Have Current records");
+                SignalsNoRecords.Add(atspmSignals);
                 MOE.Common.Models.SPMWatchDogErrorEvent error = new MOE.Common.Models.SPMWatchDogErrorEvent();
-                error.SignalID = signal.SignalID;
+                error.SignalID = atspmSignals.SignalID;
                 error.DetectorID = "0";
                 error.Phase = 0;
                 error.Direction = "";
@@ -245,7 +245,7 @@ namespace MOE.Common.Business.WatchDog
                 if (_hideIp)
                     error.Message = "Missing Records";
                 else
-                    error.Message = "Missing Records - IP: " + signal.IPAddress;
+                    error.Message = "Missing Records - IP: " + atspmSignals.IPAddress;
                 error.ErrorCode = 1;
                 MissingRecords.Add(error);
             }
@@ -369,9 +369,9 @@ namespace MOE.Common.Business.WatchDog
         }
 
         private void
-            CheckForLowDetectorHits(Models.Signal signal)
+            CheckForLowDetectorHits(Models.ATSPM_Signals atspmSignals)
         {
-            var detectors = signal.GetDetectorsForSignalThatSupportAMetric(6);
+            var detectors = atspmSignals.GetDetectorsForSignalThatSupportAMetric(6);
             //Parallel.ForEach(detectors, options, detector =>
             foreach (var detector in detectors)
                 try
@@ -398,7 +398,7 @@ namespace MOE.Common.Business.WatchDog
                         if (currentVolume < Convert.ToInt32(Settings.LowHitThreshold))
                         {
                             var error = new SPMWatchDogErrorEvent();
-                            error.SignalID = signal.SignalID;
+                            error.SignalID = atspmSignals.SignalID;
                             error.DetectorID = detector.DetectorID;
                             error.Phase = detector.Approach.ProtectedPhaseNumber;
                             error.TimeStamp = ScanDate;
@@ -420,12 +420,12 @@ namespace MOE.Common.Business.WatchDog
             //);
         }
 
-        private void CheckForStuckPed(AnalysisPhase phase, Models.Signal signal)
+        private void CheckForStuckPed(AnalysisPhase phase, Models.ATSPM_Signals atspmSignals)
         {
             if (phase.PedestrianEvents.Count > Settings.MaximumPedestrianEvents)
             {
                 var error = new SPMWatchDogErrorEvent();
-                error.SignalID = signal.SignalID;
+                error.SignalID = atspmSignals.SignalID;
                 error.Phase = phase.PhaseNumber;
                 error.TimeStamp = ScanDate;
                 error.Direction = phase.Direction ?? "";
@@ -434,20 +434,20 @@ namespace MOE.Common.Business.WatchDog
                 error.ErrorCode = 3;
                 if (!StuckPedErrors.Contains(error))
                 {
-                    Console.WriteLine("Signal " + signal.SignalID + phase.PedestrianEvents.Count +
+                    Console.WriteLine("Signal " + atspmSignals.SignalID + phase.PedestrianEvents.Count +
                                       " Pedestrian Activations");
                     StuckPedErrors.Add(error);
                 }
             }
         }
 
-        private void CheckForForceOff(AnalysisPhase phase, Models.Signal signal)
+        private void CheckForForceOff(AnalysisPhase phase, Models.ATSPM_Signals atspmSignals)
         {
             if (phase.PercentForceOffs > Settings.PercentThreshold &&
                 phase.TerminationEvents.Where(t => t.EventCode != 7).Count() > Settings.MinPhaseTerminations)
             {
                 var error = new SPMWatchDogErrorEvent();
-                error.SignalID = signal.SignalID;
+                error.SignalID = atspmSignals.SignalID;
                 error.Phase = phase.PhaseNumber;
                 error.TimeStamp = ScanDate;
                 error.Direction = phase.Direction ?? "";
@@ -459,13 +459,13 @@ namespace MOE.Common.Business.WatchDog
         }
 
         private void CheckForMaxOut(AnalysisPhase phase,
-            Models.Signal signal)
+            Models.ATSPM_Signals atspmSignals)
         {
             if (phase.PercentMaxOuts > Settings.PercentThreshold &&
                 phase.TotalPhaseTerminations > Settings.MinPhaseTerminations)
             {
                 var error = new SPMWatchDogErrorEvent();
-                error.SignalID = signal.SignalID;
+                error.SignalID = atspmSignals.SignalID;
                 error.Phase = phase.PhaseNumber;
                 error.TimeStamp = ScanDate;
                 error.Direction = phase.Direction ?? "";
@@ -473,7 +473,7 @@ namespace MOE.Common.Business.WatchDog
                 error.ErrorCode = 5;
                 if (MaxOutErrors.Count == 0 || !MaxOutErrors.Contains(error))
                 {
-                    Console.WriteLine("Signal " + signal.SignalID + " Has MaxOut Errors");
+                    Console.WriteLine("Signal " + atspmSignals.SignalID + " Has MaxOut Errors");
                     MaxOutErrors.Add(error);
                 }
             }
@@ -576,11 +576,11 @@ namespace MOE.Common.Business.WatchDog
             return false;
         }
 
-        private static string FindDetector(Models.Signal Signal, int Channel)
+        private static string FindDetector(Models.ATSPM_Signals atspmSignals, int Channel)
         {
             try
             {
-                var gd = Signal.GetDetectorForSignalByChannel(Channel);
+                var gd = atspmSignals.GetDetectorForSignalByChannel(Channel);
                 if (gd != null)
                     return gd.DetectorID;
                 return "0";

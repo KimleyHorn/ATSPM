@@ -11,7 +11,7 @@ namespace MOE.Common.Models
         public string Index { get; set; }
 
         [NotMapped]
-        public string ApproachRouteDescription => Signal.SignalDescription + " " +
+        public string ApproachRouteDescription => AtspmSignals.SignalDescription + " " +
                                                   DirectionType.Description + " Phase " + ProtectedPhaseNumber;
 
         public List<Detector> GetAllDetectorsOfDetectionType(int detectionTypeID)
@@ -57,12 +57,12 @@ namespace MOE.Common.Models
             return false;
         }
 
-        public static Approach CreateNewApproachWithDefaultValues(Signal signal, DirectionType dir, SPM db)
+        public static Approach CreateNewApproachWithDefaultValues(ATSPM_Signals atspmSignals, DirectionType dir, SPM db)
         {
             var appr = new Approach();
-            appr.Description = signal.SignalID + dir.Abbreviation;
+            appr.Description = atspmSignals.SignalID + dir.Abbreviation;
             appr.DirectionTypeID = dir.DirectionTypeID;
-            appr.SignalID = signal.SignalID;
+            appr.SignalID = atspmSignals.SignalID;
             appr.MPH = 0;
             return appr;
         }

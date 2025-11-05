@@ -18,10 +18,10 @@ namespace MOE.Common.Business.PEDDelay
         protected int _TimeBuffer;
         protected DateTime _StartDate;
 
-        public PedDelaySignal(Signal signal, int timeBuffer, DateTime startDate,
+        public PedDelaySignal(ATSPM_Signals atspmSignals, int timeBuffer, DateTime startDate,
             DateTime endDate)
         {
-            _SignalID = signal.SignalID;
+            _SignalID = atspmSignals.SignalID;
             _TimeBuffer = timeBuffer;
             _StartDate = startDate;
             _EndDate = endDate;
@@ -30,11 +30,11 @@ namespace MOE.Common.Business.PEDDelay
                 _Plans = new PlansBase(_SignalID, startDate, endDate);
                 ConcurrentBag<PedPhase> pedPhases = new ConcurrentBag<PedPhase>();
 
-                foreach (var approach in signal.Approaches)
+                foreach (var approach in atspmSignals.Approaches)
                 {
                     if (approach.PedestrianPhaseNumber != null || approach.ProtectedPhaseNumber != 0)
                     {
-                        var pedPhase = new PedPhase(approach, signal, timeBuffer, startDate, endDate, _Plans);
+                        var pedPhase = new PedPhase(approach, atspmSignals, timeBuffer, startDate, endDate, _Plans);
                         pedPhases.Add(pedPhase);
                     }
                 }

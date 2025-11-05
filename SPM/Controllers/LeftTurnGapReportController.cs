@@ -272,7 +272,7 @@ namespace SPM.Controllers
                 EndTime = new TimeSpan(parameters.EndHour ?? 0, parameters.StartMinute ?? 0, 0),
                 ApproachDescription = approach.Description,
                 SpeedLimit = approach.MPH,
-                Location = approach.Signal.PrimaryName + " & " + approach.Signal.SecondaryName,
+                Location = approach.AtspmSignals.PrimaryName + " & " + approach.AtspmSignals.SecondaryName,
                 PhaseType = approach.GetPhaseType().GetDescription(),
                 SignalType = approach.GetSignalHeadType().GetDescription()
             };

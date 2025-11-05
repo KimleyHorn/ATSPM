@@ -21,7 +21,7 @@ namespace MOE.Common.Business.Helpers
             DetectorID = gd.DetectorID;
             Direction = gd.Approach.DirectionType.Abbreviation;
             DistanceFromStopBar = gd.DistanceFromStopBar.ToString();
-            Enabled = gd.Approach.Signal.Enabled.ToString();
+            Enabled = gd.Approach.AtspmSignals.Enabled.ToString();
             MinSpeedFilter = gd.MinSpeedFilter.ToString();
             MovementDelay = gd.MovementDelay.ToString();
             MPH = gd.Approach.MPH.ToString();

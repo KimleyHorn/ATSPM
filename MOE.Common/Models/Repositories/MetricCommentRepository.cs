@@ -13,7 +13,7 @@ namespace MOE.Common.Models.Repositories
         public MetricComment GetLatestCommentForReport(string signalID, int metricID)
         {
             var comments = (from r in db.MetricComments
-                where r.Signal.SignalID == signalID
+                where r.AtspmSignals.SignalID == signalID
                 orderby r.TimeStamp descending
                 select r).ToList();
             var commentsForMetricType = new List<MetricComment>();

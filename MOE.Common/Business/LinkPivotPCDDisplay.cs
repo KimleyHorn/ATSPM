@@ -90,10 +90,10 @@ namespace MOE.Common.Business
 
         public double ExistingVolume { get; set; }
 
-        private Approach GetApproachToAnalyze(Models.Signal signal, string direction)
+        private Approach GetApproachToAnalyze(Models.ATSPM_Signals atspmSignals, string direction)
         {
             Approach approachToAnalyze = null;
-            var approaches = signal.Approaches.Where(a => a.DirectionType.Description == direction).ToList();
+            var approaches = atspmSignals.Approaches.Where(a => a.DirectionType.Description == direction).ToList();
             foreach (var approach in approaches)
                 if (approach.GetDetectorsForMetricType(6).Count > 0)
                     approachToAnalyze = approach;
@@ -106,14 +106,14 @@ namespace MOE.Common.Business
             var settings = Models.Repositories.ApplicationSettingsRepositoryFactory.Create().GetGeneralSettings();
             //Create a location string to show the combined cross strees
             var location = string.Empty;
-            if (approach.Signal != null)
-                location = approach.Signal.PrimaryName + " " + approach.Signal.SecondaryName;
+            if (approach.AtspmSignals != null)
+                location = approach.AtspmSignals.PrimaryName + " " + approach.AtspmSignals.SecondaryName;
             var chartName = string.Empty;
             //find the upstream approach
             if (!string.IsNullOrEmpty(approach.DirectionType.Description))
             {
                 //Find PCD detector for this appraoch
-                var detector = approach.Signal.GetDetectorsForSignalThatSupportAMetricByApproachDirection(
+                var detector = approach.AtspmSignals.GetDetectorsForSignalThatSupportAMetricByApproachDirection(
                     6, approach.DirectionType.Description).FirstOrDefault();
                 //Check for null value
                 if (detector != null)

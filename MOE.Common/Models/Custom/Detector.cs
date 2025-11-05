@@ -129,9 +129,9 @@ namespace MOE.Common.Models
             return newGD;
         }
 
-        public Signal GetTheSignalThatContainsThisDetector()
+        public ATSPM_Signals GetTheSignalThatContainsThisDetector()
         {
-            return Approach.Signal;
+            return Approach.AtspmSignals;
         }
 
         public bool DetectorSupportsThisMetric(int metricID)

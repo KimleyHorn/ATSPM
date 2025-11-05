@@ -12,7 +12,6 @@ using MOE.Common.Business.WCFServiceLibrary;
 using MOE.Common.Models;
 using MOE.Common.Models.Repositories;
 using MOE.Common.Models.ViewModel.Chart;
-using Signal = MOE.Common.Models.Signal;
 
 namespace SPM.Models
 {

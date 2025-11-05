@@ -56,57 +56,57 @@ namespace MOE.Common.Business.WCFServiceLibrary
                                              TimeOptions.SelectedBinSize + " bins";
 
 
-        protected override int GetAverageByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override int GetAverageByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new PcdAggregationBySignal(this, signal);
+                new PcdAggregationBySignal(this, atspmSignals);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override double GetSumByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override double GetSumByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new PcdAggregationBySignal(this, signal);
+                new PcdAggregationBySignal(this, atspmSignals);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override int GetAverageByDirection(Models.Signal signal, DirectionType direction)
+        protected override int GetAverageByDirection(Models.ATSPM_Signals atspmSignals, DirectionType direction)
         {
             var splitFailAggregationBySignal =
-                new PcdAggregationBySignal(this, signal, direction);
+                new PcdAggregationBySignal(this, atspmSignals, direction);
             return splitFailAggregationBySignal.Average;
         }
         
 
-        protected override double GetSumByDirection(Models.Signal signal, DirectionType direction)
+        protected override double GetSumByDirection(Models.ATSPM_Signals atspmSignals, DirectionType direction)
         {
             var splitFailAggregationBySignal =
-                new PcdAggregationBySignal(this, signal, direction);
+                new PcdAggregationBySignal(this, atspmSignals, direction);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override List<BinsContainer> GetBinsContainersBySignal(Models.Signal signal)
+        protected override List<BinsContainer> GetBinsContainersBySignal(Models.ATSPM_Signals atspmSignals)
         {
-            var splitFailAggregationBySignal = new PcdAggregationBySignal(this, signal);
+            var splitFailAggregationBySignal = new PcdAggregationBySignal(this, atspmSignals);
             return splitFailAggregationBySignal.BinsContainers;
         }
 
         protected override List<BinsContainer> GetBinsContainersByDirection(DirectionType directionType,
-            Models.Signal signal)
+            Models.ATSPM_Signals atspmSignals)
         {
             var splitFailAggregationBySignal =
-                new PcdAggregationBySignal(this, signal, directionType);
+                new PcdAggregationBySignal(this, atspmSignals, directionType);
             return splitFailAggregationBySignal.BinsContainers;
         }
 
-        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new PcdAggregationBySignal(this, signal, phaseNumber);
+                new PcdAggregationBySignal(this, atspmSignals, phaseNumber);
             return splitFailAggregationBySignal.BinsContainers;
         }
 
-        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.Signal> signals)
+        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.ATSPM_Signals> signals)
         {
             var aggregations = new ConcurrentBag<PcdAggregationBySignal>();
             Parallel.ForEach(signals, signal => { aggregations.Add(new PcdAggregationBySignal(this, signal)); });

@@ -19,7 +19,7 @@ namespace MOE.Common.Models
 
         [Display(Name = "Signal")]
         [DataMember]
-        public virtual ICollection<Signal> Signals { get; set; }
+        public virtual ICollection<ATSPM_Signals> Signals { get; set; }
 
         [DataMember]
         public List<int> SignalIds { get; set; }

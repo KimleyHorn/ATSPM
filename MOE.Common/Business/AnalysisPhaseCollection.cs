@@ -9,10 +9,10 @@ namespace MOE.Common.Business
     {
         public List<AnalysisPhase> Items = new List<AnalysisPhase>();
 
-        public AnalysisPhaseCollection(string signalId, DateTime startTime, DateTime endTime, int consecutivecount)
+        public AnalysisPhaseCollection(string signalId, DateTime startTime, DateTime endTime, int consecutivecount, MOEService settings = null)
         {
             SignalId = signalId;
-            var cel = ControllerEventLogRepositoryFactory.Create();
+            var cel = ControllerEventLogRepositoryFactory.Create(settings);
             var ptedt = cel.GetSignalEventsByEventCodes(SignalId, startTime, endTime,
                 new List<int> {1, 11, 4, 5, 6, 7, 21, 23});
             var dapta = cel.GetSignalEventsByEventCodes(SignalId, startTime, endTime, new List<int> {1});
@@ -28,9 +28,10 @@ namespace MOE.Common.Business
             MaxPhaseInUse = FindMaxPhase(Items);
         }
 
-        public AnalysisPhaseCollection(string signalId, DateTime startTime, DateTime endTime)
+        public AnalysisPhaseCollection(string signalId, DateTime startTime, DateTime endTime, MOEService settings = null)
         {
-            var cel = ControllerEventLogRepositoryFactory.Create();
+            SignalId = signalId;
+            var cel = ControllerEventLogRepositoryFactory.Create(settings);
             var ptedt = cel.GetSignalEventsByEventCodes(signalId, startTime, endTime,
                 new List<int> {1, 11, 4, 5, 6, 7, 21, 23});
             var dapta = cel.GetSignalEventsByEventCodes(signalId, startTime, endTime, new List<int> {1});

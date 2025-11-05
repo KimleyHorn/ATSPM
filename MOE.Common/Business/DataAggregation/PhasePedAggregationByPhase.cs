@@ -17,18 +17,18 @@ namespace MOE.Common.Business.DataAggregation
         public const string PED_DELAY_SUM = "PedDelaySum";
         public const string PED_CYCLES = "PedCycles";
 
-        public PhasePedAggregationByPhase(Models.Signal signal, int phaseNumber, PhasePedAggregationOptions options, AggregatedDataType dataType) 
-            : base(signal, phaseNumber, options, dataType)
+        public PhasePedAggregationByPhase(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhasePedAggregationOptions options, AggregatedDataType dataType) 
+            : base(atspmSignals, phaseNumber, options, dataType)
         {
-            LoadBins(signal, phaseNumber, options, dataType);
+            LoadBins(atspmSignals, phaseNumber, options, dataType);
         }
 
-        protected override void LoadBins(Models.Signal signal, int phaseNumber, PhaseAggregationMetricOptions options,
+        protected override void LoadBins(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhaseAggregationMetricOptions options,
             AggregatedDataType dataType)
         {
             var phasePedAggregationRepository =  PhasePedAggregationRepositoryFactory.Create();
             var pedAggs = phasePedAggregationRepository.GetPhasePedsAggregationBySignalIdPhaseNumberAndDateRange(
-                signal.SignalID, phaseNumber, options.StartDate, options.EndDate);
+                atspmSignals.SignalID, phaseNumber, options.StartDate, options.EndDate);
             if (pedAggs != null)
             {
                 var concurrentBinContainers = new ConcurrentBag<BinsContainer>();

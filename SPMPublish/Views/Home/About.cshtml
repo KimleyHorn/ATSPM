@@ -1,0 +1,156 @@
+@{
+    ViewBag.Title = "Home Page";
+}
+<div class="container">
+    <div class="jumbotron">
+        <h1>Automated Traffic Signal Performance Measures</h1>
+        <p class="lead">ATSPM's show real-time and historical functionality at signalized intersections. This allows traffic engineers to directly measure what previously could only be estimated and modeled.</p>
+        <p><a href="http://udottraffic.utah.gov/atspm/FAQs/Display" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
+
+
+    </div>
+    <p>The following are those who have contributed changes to the ATSPM system:</p>
+    <div class="partners">
+
+        <img class="partners" src="~/Images/PartnersLogo.jpg" alt="Logos of all those those who have contributed changes to the ATSPM system " />
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <h2>Getting started</h2>
+            <p>
+                You can download the software for our site by clicking the button below.
+            </p>
+            <p><a class="btn btn-dark" href="https://github.com/udotdevelopment/ATSPM/releases">Download &raquo;</a></p>
+        </div>
+        <div class="col-md-4">
+            <h2>What's New</h2>
+            <h5>Version KH 4.3.4 (April 2024)</h5>
+            <p>Changes:</p>
+            <ul>
+                <li>
+                    <p>Support for exporting signal configs and importing multiple at once.</p>
+                </li>
+                <li>
+                    <p>Fix signal list in export data page.</p>
+                </li>
+                <li>
+                    <p>Allow queries to pull from database and archives when a date range spans both data sources.</p>
+                </li>
+                <li>
+                    <p>Fix error displaying signals when one has an invalid location.</p>
+                </li>
+                <li>
+                    <p>Support for decoding D4 files.</p>
+                </li>
+                <li>
+                    <p>Minor updates to charts.</p>
+                </li>
+                <li>
+                    <p>Bug fix for link pivot.</p>
+                </li>
+            </ul>
+            <h5>Version KH 4.3.3 (Nov 2023)</h5>
+            <p>Changes:</p>
+            <ul>
+                <li>
+                    <p>Parquet archiver bug fixes related to cloud storage and archiving data for non-configured signals.</p>
+                </li>
+                <li>
+                    <p>Updates to WavetronicsSpeedListener.</p>
+                </li>
+                <li>
+                    <p>Bug fix when saving signal with no approaches.</p>
+                </li>
+                <li>
+                    <p>Bug fix for displaying plan label.</p>
+                </li>
+                <li>
+                    <p>Updated chart description for Left Turn Gap Analysis to reflect the approach the gaps are being collected from.</p>
+                </li>
+            </ul>
+            <h5>Version KH 4.3.2 (Sep 2023)</h5>
+            <p>Changes:</p>
+            <ul>
+                <li>
+                    <p>Ability to delete metric and detector comments on the Signal Configuration page.</p>
+                </li>
+                <li>
+                    <p>Bug fix for PCD chart labels when selecting the current day as the time range.</p>
+                </li>
+                <li>
+                    <p>Sort signals by primary name.</p>
+                </li>
+                <li>
+                    <p>SFTP polling support.</p>
+                </li>
+                <li>
+                    <p>Watchdog signal exclusions feature.</p>
+                </li>
+            </ul>
+            <h5>Version 4.3.1 (Dec 2022)</h5>
+            <p>Changes:</p>
+            <ul>
+                <li>
+                    <p>The ConvertDBForHistoricalConfigurations executable has been added to the executables folder.</p>
+                </li>
+                <li>
+                    <p>A bug that can prevent the chart usage report from working has been fixed.</p>
+                </li>
+                <li>
+                    <p>The Split Fail measure now shows the full time span selected.</p>
+                </li>
+                <li>
+                    <p>The method the Arrivals On Red measure uses to create bins has been updated to prevent boundary issues.</p>
+                </li>
+                <li>
+                    <p>A bug preventing the FTPfromasc3 project from running properly has been fixed.</p>
+                </li>
+                <li>
+                    <p>Additional updates have been made to the aggregation tables and programs.</p>
+                </li>
+                <li>
+                    <p>A bug in the Wait Time measure has been fixed; Phase Call Dropped events are now considered whenever stop bar presence detection is being used.</p>
+                </li>
+            </ul>
+            <h5>Version 4.3 (May 2022)</h5>
+            <p>Changes:</p>
+            <ul>
+                <li>
+                    <b>Wait Time Measure</b>
+                    <p>New measure calculating the average wait time for vehicles by approach and movement.</p>
+                </li>
+                <li>
+                    <b>Left Turn Gap Report</b>
+                    <p>Left turn phasing analysis based on existing gaps, volumes, and critical gap.</p>
+                </li>
+                <li>
+                    <b>Options and Thresholds</b>
+                    <p>New admin page with the ability to modify default options and thresholds for all measures.</p>
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <h2>What's Next</h2>
+            <h5>Version 5.0 (Anticipated Release: 2023)</h5>
+            <ul>
+                <li>
+                    <b>Backend</b>
+                    <p>-Migrate to .NET 6.0</p>
+                    <p>-Migrate to Entity Framework Core 6.0</p>
+                    <p>-Improved API</p>
+                </li>
+                <li>
+                    <b>New Measures</b>
+                    <p>-Green-Time Distribution</p> 
+                    <p>-Time-Space Diagram</p>
+                </li>
+                <li>
+                    <b>Additional Features</b>
+                    <p>-Options to download data in raw or 15-minute aggregated forms</p>
+                    <p>-Improved data compression</p>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

@@ -16,8 +16,8 @@ namespace MOE.Common.Business.CustomReport
             EventCodes = eventCodes;
             var repository =
                 SignalsRepositoryFactory.Create();
-            SignalModel = repository.GetLatestVersionOfSignalBySignalID(signalID);
-            Detectors = SignalModel.GetDetectorsForSignal();
+            AtspmSignalsModel = repository.GetLatestVersionOfSignalBySignalID(signalID);
+            Detectors = AtspmSignalsModel.GetDetectorsForSignal();
             Plans = new PlansBase(signalID, startDate, endDate);
 
             GetPhases(startOfCycle);
@@ -37,11 +37,11 @@ namespace MOE.Common.Business.CustomReport
 
         public List<int> EventCodes { get; set; }
 
-        public Models.Signal SignalModel { get; set; }
+        public Models.ATSPM_Signals AtspmSignalsModel { get; set; }
 
         private void GetPhases(int startOfCycle)
         {
-            foreach (var a in SignalModel.Approaches)
+            foreach (var a in AtspmSignalsModel.Approaches)
             {
                 Phases.Add(new Phase(a, StartDate, EndDate, EventCodes, startOfCycle, false));
 

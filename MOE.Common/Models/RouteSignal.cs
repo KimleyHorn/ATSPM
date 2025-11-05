@@ -27,7 +27,7 @@ namespace MOE.Common.Models
         public string SignalId { get; set; }
 
         [NotMapped]
-        public Signal Signal { get; set; }
+        public ATSPM_Signals AtspmSignals { get; set; }
 
         public List<RoutePhaseDirection> PhaseDirections { get; set; }
     }

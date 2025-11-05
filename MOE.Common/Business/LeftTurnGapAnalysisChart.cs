@@ -47,7 +47,7 @@ namespace MOE.Common.Business
             options.Y2AxisTitle = $"% of Green Time where Gap ≥ {options.TrendLineGapThreshold} seconds";
 
             Chart = ChartFactory.CreateDefaultChartNoX2Axis(options);
-            SetChartTitle(Chart, options, GapData.Approach.Signal, GapData.Approach, GapData.DetectionTypeStr);
+            SetChartTitle(Chart, options, GapData.Approach.AtspmSignals, GapData.Approach, GapData.DetectionTypeStr);
             ChartFactory.SetImageProperties(Chart);
 
             Chart.ChartAreas[0].AxisY.Title = "# Gaps";
@@ -57,10 +57,10 @@ namespace MOE.Common.Business
             AddDataToChart();
         }
 
-        private void SetChartTitle(Chart chart, LeftTurnGapAnalysisOptions options, Signal signal, Approach approach, string detectionType)
+        private void SetChartTitle(Chart chart, LeftTurnGapAnalysisOptions options, ATSPM_Signals atspmSignals, Approach approach, string detectionType)
         {
             chart.Titles.Add(ChartTitleFactory.GetChartName(options.MetricTypeID));
-            chart.Titles.Add(ChartTitleFactory.GetSignalLocationAndDateRange(signal.SignalID, options.StartDate,
+            chart.Titles.Add(ChartTitleFactory.GetSignalLocationAndDateRange(atspmSignals.SignalID, options.StartDate,
                 options.EndDate));
             Title phaseTitle = ChartTitleFactory.GetPhaseAndPhaseDescriptions(approach, false);
             phaseTitle.Text = (phaseTitle.Text + " Approach Gaps");

@@ -11,7 +11,7 @@ namespace MOE.Common.Business
         /// </summary>
         /// <param name="region"></param>
         /// <returns>Data.Signals.MasterDataTable</returns>
-        public static List<Models.Signal> GetSignals()
+        public static List<Models.ATSPM_Signals> GetSignals()
         {
             var db = new SPM();
 

@@ -1,0 +1,24 @@
+﻿@model MOE.Common.Models.MetricComment
+
+<tr data-comment-id="@Model.CommentID">
+    <td>
+        @Html.HiddenFor(model => model.CommentID)
+        @Html.HiddenFor(model => model.SignalID)
+        @Model.TimeStamp
+    </td>
+
+    <td>
+        @Model.CommentText
+    </td>
+
+    <td>
+        @{
+            string chartstring = string.Join(", ", Model.MetricTypes.Select(item => item.Abbreviation));
+        }
+        @chartstring
+    </td>
+
+    <td>
+        <button class="btn btn-danger" onclick="DeleteComment(@Model.CommentID)">Delete</button>
+    </td>
+</tr>

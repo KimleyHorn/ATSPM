@@ -11,20 +11,20 @@ namespace MOE.Common.Business.DataAggregation
     {
         public List<PhaseCycleAggregationByApproach> ApproachCycles { get; }
 
-        public PhaseCycleAggregationBySignal(PhaseCycleAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public PhaseCycleAggregationBySignal(PhaseCycleAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             ApproachCycles = new List<PhaseCycleAggregationByApproach>();
-            GetApproachCycleAggregationContainersForAllApporaches(options, signal);
+            GetApproachCycleAggregationContainersForAllApporaches(options, atspmSignals);
             LoadBins(null, null);
         }
 
 
-        public PhaseCycleAggregationBySignal(PhaseCycleAggregationOptions options, Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+        public PhaseCycleAggregationBySignal(PhaseCycleAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             ApproachCycles = new List<PhaseCycleAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.ProtectedPhaseNumber == phaseNumber)
                 {
                     ApproachCycles.Add(
@@ -40,11 +40,11 @@ namespace MOE.Common.Business.DataAggregation
             LoadBins(null, null);
         }
 
-        public PhaseCycleAggregationBySignal(PhaseCycleAggregationOptions options, Models.Signal signal,
-            DirectionType direction) : base(options, signal)
+        public PhaseCycleAggregationBySignal(PhaseCycleAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            DirectionType direction) : base(options, atspmSignals)
         {
             ApproachCycles = new List<PhaseCycleAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.DirectionType.DirectionTypeID == direction.DirectionTypeID)
                 {
                     ApproachCycles.Add(
@@ -60,7 +60,7 @@ namespace MOE.Common.Business.DataAggregation
             LoadBins(null, null);
         }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
            
             for (var i = 0; i < BinsContainers.Count; i++)
@@ -76,7 +76,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             {
@@ -92,9 +92,9 @@ namespace MOE.Common.Business.DataAggregation
 
 
         private void GetApproachCycleAggregationContainersForAllApporaches(
-            PhaseCycleAggregationOptions options, Models.Signal signal)
+            PhaseCycleAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 ApproachCycles.Add(
                     new PhaseCycleAggregationByApproach(approach, options, options.StartDate,

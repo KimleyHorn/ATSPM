@@ -38,7 +38,7 @@ namespace MOE.Common.Business.ScriptGenerator
         public static List<Pin> GetPinInfo()
         {
             var pins = new ConcurrentBag<Pin>();
-            List<Signal> signals = GetSignalVersionByDate(DateTime.Now);
+            List<ATSPM_Signals> signals = GetSignalVersionByDate(DateTime.Now);
             //foreach (var signal in signals)
             Parallel.ForEach(signals, signal =>
             {
@@ -64,7 +64,7 @@ namespace MOE.Common.Business.ScriptGenerator
         }
 
 
-        private static List<Signal> GetSignalVersionByDate(DateTime dt)
+        private static List<ATSPM_Signals> GetSignalVersionByDate(DateTime dt)
         {
             using (var db = new SPM())
             {

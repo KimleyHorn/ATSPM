@@ -9,13 +9,13 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class PreemptionAggregationBySignal : AggregationBySignal
     {
-        public PreemptionAggregationBySignal(PreemptionAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public PreemptionAggregationBySignal(PreemptionAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
-            LoadBins(options, signal);
+            LoadBins(options, atspmSignals);
         }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             var preemptionAggregationRepository =
                 PreemptAggregationDatasRepositoryFactory.Create();
@@ -28,7 +28,7 @@ namespace MOE.Common.Business.DataAggregation
 
             var preemptions =
                 preemptionAggregationRepository.GetPreemptionsBySignalIdAndDateRange(
-                    signal.SignalID, BinsContainers.Min(b => b.Start), selectionEndDate);
+                    atspmSignals.SignalID, BinsContainers.Min(b => b.Start), selectionEndDate);
             if (preemptions != null)
             {
                 var concurrentBinContainers = new ConcurrentBag<BinsContainer>();
@@ -90,7 +90,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             throw new System.NotImplementedException();
         }

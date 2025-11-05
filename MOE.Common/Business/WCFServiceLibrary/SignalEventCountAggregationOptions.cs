@@ -39,13 +39,13 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
         
 
-        protected override List<BinsContainer> GetBinsContainersBySignal(Models.Signal signal)
+        protected override List<BinsContainer> GetBinsContainersBySignal(Models.ATSPM_Signals atspmSignals)
         {
-            var aggregationBySignal = new SignalEventCountAggregationBySignal(this, signal);
+            var aggregationBySignal = new SignalEventCountAggregationBySignal(this, atspmSignals);
             return aggregationBySignal.BinsContainers;
         }
 
-        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.Signal> signals)
+        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.ATSPM_Signals> signals)
         {
             var binsContainers = BinFactory.GetBins(TimeOptions);
             foreach (var signal in signals)

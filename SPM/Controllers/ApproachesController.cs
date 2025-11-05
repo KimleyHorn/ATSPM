@@ -60,7 +60,7 @@ namespace SPM.Controllers
             {
 
                 approachRepository.AddOrUpdate(approach);
-                approach.Signal = signalRepository.GetLatestVersionOfSignalBySignalID(approach.SignalID);
+                approach.AtspmSignals = signalRepository.GetLatestVersionOfSignalBySignalID(approach.SignalID);
                 return PartialView("~/Views/Signals/EditorTemplates/Approach.cshtml", approach);
             }
             return PartialView(approach);

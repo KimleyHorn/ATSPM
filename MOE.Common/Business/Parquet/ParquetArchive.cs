@@ -18,16 +18,17 @@ namespace MOE.Common.Business.Parquet
     public static class ParquetArchive
     {
         private static readonly string Destination = ConfigurationManager.AppSettings["StorageLocation"];
+        private static int _storageLocation = -1;
         private static readonly string GoogleBucketName = ConfigurationManager.AppSettings["BucketName"];
-        private static readonly string FolderName = ConfigurationManager.AppSettings["FolderName"];
+        private static readonly string FolderName = "kimley-horn";
         private static readonly string AwsBucketName = ConfigurationManager.AppSettings["S3_BUCKETNAME"];
         private static readonly string AwsAccessKey = ConfigurationManager.AppSettings["S3_ACCESSKEY"];
         private static readonly string AwsSecretKey = ConfigurationManager.AppSettings["S3_SECRETKEY"];
-        private static readonly string Container = ConfigurationManager.AppSettings["AZURE_CONTAINER"];
-        private static readonly string FilePathPrefix = ConfigurationManager.AppSettings["FILE_PATH_PREFIX"];
+        private static string Container = "parquetarchive";
+        private static readonly string FilePathPrefix = "archivedDate";
 
         public static List<Controller_Event_Log> GetDataFromArchive(string localPath, string signalId,
-            DateTime startTime, DateTime endTime)
+            DateTime startTime, DateTime endTime, MOEService settings = null)
         {
             try
             {
@@ -37,25 +38,51 @@ namespace MOE.Common.Business.Parquet
                     : GetDateRange(startTime, endTime);
 
                 var events = new List<Controller_Event_Log>();
-
-                switch (Destination)
+                if (Destination != null)
                 {
-                    case "0":
-                        if (string.IsNullOrWhiteSpace(localPath)) return new List<Controller_Event_Log>();
-                        events = GetEventsFromLocalFile(localPath, signalId, dateRange);
-                        break;
-                    case "1":
-                        events = GetEventsFromGoogleCloud(signalId, dateRange);
-                        break;
-                    case "2":
-                        events = GetEventsFromAws(signalId, dateRange);
-                        break;
-                    case "3":
-                        events = GetEventsFromAzure(signalId, dateRange);
-                        break;
-                    default:
-                        return events;
+                    switch (Destination)
+                    {
+                        case "0":
+                            if (string.IsNullOrWhiteSpace(localPath)) return new List<Controller_Event_Log>();
+                            events = GetEventsFromLocalFile(localPath, signalId, dateRange);
+                            break;
+                        case "1":
+                            events = GetEventsFromGoogleCloud(signalId, dateRange);
+                            break;
+                        case "2":
+                            events = GetEventsFromAws(signalId, dateRange);
+                            break;
+                        case "3":
+                            events = GetEventsFromAzure(signalId, dateRange, settings);
+                            break;
+                        default:
+                            return events;
+                    }
                 }
+                else
+                {
+                    if(settings != null)
+                        _storageLocation = settings.StorageLocation;
+                    switch (_storageLocation)
+                    {
+                        case 0:
+                            if (string.IsNullOrWhiteSpace(localPath)) return new List<Controller_Event_Log>();
+                            events = GetEventsFromLocalFile(localPath, signalId, dateRange);
+                            break;
+                        case 1:
+                            events = GetEventsFromGoogleCloud(signalId, dateRange);
+                            break;
+                        case 2:
+                            events = GetEventsFromAws(signalId, dateRange);
+                            break;
+                        case 3:
+                            events = GetEventsFromAzure(signalId, dateRange, settings);
+                            break;
+                        default:
+                            return events;
+                    }
+                }
+                    
 
                 return events.Where(x => x.Timestamp >= startTime && x.Timestamp < endTime).ToList();
             }
@@ -76,17 +103,25 @@ namespace MOE.Common.Business.Parquet
             }
         }
 
-        private static List<Controller_Event_Log> GetEventsFromAzure(string signalId, IEnumerable<DateTime> dateRange)
+        private static List<Controller_Event_Log> GetEventsFromAzure(string signalId, IEnumerable<DateTime> dateRange, MOEService settings = null)
         {
             var events = new List<Controller_Event_Log>();
+            BlobServiceClient blobServiceClient = null;
 
+                //blobServiceClient =
+                //    new BlobServiceClient(ConfigurationManager.ConnectionStrings["AZURE_CONN_STRING"].ToString());
 
-            var blobServiceClient = new BlobServiceClient(ConfigurationManager.AppSettings["AZURE_CONN_STRING"]);
+                if (settings == null || string.IsNullOrWhiteSpace(settings.ConnectionString))
+                    return events;
+                blobServiceClient = new BlobServiceClient(settings.ConnectionString);
+            
+            
             var container = blobServiceClient.GetBlobContainerClient(Container);
 
             foreach (var date in dateRange)
             {
-                var fileName = $"{FolderName}{FilePathPrefix}={date:yyyy-MM-dd}/{signalId}_{date:yyyy-MM-dd}.parquet";
+                var fileName = $"{FolderName}/archives/{FilePathPrefix}={date:yyyy-MM-dd}/{signalId}_{date:yyyy-MM-dd}.parquet";
+                //var fileName = $"{FolderName}{FilePathPrefix}={date:yyyy-MM-dd}/{signalId}_{date:yyyy-MM-dd}.parquet";
                 var blobClient = container.GetBlobClient(fileName);
                 if (blobClient.Exists())
                 {

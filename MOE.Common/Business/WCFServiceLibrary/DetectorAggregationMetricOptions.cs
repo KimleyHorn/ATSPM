@@ -95,11 +95,11 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
         }
 
-        private void GetApproachXAxisDetectorSeriesChart(Models.Signal signal, Chart chart)
+        private void GetApproachXAxisDetectorSeriesChart(Models.ATSPM_Signals atspmSignals, Chart chart)
         {
-            var series = CreateSeries(0, signal.SignalDescription);
+            var series = CreateSeries(0, atspmSignals.SignalDescription);
             var i = 1;
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             foreach (var detector in approach.Detectors)
             {
                 var binsContainers = GetBinsContainersByDetector(detector);
@@ -126,7 +126,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 case SeriesType.PhaseNumber:
                     foreach (var signal in Signals)
                     {
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeXAxisApproachSeriesChart(signal, chart);
                         SaveChartImage(chart);
                     }
@@ -134,7 +134,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 case SeriesType.Direction:
                     foreach (var signal in Signals)
                     {
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeXAxisDirectionSeriesChart(signal, chart);
                         SaveChartImage(chart);
                     }
@@ -143,7 +143,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 case SeriesType.Detector:
                     foreach (var signal in Signals)
                     {
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeXAxisDetectorSeriesChart(signal, chart);
                         SaveChartImage(chart);
                     }
@@ -163,10 +163,10 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
         }
 
-        private void GetTimeXAxisDetectorSeriesChart(Models.Signal signal, Chart chart)
+        private void GetTimeXAxisDetectorSeriesChart(Models.ATSPM_Signals atspmSignals, Chart chart)
         {
             var i = 1;
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             foreach (var detector in approach.Detectors)
             {
                 var binsContainers = GetBinsContainersByDetector(detector);
@@ -226,7 +226,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 case SeriesType.PhaseNumber:
                     foreach (var signal in Signals)
                     {
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeOfDayXAxisApproachSeriesChart(signal, chart);
                         SaveChartImage(chart);
                     }
@@ -234,7 +234,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 case SeriesType.Direction:
                     foreach (var signal in Signals)
                     {
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeOfDayXAxisDirectionSeriesChart(signal, chart);
                         SaveChartImage(chart);
                     }
@@ -253,7 +253,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 case SeriesType.Detector:
                     foreach (var signal in Signals)
                     {
-                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.Signal> {signal});
+                        chart = ChartFactory.CreateTimeXIntYChart(this, new List<Models.ATSPM_Signals> {signal});
                         GetTimeOfDayXAxisDetectorSeriesChart(signal, chart);
                         SaveChartImage(chart);
                     }
@@ -263,7 +263,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
         }
 
-        private void GetTimeOfDayXAxisDetectorSeriesChart(Models.Signal signal, Chart chart)
+        private void GetTimeOfDayXAxisDetectorSeriesChart(Models.ATSPM_Signals atspmSignals, Chart chart)
         {
             if (TimeOptions.TimeOfDayStartHour != null && TimeOptions.TimeOfDayStartMinute.Value != null)
                 chart.ChartAreas.FirstOrDefault().AxisX.Minimum =
@@ -271,7 +271,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                             TimeOptions.TimeOfDayStartHour.Value, TimeOptions.TimeOfDayStartMinute.Value, 0)
                         .AddHours(-1).ToOADate();
             var seriesList = new ConcurrentBag<Series>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 var detectors = approach.Detectors.ToList();
                 Parallel.For(0, detectors.Count, i =>

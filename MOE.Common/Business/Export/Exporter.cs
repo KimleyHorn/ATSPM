@@ -78,23 +78,23 @@ namespace MOE.Common.Business.Export
             return fileBytes;
         }
 
-        private static void ExportSignalInformation(ExcelWorkbook workbook, Signal signal)
+        private static void ExportSignalInformation(ExcelWorkbook workbook, ATSPM_Signals atspmSignals)
         {
             var sheet = workbook.Worksheets["Signal Information"];
-            sheet.Cells[4, 2].Value = signal.SignalID;
-            sheet.Cells[4, 4].Value = signal.PrimaryName;
-            sheet.Cells[4, 6].Value = signal.SecondaryName;
-            switch (signal.ControllerType)
+            sheet.Cells[4, 2].Value = atspmSignals.SignalID;
+            sheet.Cells[4, 4].Value = atspmSignals.PrimaryName;
+            sheet.Cells[4, 6].Value = atspmSignals.SecondaryName;
+            switch (atspmSignals.ControllerType)
             {
                 // Add custom text as needed
                 default:
-                    sheet.Cells[4, 8].Value = signal.ControllerType.Description;
+                    sheet.Cells[4, 8].Value = atspmSignals.ControllerType.Description;
                     break;
             }
 
-            sheet.Cells[5, 2].Value = Convert.ToDouble(signal.Latitude);
-            sheet.Cells[5, 4].Value = Convert.ToDouble(signal.Longitude);
-            sheet.Cells[5, 6].Value = signal.IPAddress;
+            sheet.Cells[5, 2].Value = Convert.ToDouble(atspmSignals.Latitude);
+            sheet.Cells[5, 4].Value = Convert.ToDouble(atspmSignals.Longitude);
+            sheet.Cells[5, 6].Value = atspmSignals.IPAddress;
         }
 
         private static void ExportApproaches(ExcelWorkbook workbook, List<Models.Detector> detectors)

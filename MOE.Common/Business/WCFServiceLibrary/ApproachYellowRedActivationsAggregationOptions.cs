@@ -56,56 +56,56 @@ namespace MOE.Common.Business.WCFServiceLibrary
                                              TimeOptions.SelectedBinSize + " bins";
 
 
-        protected override int GetAverageByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override int GetAverageByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new YellowRedActivationsAggregationBySignal(this, signal);
+                new YellowRedActivationsAggregationBySignal(this, atspmSignals);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override double GetSumByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override double GetSumByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new YellowRedActivationsAggregationBySignal(this, signal);
+                new YellowRedActivationsAggregationBySignal(this, atspmSignals);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override int GetAverageByDirection(Models.Signal signal, DirectionType direction)
+        protected override int GetAverageByDirection(Models.ATSPM_Signals atspmSignals, DirectionType direction)
         {
             var splitFailAggregationBySignal =
-                new YellowRedActivationsAggregationBySignal(this, signal, direction);
+                new YellowRedActivationsAggregationBySignal(this, atspmSignals, direction);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override double GetSumByDirection(Models.Signal signal, DirectionType direction)
+        protected override double GetSumByDirection(Models.ATSPM_Signals atspmSignals, DirectionType direction)
         {
             var yellowRedActivationsAggregationBySignal =
-                new YellowRedActivationsAggregationBySignal(this, signal, direction);
+                new YellowRedActivationsAggregationBySignal(this, atspmSignals, direction);
             return yellowRedActivationsAggregationBySignal.Average;
         }
 
-        protected override List<BinsContainer> GetBinsContainersBySignal(Models.Signal signal)
+        protected override List<BinsContainer> GetBinsContainersBySignal(Models.ATSPM_Signals atspmSignals)
         {
-            var yellowRedActivationsAggregationBySignal = new YellowRedActivationsAggregationBySignal(this, signal);
+            var yellowRedActivationsAggregationBySignal = new YellowRedActivationsAggregationBySignal(this, atspmSignals);
             return yellowRedActivationsAggregationBySignal.BinsContainers;
         }
 
         protected override List<BinsContainer> GetBinsContainersByDirection(DirectionType directionType,
-            Models.Signal signal)
+            Models.ATSPM_Signals atspmSignals)
         {
             var splitFailAggregationBySignal =
-                new YellowRedActivationsAggregationBySignal(this, signal, directionType);
+                new YellowRedActivationsAggregationBySignal(this, atspmSignals, directionType);
             return splitFailAggregationBySignal.BinsContainers;
         }
 
-        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new YellowRedActivationsAggregationBySignal(this, signal, phaseNumber);
+                new YellowRedActivationsAggregationBySignal(this, atspmSignals, phaseNumber);
             return splitFailAggregationBySignal.BinsContainers;
         }
 
-        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.Signal> signals)
+        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.ATSPM_Signals> signals)
         {
             var aggregations = new ConcurrentBag<YellowRedActivationsAggregationBySignal>();
             Parallel.ForEach(signals,

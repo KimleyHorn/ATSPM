@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing;
+using System.Globalization;
 using System.Runtime.Serialization;
+using System.Text.Json;
 using System.Web.UI.DataVisualization.Charting;
 using MOE.Common.Models;
+using Xunit;
+using Annotation = MOE.Common.Models.Annotation;
 
 namespace MOE.Common.Business.WCFServiceLibrary
 {
@@ -17,17 +21,23 @@ namespace MOE.Common.Business.WCFServiceLibrary
             string signalId,
             bool showPedActivity,
             int consecutiveCount,
-            bool showPlanStripes)
+            string zone,
+            bool showPlanStripes, string connString = "", int storageLoc = 0)
         {
+            StartDate = startDate;
+            EndDate = endDate;
+            Zone = TimeZoneInfo.FindSystemTimeZoneById(zone);
             SignalID = signalId;
             YAxisMax = yAxisMax;
             YAxisMin = 0;
             Y2AxisMax = 0;
             Y2AxisMin = 0;
             MetricTypeID = 1;
-            //ConsecutiveCount = consecutiveCount;
+            SelectedConsecutiveCount = consecutiveCount;
             ShowPedActivity = showPedActivity;
             ShowPlanStripes = showPlanStripes;
+            Settings = new MOEService(storageLoc, connString);
+            
         }
 
         public PhaseTerminationOptions()
@@ -37,6 +47,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             ShowArrivalsOnGreen = true;
             SetDefaults();
         }
+        public TimeZoneInfo Zone { get; set; } // set this from ctor/options
 
         [Required]
         [DataMember]
@@ -56,6 +67,10 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
         [DataMember]
         public bool ShowArrivalsOnGreen { get; set; }
+
+        public PlotlyObject PhaseTermPlotlyObject { get; set; }
+
+        public MOEService Settings { get; set; }
 
         private void CreateLegend()
         {
@@ -114,6 +129,127 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
             ReturnList.Add(MetricWebPath + "PPTLegend.jpeg");
         }
+
+        public string CreateTractionMetric()
+        {
+            PhaseTermPlotlyObject = new PlotlyObject();
+            ConfigureGraph(PhaseTermPlotlyObject, StartDate,EndDate, 3600000, 1, Zone);
+
+            var analysisPhaseCollection = new AnalysisPhaseCollection(SignalID, StartDate, EndDate, SelectedConsecutiveCount, Settings);
+            PhaseTermPlotlyObject.Data = AddTermEventData(analysisPhaseCollection, Zone);
+            return JsonSerializer.Serialize(PhaseTermPlotlyObject, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping, WriteIndented = true });
+
+        }
+
+        public List<Trace> AddTermEventData(AnalysisPhaseCollection analysisPhaseCollection, TimeZoneInfo tz)
+        {
+            var allTraces = new List<Trace>();
+            var gapOut = new Trace("Gap Out");
+            var maxOut = new Trace("Max Out");
+            var forceOff = new Trace("Force Off");
+            var unknown = new Trace("Unknown");
+            var pedWalk = new Trace("Ped Walk Begin");
+            foreach (var phase in analysisPhaseCollection.Items)
+            {
+                if (phase.TerminationEvents.Count > 0)
+                {
+                    foreach (var TermEvent in phase.ConsecutiveGapOuts)
+                        gapOut.AddXY(TermEvent.Timestamp, phase.PhaseNumber, tz);
+
+                    foreach (var TermEvent in phase.ConsecutiveMaxOut)
+                        maxOut.AddXY(TermEvent.Timestamp, phase.PhaseNumber, tz);
+                    foreach (var TermEvent in phase.ConsecutiveForceOff)
+                        forceOff.AddXY(TermEvent.Timestamp, phase.PhaseNumber , tz);
+                    foreach (var TermEvent in phase.UnknownTermination)
+                        unknown.AddXY(TermEvent.Timestamp, phase.PhaseNumber, tz);
+                    if (ShowPedActivity)
+                        foreach (var PedEvent in phase.PedestrianEvents)
+                            if (PedEvent.EventCode == 23)
+                                pedWalk.AddXY(PedEvent.Timestamp, phase.PhaseNumber + .3, tz);
+
+                }
+            }
+#if DEBUG
+            var plans = new List<PlanSplitMonitor>
+            {
+                new PlanSplitMonitor(new DateTime(2025, 3, 4, 0, 0, 0),new DateTime(2025,  3, 4, 8, 0, 0), 1),
+                new PlanSplitMonitor(new DateTime(2025, 3, 4, 8, 0, 0), new DateTime(2025,  3, 4, 16, 0, 0),2),
+                new PlanSplitMonitor(new DateTime(2025, 3, 4, 16, 0, 0), new DateTime(2025,  3, 4, 23, 59, 59),3)
+
+                
+            };
+            analysisPhaseCollection.Plans.Clear();
+            analysisPhaseCollection.Plans.AddRange(plans);
+            #endif
+
+            
+
+
+            if (ShowPlanStripes)
+                SetSimplePlanStripes(analysisPhaseCollection.Plans, StartDate, EndDate, tz);
+            gapOut.Marker.Color = "olivedrab";
+            maxOut.Marker.Color = "darkgoldenrod";
+            forceOff.Marker.Color = "mediumblue";
+            unknown.Marker.Color = "yellow";
+            pedWalk.Marker.Color = "green";
+            allTraces.Add(gapOut);
+            allTraces.Add(maxOut);
+            allTraces.Add(forceOff);
+            allTraces.Add(unknown);
+            if (ShowPedActivity)
+                allTraces.Add(pedWalk);
+            return allTraces;
+        }
+
+        public void SetSimplePlanStripes(List<PlanSplitMonitor> plans, DateTime graphStartDate, DateTime graphEndDate, TimeZoneInfo tz)
+        {
+            
+            var backGroundColor = 1;
+            foreach (PlanSplitMonitor plan in plans)
+            {
+                var startLocal = TimeZoneInfo.ConvertTime(plan.StartTime, Zone);
+                var endLocal = TimeZoneInfo.ConvertTime(plan.EndTime, Zone);
+                var stripLine = new Shape();
+                //Creates alternating backcolor to distinguish the plans
+                if (backGroundColor % 2 == 0)
+
+                    stripLine.FillColor = RgbaFromColor(Color.LightSeaGreen);
+                else
+                    stripLine.FillColor = RgbaFromColor(Color.LightSteelBlue);
+
+                stripLine.X0 = startLocal.ToString("o");
+                stripLine.X1 = endLocal.ToString("o");
+                stripLine.Y1 = 1;
+                var midpoint = new DateTime((startLocal.Ticks + endLocal.Ticks) / 2, plan.StartTime.Kind);
+                var annotation = new Annotation
+                {
+                    X = midpoint.ToString("yyyy-MM-ddTHH:mm"),
+                    ShowArrow = false
+                };
+                switch (plan.PlanNumber)
+                {
+                    case 254:
+                        annotation.Text = "Free";
+                        break;
+                    case 255:
+                        annotation.Text = "Flash";
+                        break;
+                    case 0:
+                        annotation.Text = "Unknown";
+                        break;
+                    default:
+                        annotation.Text = "Plan " + plan.PlanNumber;
+                        break;
+                }
+                PhaseTermPlotlyObject.Layout.Shapes.Add(stripLine);
+                PhaseTermPlotlyObject.Layout.Annotations.Add(annotation);
+                backGroundColor++;
+            }
+            
+        }
+
+
+
 
         public override List<string> CreateMetric()
         {
@@ -301,13 +437,13 @@ namespace MOE.Common.Business.WCFServiceLibrary
                                 chart.Series["Ped Walk Begin"].Points.AddXY(PedEvent.Timestamp, phase.PhaseNumber + .3);
                 }
                 if (showPlanStripes)
-                    SetSimplePlanStrips(analysisPhaseCollection.Plans, chart, startDate);
+                    SetSimplePlanStripes(analysisPhaseCollection.Plans, chart, startDate);
                 if (YAxisMax != null)
                     chart.ChartAreas[0].AxisY.Maximum = YAxisMax.Value + .5;
             }
         }
 
-        public static void SetSimplePlanStrips(List<PlanSplitMonitor> plans, Chart chart, DateTime graphStartDate)
+        public static void SetSimplePlanStripes(List<PlanSplitMonitor> plans, Chart chart, DateTime graphStartDate)
         {
             var backGroundColor = 1;
             foreach (Plan plan in plans)
@@ -359,5 +495,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                 backGroundColor++;
             }
         }
+
+
     }
 }

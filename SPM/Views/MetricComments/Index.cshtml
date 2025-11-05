@@ -18,7 +18,7 @@
     <table class="table">
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Signal.PrimaryName)
+                @Html.DisplayNameFor(model => model.AtspmSignals.PrimaryName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.TimeStamp)
@@ -32,7 +32,7 @@
     @foreach (var item in Model) {
         <tr>
             <td>
-                @Html.DisplayFor(modelItem => item.Signal.PrimaryName)
+                @Html.DisplayFor(modelItem => item.AtspmSignals.PrimaryName)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.TimeStamp)

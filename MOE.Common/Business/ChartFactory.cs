@@ -130,7 +130,7 @@ namespace MOE.Common.Business
         //    return chartArea;
         //}
 
-        public static Chart CreateTimeXIntYChart(SignalAggregationMetricOptions options, List<Models.Signal> signals)
+        public static Chart CreateTimeXIntYChart(SignalAggregationMetricOptions options, List<Models.ATSPM_Signals> signals)
         {
             var chart = new Chart();
             SetImageProperties(chart);

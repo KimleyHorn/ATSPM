@@ -4,6 +4,7 @@ using System.Data.Entity;
 using System.Data.Entity.Validation;
 using System.Linq;
 using System.Threading.Tasks;
+using Caseiro.Mvc.PagedList.Extensions;
 using MOE.Common.Business;
 using MOE.Common.Business.CustomReport;
 using NuGet;
@@ -26,40 +27,57 @@ namespace MOE.Common.Models.Repositories
         }
 
 
-        public List<Signal> GetAllSignals()
+        public List<ATSPM_Signals> GetAllSignals()
         {
             return GetLatestVersionOfAllSignals();
         }
 
-        public Signal GetVersionOfSignalByDate(string signalId, DateTime startDate)
+        public ATSPM_Signals GetVersionOfSignalByDate(string signalId, DateTime startDate)
         {
-            var signals = _db.Signals
-                .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.MovementType)))
-                .Include(signal => signal.Approaches.Select(a => a.DirectionType))
-                .Where(signal => signal.SignalID == signalId)
+            var signals = _db.Signals.Where(signal => signal.SignalID == signalId)
                 .Where(signal => signal.Start <= startDate)
-                .Where(signal => signal.VersionActionId != 3)
-                .ToList();
+                .Where(signal => signal.VersionActionId != 3).ToList();
+            var approaches = _db.Approaches.ToList();
 
-            Signal versionSignal;
+            foreach (var signal in signals)
+            {
+                signal.Approaches = approaches.Where(a => a.SignalID == signal.SignalID).ToList();
+            }
+
+
+            var testSignal = _db.Signals
+    .Include(s => s.Approaches)
+    .FirstOrDefault(s => s.SignalID == signalId);
+
+            var signalCount = testSignal.Approaches.Count; // should be > 0
+
+            //var signals = _db.Signals
+            //    //.Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.MovementType)))
+            //    .Include(signal => signal.Approaches.Select(a => a.DirectionType))
+            //    .Where(signal => signal.SignalID == signalId)
+            //    .Where(signal => signal.Start <= startDate)
+            //    .Where(signal => signal.VersionActionId != 3)
+            //    .ToList();
+
+            ATSPM_Signals versionAtspmSignals;
             if (signals.Count > 1)
             {
                 var orderedSignals = signals.OrderByDescending(signal => signal.Start);
-                versionSignal = orderedSignals.First();
+                versionAtspmSignals = orderedSignals.First();
             }
             else
             {
-                versionSignal = signals.FirstOrDefault();
+                versionAtspmSignals = signals.FirstOrDefault();
             }
 
-            if (versionSignal != null)
+            if (versionAtspmSignals != null)
             {
-                AddSignalAndDetectorLists(versionSignal);
+                AddSignalAndDetectorLists(versionAtspmSignals);
             }
-            return versionSignal;
+            return versionAtspmSignals;
         }
 
-        public Signal GetVersionOfSignalByDateWithDetectionTypes(string signalId, DateTime startDate)
+        public ATSPM_Signals GetVersionOfSignalByDateWithDetectionTypes(string signalId, DateTime startDate)
         {
             var signals = _db.Signals
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.MovementType)))
@@ -81,7 +99,7 @@ namespace MOE.Common.Models.Repositories
             }
         }
 
-        public Signal GetSignalVersionByVersionId(int versionId)
+        public ATSPM_Signals GetSignalVersionByVersionId(int versionId)
         {
             var version = _db.Signals
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.MovementType)))
@@ -116,9 +134,9 @@ namespace MOE.Common.Models.Repositories
             _db.SaveChanges();
         }
 
-        public List<Signal> GetSignalsBetweenDates(string signalId, DateTime startDate, DateTime endDate)
+        public List<ATSPM_Signals> GetSignalsBetweenDates(string signalId, DateTime startDate, DateTime endDate)
         {
-            var signals = new List<Signal>();
+            var signals = new List<ATSPM_Signals>();
             var signalBeforeStart = _db.Signals
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.MovementType)))
                 .Include(signal => signal.Approaches.Select(a => a.DirectionType))
@@ -148,9 +166,9 @@ namespace MOE.Common.Models.Repositories
             return _db.DatabaseArchiveExcludedSignals.Any(s => s.SignalId == signalId);
         }
 
-        public Signal CopySignalToNewVersion(Signal originalVersion, bool isImport = false, string user = "")
+        public ATSPM_Signals CopySignalToNewVersion(ATSPM_Signals originalVersion, bool isImport = false, string user = "")
         {
-            var newVersion = new Signal();
+            var newVersion = new ATSPM_Signals();
 
             //originalVersion.VersionAction = (from r in _db.VersionActions
             //    where r.ID == 4
@@ -187,7 +205,7 @@ namespace MOE.Common.Models.Repositories
             return newVersion;
         }
 
-        public List<Signal> GetLatestVerionOfAllSignalsByControllerType(int controllerTypeId)
+        public List<ATSPM_Signals> GetLatestVerionOfAllSignalsByControllerType(int controllerTypeId)
         {
             var signals = GetLatestVersionOfAllSignals();
 
@@ -198,7 +216,7 @@ namespace MOE.Common.Models.Repositories
             return filteredSignals;
         }
 
-        public List<Signal> EagerLoadAllSignals()
+        public List<ATSPM_Signals> EagerLoadAllSignals()
         {
             var signals = _db.Signals.Where(r => r.VersionActionId != 3)
                 .GroupBy(r => r.SignalID)
@@ -210,7 +228,7 @@ namespace MOE.Common.Models.Repositories
             return signals;
         }
 
-        public List<Signal> GetAllEnabledSignals()
+        public List<ATSPM_Signals> GetAllEnabledSignals()
         {
             _db.Configuration.LazyLoadingEnabled = false;
 
@@ -240,16 +258,16 @@ namespace MOE.Common.Models.Repositories
             return location;
         }
 
-        public void AddOrUpdate(Signal signal)
+        public void AddOrUpdate(ATSPM_Signals atspmSignals)
         {
             var g = (from r in _db.Signals
-                     where r.VersionID == signal.VersionID
+                     where r.VersionID == atspmSignals.VersionID
                      select r).FirstOrDefault();
             if (g == null)
             {
-                if (signal.Approaches != null)
+                if (atspmSignals.Approaches != null)
                 {
-                    foreach (var appr in signal.Approaches)
+                    foreach (var appr in atspmSignals.Approaches)
                     {
                         if (appr.Detectors != null)
                         {
@@ -260,7 +278,7 @@ namespace MOE.Common.Models.Repositories
                         }
                     }
                 }
-                _db.Signals.Add(signal);
+                _db.Signals.Add(atspmSignals);
                 try
                 {
                     _db.SaveChanges();
@@ -284,7 +302,7 @@ namespace MOE.Common.Models.Repositories
             }
             else
             {
-                Update(signal);
+                Update(atspmSignals);
                 //throw new Exception("Signal already exists in the database");
             }
         }
@@ -320,7 +338,7 @@ namespace MOE.Common.Models.Repositories
             }
         }
 
-        public void AddList(List<Signal> signals)
+        public void AddList(List<ATSPM_Signals> signals)
         {
             foreach (var s in signals)
                 try
@@ -379,8 +397,10 @@ namespace MOE.Common.Models.Repositories
         }
 
 
-        public Signal GetLatestVersionOfSignalBySignalID(string signalId)
+        public ATSPM_Signals GetLatestVersionOfSignalBySignalID(string signalId)
         {
+            var test = _db.Signals.Sql;
+            Console.WriteLine(test);
             var returnSignal = _db.Signals
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionTypes)))
                 .Include(signal => signal.Areas)
@@ -394,6 +414,8 @@ namespace MOE.Common.Models.Repositories
                 .Where(signal => signal.VersionActionId != 3)
                 .OrderByDescending(signal => signal.Start)
                 .FirstOrDefault();
+            var testSignal = _db.Signals.Any();
+            Console.WriteLine(testSignal);
             if (returnSignal != null)
             {
                 returnSignal.VersionList = GetAllVersionsOfSignalBySignalID(returnSignal.SignalID);
@@ -402,14 +424,14 @@ namespace MOE.Common.Models.Repositories
             return returnSignal;
         }
 
-        private static void AddSignalAndDetectorLists(Signal returnSignal)
+        private static void AddSignalAndDetectorLists(ATSPM_Signals returnAtspmSignals)
         {
             var detectionTypesRepository = MOE.Common.Models.Repositories.DetectionTypeRepositoryFactory.Create();
             var detectionTypes = detectionTypesRepository.GetAllDetectionTypes();
             var hardwareTypesRepository =
                 MOE.Common.Models.Repositories.DetectionHardwareRepositoryFactory.Create();
             var hardwareTypes = hardwareTypesRepository.GetAllDetectionHardwares();
-            foreach (var approach in returnSignal.Approaches)
+            foreach (var approach in returnAtspmSignals.Approaches)
             {
                 foreach (var detector in approach.Detectors)
                 {
@@ -424,7 +446,7 @@ namespace MOE.Common.Models.Repositories
             }
         }
 
-        public List<Signal> GetAllVersionsOfSignalBySignalID(string signalId)
+        public List<ATSPM_Signals> GetAllVersionsOfSignalBySignalID(string signalId)
         {
             var signals = _db.Signals
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionTypes)))
@@ -443,8 +465,11 @@ namespace MOE.Common.Models.Repositories
             return null;
         }
 
-        public List<Signal> GetLatestVersionOfAllSignals()
+        public List<ATSPM_Signals> GetLatestVersionOfAllSignals()
         {
+            var test = _db.Signals.Sql;
+            Console.WriteLine(test);
+
             var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
                 .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionTypes)))
                 .Include(signal => signal.Areas)
@@ -461,7 +486,7 @@ namespace MOE.Common.Models.Repositories
 
         }
 
-        public IQueryable<Signal> GetLatestVersionOfAllSignalsAsQueryable()
+        public IQueryable<ATSPM_Signals> GetLatestVersionOfAllSignalsAsQueryable()
         {
             var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
                     .GroupBy(r => r.SignalID)
@@ -471,7 +496,7 @@ namespace MOE.Common.Models.Repositories
 
         }
 
-        public List<Signal> GetLatestVersionOfAllSignalsForFtp()
+        public List<ATSPM_Signals> GetLatestVersionOfAllSignalsForFtp()
         {
             List<int> controllerTypes = new List<int> { 4 };
             var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
@@ -486,7 +511,7 @@ namespace MOE.Common.Models.Repositories
             return activeSignals;
         }
 
-        public List<Signal> GetLatestVersionOfAllSignalsForSftp()
+        public List<ATSPM_Signals> GetLatestVersionOfAllSignalsForSftp()
         {
             List<int> controllerTypes = new List<int> { 20 };
             var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
@@ -501,7 +526,7 @@ namespace MOE.Common.Models.Repositories
             return activeSignals;
         }
 
-        public List<Signal> GetLatestVersionOfAllSignalsForSftp(int controllerType)
+        public List<ATSPM_Signals> GetLatestVersionOfAllSignalsForSftp(int controllerType)
         {
             List<int> controllerTypes = new List<int> { controllerType };
             var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
@@ -533,17 +558,17 @@ namespace MOE.Common.Models.Repositories
             }
         }
 
-        private void CopyApproaches(Signal signalFromDb, Signal newSignal)
+        private void CopyApproaches(ATSPM_Signals atspmSignalsFromDb, ATSPM_Signals newAtspmSignals)
         {
             var approaches = (from r in _db.Approaches
-                              where r.VersionID == signalFromDb.VersionID
+                              where r.VersionID == atspmSignalsFromDb.VersionID
                               select r).ToList();
 
             foreach (var apprFromDb in approaches)
             {
                 var newApp = new Approach();
 
-                newApp.SignalID = newSignal.SignalID;
+                newApp.SignalID = newAtspmSignals.SignalID;
                 newApp.Description = apprFromDb.Description;
                 newApp.DirectionTypeID = apprFromDb.DirectionTypeID;
                 newApp.ProtectedPhaseNumber = apprFromDb.ProtectedPhaseNumber;
@@ -552,7 +577,7 @@ namespace MOE.Common.Models.Repositories
                 newApp.IsPermissivePhaseOverlap = apprFromDb.IsPermissivePhaseOverlap;
                 newApp.MPH = apprFromDb.MPH;
                 newApp.PermissivePhaseNumber = apprFromDb.PermissivePhaseNumber;
-                newApp.VersionID = newSignal.VersionID;
+                newApp.VersionID = newAtspmSignals.VersionID;
 
                 _db.Approaches.Add(newApp);
                 _db.SaveChanges();
@@ -600,10 +625,10 @@ namespace MOE.Common.Models.Repositories
         }
 
 
-        public void Update(Signal incomingSignal)
+        public void Update(ATSPM_Signals incomingAtspmSignals)
         {
             var signalFromDatabase = (from r in _db.Signals
-                                      where r.VersionID == incomingSignal.VersionID
+                                      where r.VersionID == incomingAtspmSignals.VersionID
                                       select r).FirstOrDefault();
             if (signalFromDatabase != null)
             {
@@ -614,19 +639,19 @@ namespace MOE.Common.Models.Repositories
                         signalFromDatabase.Areas.Remove(area);
                     }
                 }
-                if (incomingSignal.AreaIds != null && incomingSignal.AreaIds.Count > 0)
+                if (incomingAtspmSignals.AreaIds != null && incomingAtspmSignals.AreaIds.Count > 0)
                 {
-                    foreach (var id in incomingSignal.AreaIds)
+                    foreach (var id in incomingAtspmSignals.AreaIds)
                     {
                         var area = _db.Areas.Where(a => a.Id == id).FirstOrDefault();
                         signalFromDatabase.Areas.Add(area);
                     }
                 }
-                if (incomingSignal.VersionActionId == 0)
-                    incomingSignal.VersionActionId = signalFromDatabase.VersionActionId;
-                _db.Entry(signalFromDatabase).CurrentValues.SetValues(incomingSignal);
-                if (incomingSignal.Approaches != null)
-                    foreach (var a in incomingSignal.Approaches)
+                if (incomingAtspmSignals.VersionActionId == 0)
+                    incomingAtspmSignals.VersionActionId = signalFromDatabase.VersionActionId;
+                _db.Entry(signalFromDatabase).CurrentValues.SetValues(incomingAtspmSignals);
+                if (incomingAtspmSignals.Approaches != null)
+                    foreach (var a in incomingAtspmSignals.Approaches)
                     {
                         var approach =
                             signalFromDatabase.Approaches.FirstOrDefault(app => app.ApproachID == a.ApproachID);
@@ -686,11 +711,11 @@ namespace MOE.Common.Models.Repositories
             }
             else
             {
-                foreach (var a in incomingSignal.Approaches)
+                foreach (var a in incomingAtspmSignals.Approaches)
                     foreach (var gd in a.Detectors)
                         gd.DetectionTypes = _db.DetectionTypes
                             .Where(x => gd.DetectionTypeIDs.Contains(x.DetectionTypeID)).ToList();
-                _db.Signals.Add(incomingSignal);
+                _db.Signals.Add(incomingAtspmSignals);
             }
             try
             {

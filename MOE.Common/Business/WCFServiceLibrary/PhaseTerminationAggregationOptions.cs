@@ -55,41 +55,41 @@ namespace MOE.Common.Business.WCFServiceLibrary
                                              TimeOptions.SelectedBinSize + " bins";
 
 
-        protected override List<int> GetAvailablePhaseNumbers(Models.Signal signal)
+        protected override List<int> GetAvailablePhaseNumbers(Models.ATSPM_Signals atspmSignals)
         {
             var phaseTerminationRepository = Models.Repositories.PhaseTerminationAggregationRepositoryFactory.Create();
-            return phaseTerminationRepository.GetAvailablePhaseNumbers(signal, this.StartDate, this.EndDate);
+            return phaseTerminationRepository.GetAvailablePhaseNumbers(atspmSignals, this.StartDate, this.EndDate);
         }
 
-        protected override int GetAverageByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override int GetAverageByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new PhaseTerminationAggregationBySignal(this, signal);
+                new PhaseTerminationAggregationBySignal(this, atspmSignals);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override int GetSumByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override int GetSumByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var splitFailAggregationBySignal =
-                new PhaseTerminationAggregationBySignal(this, signal);
+                new PhaseTerminationAggregationBySignal(this, atspmSignals);
             return splitFailAggregationBySignal.Average;
         }
 
-        protected override List<BinsContainer> GetBinsContainersBySignal(Models.Signal signal)
+        protected override List<BinsContainer> GetBinsContainersBySignal(Models.ATSPM_Signals atspmSignals)
         {
-            var phaseTerminationAggregationBySignal = new PhaseTerminationAggregationBySignal(this, signal);
+            var phaseTerminationAggregationBySignal = new PhaseTerminationAggregationBySignal(this, atspmSignals);
             return phaseTerminationAggregationBySignal.BinsContainers;
         }
         
 
-        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.Signal signal, int phaseNumber)
+        protected override List<BinsContainer> GetBinsContainersByPhaseNumber(Models.ATSPM_Signals atspmSignals, int phaseNumber)
         {
             var phaseTerminationAggregationBySignal =
-                new PhaseTerminationAggregationBySignal(this, signal, phaseNumber);
+                new PhaseTerminationAggregationBySignal(this, atspmSignals, phaseNumber);
             return phaseTerminationAggregationBySignal.BinsContainers;
         }
 
-        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.Signal> signals)
+        public override List<BinsContainer> GetBinsContainersByRoute(List<Models.ATSPM_Signals> signals)
         {
             var aggregations = new ConcurrentBag<PhaseTerminationAggregationBySignal>();
             Parallel.ForEach(signals, signal => { aggregations.Add(new PhaseTerminationAggregationBySignal(this, signal)); });

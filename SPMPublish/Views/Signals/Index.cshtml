@@ -1,0 +1,77 @@
+﻿@model MOE.Common.Models.ViewModel.WebConfigTool.WebConfigToolViewModel
+@{
+    ViewBag.Title = "ATSPM Configuration Tool";
+}
+@Html.AntiForgeryToken()
+<h2>ATSPM Configuration Tool</h2>
+
+<div class="row">
+    <form action="javascript:CreateNewSignal()" style="margin: 0 0 5px 10px">
+        <input type="submit" value="Create New Signal" class="btn btn-dark" />
+    </form>
+    <form action="javascript:ImportSignal()" style="margin: 0 0 5px 10px">
+        <input type="submit" value="Import Signal" class="btn btn-dark" />
+    </form>
+    <!-- Button to trigger the popup -->
+    <button onclick="openPopup()" class="btn btn-dark" style="margin: 0 15px 5px auto;">Export Signals</button>
+
+    <!-- The modal popup -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <div class="row pb-1" style="justify-content: space-between;">
+                <h4 style="padding-left: 10px;">Select Signals to Export</h4>
+                <span class="close" onclick="closePopup()" style="padding-right: 10px;">&times;</span>
+            </div>
+            @Html.Partial("~/Views/Signals/SignalMultiSelect.cshtml", new ViewDataDictionary(Model.SignalMultiSelect))
+            
+        </div>
+    </div>
+
+</div>
+
+@Html.Partial("~/Views/DefaultCharts/SignalSearch.cshtml", new ViewDataDictionary(Model.SignalSearch))
+<div class="" id="ResultMessage"></div>
+<div id="SignalEdit"></div>
+@section Scripts
+    {
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/chosen")
+    <script type="text/javascript" src="~/Scripts/Map.js"></script>
+    <script type="text/javascript" src="~/Scripts/AddData.js"></script>
+    <script type="text/javascript" src="~/Scripts/SignalsSearch.js"></script>
+    <script type="text/javascript" src="~/Scripts/SPMConfigurationTool.js"></script>
+    <script type="text/javascript" src="~/Scripts/SignalEdit.js"></script>
+    <script type="text/javascript" src="~/Scripts/GetMetrics.js"></script>
+    <script type="text/javascript" src="~/Scripts/chosen.jquery.js"></script>
+    <script type="text/javascript">
+        var urlpathGetSignalLocation = '@Url.Action("GetSignalLocation", "DefaultCharts")';
+        var urlpathSignalInfoBox = '@Url.Action("SignalInfoBox", "DefaultCharts")';
+        var urlpathGetMetricsList = '@Url.Action("GetMetricsList", "DefaultCharts")';
+        var urlpathFillSignals = '@Url.Action("FillSignals", "DefaultCharts")';
+        var urlpathGetSignalEdit = '@Url.Action("Edit", "Signals")';
+        var urlpathCopyApproach = '@Url.Action("CopyApproach", "Signals")';
+        var urlpathCreateApproach = '@Url.Action("AddApproach", "Signals")';
+        var urlpathDeleteApproach = '@Url.Action("Delete", "Approaches")';
+        var urlpathDeleteSignal = '@Url.Action("Delete", "Signals")';
+        var urlpathCreateDetector = '@Url.Action("AddDetector", "Signals")';
+        var urlpathDeleteDetector = '@Url.Action("Delete", "Detectors")';
+        var urlpathCopyDetector = '@Url.Action("CopyDetector", "Signals")';
+        var urlpathCopySignal = '@Url.Action("Copy", "Signals")';
+        var urlpathCreateSignal = '@Url.Action("Create", "Signals")';
+        var urlpathImportSignal = '@Url.Action("Import", "Signals")';
+        var urlpathCreateMetricComments = '@Url.Action("Create", "MetricComments")';
+        var urlpathCreateDetectorComments = '@Url.Action("Create", "DetectorComments")';
+        var urlpathGetConfigurationTable = '@Url.Action("Index", "ConfigurationTable")';
+        var urlpathGetConfigurationTableForVersion = '@Url.Action("IndexByVersion", "ConfigurationTable")';
+        var urlpathGetVersionEdit = '@Url.Action("EditVersion", "Signals")';
+        var urlpathCopyVersion = '@Url.Action("AddNewVersion", "Signals")';
+        var urlpathDeleteVersion = '@Url.Action("DeleteVersion", "Signals")';
+        var urlpathDeleteComment = '@Url.Action("Delete", "MetricComments")';
+        var urlpathDeleteDetectorComment = '@Url.Action("Delete", "DetectorComments")';
+        var urlpathExportSignal = '@Url.Action("ExportSignal", "DataExport")';
+    </script>
+
+    <link href="~/Content/bootstrap-chosen.css" rel="stylesheet" />
+    <link href="~/Content/font-awesome.min.css" rel="stylesheet" />
+    <link href="~/Content/modal-popup.css" rel="stylesheet" />
+}

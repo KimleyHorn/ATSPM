@@ -13,14 +13,14 @@ namespace MOE.Common.Models
 {
     public class SPM : IdentityDbContext<SPMUser>
     {
-        public SPM()
-            :base("SPM")
+        public SPM() : base("MOEMetrics")
             //: base("name=SPM")
         {
             
 
             Database.SetInitializer<SPM>(new CreateDatabaseIfNotExists<SPM>());
             Database.CommandTimeout = 900;
+            Database.Connection.ConnectionString = "data source=localhost\\MSSQLSERVER01;initial catalog=MOEMetrics;Persist Security Info=True;Integrated Security=SSPI;MultipleActiveResultSets=True;App=EntityFramework;Connection Timeout=30";
         }
 
         public SPM(string ConnectionString) : base(ConnectionString)
@@ -48,7 +48,7 @@ namespace MOE.Common.Models
         public virtual DbSet<Detector> Detectors { get; set; }
         public virtual DbSet<Menu> Menus { get; set; }
         public virtual DbSet<Region> Regions { get; set; }
-        public virtual DbSet<Signal> Signals { get; set; }
+        public virtual DbSet<ATSPM_Signals> Signals { get; set; }
         public virtual DbSet<Action> Actions { get; set; }
         public virtual DbSet<ActionLog> ActionLogs { get; set; }
         public virtual DbSet<Route> Routes { get; set; }
@@ -108,30 +108,30 @@ namespace MOE.Common.Models
             //modelBuilder.Conventions.Remove<OneToManyCascadeDeleteConvention>();
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .Property(e => e.PrimaryName)
                 .IsUnicode(false);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .Property(e => e.SecondaryName)
                 .IsUnicode(false);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .Property(e => e.IPAddress)
                 .IsUnicode(false);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .Property(e => e.Latitude)
                 .IsUnicode(false);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .Property(e => e.Longitude)
                 .IsUnicode(false);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .Property(e => e.RegionID);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .HasRequired(s => s.Jurisdiction)
                 .WithMany(s => s.Signals)
                 .HasForeignKey(u => u.JurisdictionId)
@@ -171,7 +171,7 @@ namespace MOE.Common.Models
                 .Property(e => e.Password)
                 .IsUnicode(false);
 
-            modelBuilder.Entity<Signal>()
+            modelBuilder.Entity<ATSPM_Signals>()
                 .HasRequired(s => s.ControllerType)
                 .WithMany()
                 .HasForeignKey(u => u.ControllerTypeID).WillCascadeOnDelete(false);

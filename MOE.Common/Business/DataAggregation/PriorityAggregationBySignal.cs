@@ -10,13 +10,13 @@ namespace MOE.Common.Business.DataAggregation
 {
     public class PriorityAggregationBySignal : AggregationBySignal
     {
-        public PriorityAggregationBySignal(SignalAggregationMetricOptions options, Models.Signal signal) : base(options,
-            signal)
+        public PriorityAggregationBySignal(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals) : base(options,
+            atspmSignals)
         {
-            LoadBins(options, signal);
+            LoadBins(options, atspmSignals);
         }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             var priorityAggregationRepository =
                 PriorityAggregationDatasRepositoryFactory.Create(); var selectionEndDate = BinsContainers.Max(b => b.End);
@@ -27,7 +27,7 @@ namespace MOE.Common.Business.DataAggregation
             }
             var priorityAggregations =
                 priorityAggregationRepository.GetPriorityBySignalIdAndDateRange(
-                    signal.SignalID, BinsContainers.Min(b => b.Start), selectionEndDate);
+                    atspmSignals.SignalID, BinsContainers.Min(b => b.Start), selectionEndDate);
             if (priorityAggregations != null)
             {
                 var concurrentBinContainers = new ConcurrentBag<BinsContainer>();
@@ -97,7 +97,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             throw new NotImplementedException();
         }

@@ -13,7 +13,7 @@ namespace MOE.Common.Business
         public Chart Chart;
 
         private readonly WaitTimeOptions _waitTimeOptions;
-        private readonly Signal _signal;
+        private readonly ATSPM_Signals _atspmSignals;
         private readonly Approach _approach;
         private readonly IEnumerable<Controller_Event_Log> _phaseEvents;
         private readonly DateTime _startDate;
@@ -27,12 +27,12 @@ namespace MOE.Common.Business
             public double WaitTimeSeconds;
         }
 
-        public WaitTimeChart(WaitTimeOptions waitTimeOptions, Signal signal, Approach approach,
+        public WaitTimeChart(WaitTimeOptions waitTimeOptions, ATSPM_Signals atspmSignals, Approach approach,
             IEnumerable<Controller_Event_Log> phaseEvents, DateTime startDate, DateTime endDate,
             AnalysisPhase phaseInfo, List<PlanSplitMonitor> plans)
         {
             _waitTimeOptions = waitTimeOptions;
-            _signal = signal;
+            _atspmSignals = atspmSignals;
             _approach = approach;
             _phaseEvents = phaseEvents;
             _startDate = startDate;
@@ -64,7 +64,7 @@ namespace MOE.Common.Business
                 return;
 
             Chart = ChartFactory.CreateDefaultChartNoX2Axis(waitTimeOptions);
-            SetChartTitle(Chart, waitTimeOptions, signal, approach, detectionTypesForApproach);
+            SetChartTitle(Chart, waitTimeOptions, atspmSignals, approach, detectionTypesForApproach);
             ChartFactory.SetImageProperties(Chart);
             CreateLegend(Chart);
 
@@ -77,11 +77,11 @@ namespace MOE.Common.Business
             AddDataToChart(useDroppingAlgorithm);
         }
 
-        private void SetChartTitle(Chart chart, WaitTimeOptions waitTimeOptions, Signal signal, Approach approach,
+        private void SetChartTitle(Chart chart, WaitTimeOptions waitTimeOptions, ATSPM_Signals atspmSignals, Approach approach,
             string detectionTypes)
         {
             chart.Titles.Add(ChartTitleFactory.GetChartName(waitTimeOptions.MetricTypeID));
-            chart.Titles.Add(ChartTitleFactory.GetSignalLocationAndDateRange(signal.SignalID, waitTimeOptions.StartDate,
+            chart.Titles.Add(ChartTitleFactory.GetSignalLocationAndDateRange(atspmSignals.SignalID, waitTimeOptions.StartDate,
                 waitTimeOptions.EndDate));
             chart.Titles.Add(ChartTitleFactory.GetPhaseAndPhaseDescriptions(approach, false));
             chart.Titles.Add(detectionTypes);

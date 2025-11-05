@@ -58,14 +58,14 @@ namespace MOE.Common.Business.WCFServiceLibrary
             return ReturnList;
         }
 
-        public void CreateChart(Approach approach, ControllerEventLogs eventLogs, Signal signal,
+        public void CreateChart(Approach approach, ControllerEventLogs eventLogs, ATSPM_Signals atspmSignals,
             AnalysisPhase phaseInfo, List<PlanSplitMonitor> plans)
         {
             var phaseEvents = eventLogs.Events.Where(x => x.EventParam == approach.ProtectedPhaseNumber);
 
             if (phaseEvents.Any())
             {
-                var waitTimeChart = new WaitTimeChart(this, signal, approach, phaseEvents, StartDate, EndDate,
+                var waitTimeChart = new WaitTimeChart(this, atspmSignals, approach, phaseEvents, StartDate, EndDate,
                     phaseInfo, plans);
                 var chart = waitTimeChart.Chart;
                 var chartName = CreateFileName();

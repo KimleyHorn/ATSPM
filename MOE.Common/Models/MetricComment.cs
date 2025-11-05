@@ -12,7 +12,7 @@ namespace MOE.Common.Models
         public int VersionID { get; set; }
 
         [DataMember]
-        public virtual Signal Signal { get; set; }
+        public virtual ATSPM_Signals AtspmSignals { get; set; }
 
         [DataMember]
         [StringLength(10)]

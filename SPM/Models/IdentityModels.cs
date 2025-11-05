@@ -35,6 +35,6 @@ namespace SPM.Models
 
         public System.Data.Entity.DbSet<MOE.Common.Models.DirectionType> DirectionTypes { get; set; }
 
-        public System.Data.Entity.DbSet<MOE.Common.Models.Signal> Signals { get; set; }
+        public System.Data.Entity.DbSet<MOE.Common.Models.ATSPM_Signals> Signals { get; set; }
     }
 }

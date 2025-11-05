@@ -51,7 +51,7 @@
                 @Html.LabelFor(model => model.PedestrianPhaseNumber, htmlAttributes: new { @class = "control-label" })
                 <div class="input-group">
                     @Html.EditorFor(model => model.PedestrianPhaseNumber, 
-                   Model.Signal.Pedsare1to1 ?
+                   Model.AtspmSignals.Pedsare1to1 ?
                                    (object)new { htmlAttributes = new { @class = "form-control ped-phase-value", placeholder = "Comma or Dash List", @readonly = "readonly" } } :
                                    (object)new { htmlAttributes = new { @class = "form-control ped-phase-value", placeholder = "Comma or Dash List" } })
                     @Html.ValidationMessageFor(model => model.PedestrianPhaseNumber, "", new { id = "PedestrianPhaseNumber-error", @class = "text-danger" })
@@ -61,7 +61,7 @@
                 @Html.LabelFor(model => model.PedestrianDetectors, htmlAttributes: new { @class = "control-label" })
                 <div class="input-group">
                     @Html.EditorFor(model => model.PedestrianDetectors, 
-                   Model.Signal.Pedsare1to1 ? 
+                   Model.AtspmSignals.Pedsare1to1 ? 
                                    (object)new { htmlAttributes = new { @class = "form-control ped-detectors-string", placeholder = "Comma or Dash List", @readonly = "readonly" } } : 
                                    (object)new { htmlAttributes = new { @class = "form-control ped-detectors-string", placeholder = "Comma or Dash List"} })
                     @Html.ValidationMessageFor(model => model.PedestrianDetectors, "", new { id = "PedestrianDetectors-error", @class = "text-danger" })

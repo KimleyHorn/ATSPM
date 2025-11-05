@@ -34,7 +34,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        public AggregationByPhase(Models.Signal signal, int phaseNumber, PhaseAggregationMetricOptions options, AggregatedDataType dataType)
+        public AggregationByPhase(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhaseAggregationMetricOptions options, AggregatedDataType dataType)
         {
             BinsContainers = BinFactory.GetBins(options.TimeOptions);
             PhaseNumber = phaseNumber;
@@ -46,7 +46,7 @@ namespace MOE.Common.Business.DataAggregation
             //        ApproachEventCountAggregations.AddRange(GetApproachEventCountAggregations(options, approach, false));
             //    }
             //}
-            LoadBins(signal, phaseNumber, options, dataType);
+            LoadBins(atspmSignals, phaseNumber, options, dataType);
         }
 
         //protected List<ApproachEventCountAggregation> GetApproachEventCountAggregations(ApproachAggregationMetricOptions options, Approach approach, bool getProtectedPhase)
@@ -59,7 +59,7 @@ namespace MOE.Common.Business.DataAggregation
         //}
         
 
-        protected abstract void LoadBins(Models.Signal signal, int phaseNumber, PhaseAggregationMetricOptions options, AggregatedDataType dataType);
+        protected abstract void LoadBins(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhaseAggregationMetricOptions options, AggregatedDataType dataType);
         
 
     }

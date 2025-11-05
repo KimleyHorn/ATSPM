@@ -73,16 +73,16 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
         [DataMember] public bool ShowArrivalsOnGreen { get; set; }
 
-        public Models.Signal Signal { get; set; }
+        public Models.ATSPM_Signals AtspmSignals { get; set; }
 
         public override List<string> CreateMetric()
         {
             base.CreateMetric();
             var signalRepository = SignalsRepositoryFactory.Create();
-            Signal = signalRepository.GetVersionOfSignalByDate(SignalID, StartDate);
+            AtspmSignals = signalRepository.GetVersionOfSignalByDate(SignalID, StartDate);
             MetricTypeID = 6;
             var chart = new Chart();
-            var metricApproaches = Signal.GetApproachesForSignalThatSupportMetric(MetricTypeID);
+            var metricApproaches = AtspmSignals.GetApproachesForSignalThatSupportMetric(MetricTypeID);
             if (metricApproaches.Count > 0)
                 foreach (var approach in metricApproaches)
                 {
@@ -103,9 +103,9 @@ namespace MOE.Common.Business.WCFServiceLibrary
         {
             base.CreateMetric();
             var signalRepository = SignalsRepositoryFactory.Create();
-            Signal = signalRepository.GetVersionOfSignalByDate(SignalID, StartDate);
+            AtspmSignals = signalRepository.GetVersionOfSignalByDate(SignalID, StartDate);
             MetricTypeID = 6;
-            var metricApproaches = Signal.GetApproachesForSignalThatSupportMetric(MetricTypeID);
+            var metricApproaches = AtspmSignals.GetApproachesForSignalThatSupportMetric(MetricTypeID);
             List<PCDSummary> pcdSummaries = new List<PCDSummary>();
             if (metricApproaches.Count > 0)
             {
@@ -118,7 +118,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
                     {
                         pcdSummaries.Add(new PCDSummary()
                         {
-                            SignalId = Signal.SignalID,                            
+                            SignalId = AtspmSignals.SignalID,                            
                             Date = plan.StartTime.ToString("MM/dd/yyyy hh:mm tt"),
                             Phase = approach.ProtectedPhaseNumber,
                             Plan = plan.PlanNumber,

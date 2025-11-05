@@ -94,7 +94,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
         [DataMember]
         public AggregatedDataType SelectedAggregatedDataType { get; set; }
 
-        public List<Models.Signal> Signals { get; set; } = new List<Models.Signal>();
+        public List<Models.ATSPM_Signals> Signals { get; set; } = new List<Models.ATSPM_Signals>();
 
         public abstract string YAxisTitle { get; }
         [DataMember]
@@ -199,7 +199,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             try
             {
                 if (Signals == null)
-                    Signals = new List<Models.Signal>();
+                    Signals = new List<Models.ATSPM_Signals>();
                 if (Signals.Count == 0)
                 {
                     var signalRepository = SignalsRepositoryFactory.Create();
@@ -314,14 +314,14 @@ namespace MOE.Common.Business.WCFServiceLibrary
             SaveChartImage(chart);
         }
 
-        protected void GetSignalsXAxisSignalSeriesChart(List<Models.Signal> signals, Chart chart)
+        protected void GetSignalsXAxisSignalSeriesChart(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var seriesName = "Signals";
             Series series = GetSignalsXAxisSignalSeries(signals, seriesName);
             chart.Series.Add(series);
         }
 
-        public Series GetSignalsXAxisSignalSeries(List<Models.Signal> signals, string seriesName)
+        public Series GetSignalsXAxisSignalSeries(List<Models.ATSPM_Signals> signals, string seriesName)
         {
             var series = CreateSeries(0, seriesName);
             foreach (var signal in signals)
@@ -337,13 +337,13 @@ namespace MOE.Common.Business.WCFServiceLibrary
             return series;
         }
 
-        protected void SetTimeXAxisRouteSeriesChart(List<Models.Signal> signals, Chart chart)
+        protected void SetTimeXAxisRouteSeriesChart(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             Series series = GetTimeXAxisRouteSeries(signals);
             chart.Series.Add(series);
         }
 
-        public Series GetTimeXAxisRouteSeries(List<Models.Signal> signals)
+        public Series GetTimeXAxisRouteSeries(List<Models.ATSPM_Signals> signals)
         {
             var series = CreateSeries(0, "Route");
             var binsContainers = GetBinsContainersByRoute(signals);
@@ -382,7 +382,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             SaveChartImage(chart);
         }
 
-        protected void GetTimeOfDayXAxisRouteSeriesChart(List<Models.Signal> signals, Chart chart)
+        protected void GetTimeOfDayXAxisRouteSeriesChart(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             SetTimeXAxisAxisMinimum(chart);
             var binsContainers = GetBinsContainersByRoute(signals);
@@ -392,7 +392,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
         }
 
 
-        protected void GetTimeOfDayXAxisSignalSeriesChart(List<Models.Signal> signals, Chart chart)
+        protected void GetTimeOfDayXAxisSignalSeriesChart(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             //SetTimeXAxisAxisMinimum(chart);
             var seriesList = new ConcurrentBag<Series>();
@@ -451,7 +451,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
         }
 
-        protected void GetTimeXAxisSignalSeriesChart(List<Models.Signal> signals, Chart chart)
+        protected void GetTimeXAxisSignalSeriesChart(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             //SetTimeXAxisAxisMinimum(chart);
             var i = 1;
@@ -464,7 +464,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
         }
 
-        public virtual void SetSignalsXAxisSignalSeriesForEventCount(List<Models.Signal> signals, Chart chart)
+        public virtual void SetSignalsXAxisSignalSeriesForEventCount(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
             Series eventCountSeries = eventCountOptions.GetSignalsXAxisSignalSeries(signals, "Event Count");
@@ -472,7 +472,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
             chart.Series.Add(SetEventCountSeries(eventCountSeries));
         }
 
-        public virtual void SetTimeXAxisRouteSeriesForEventCount(List<Models.Signal> signals, Chart chart)
+        public virtual void SetTimeXAxisRouteSeriesForEventCount(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
             Series series = eventCountOptions.GetTimeXAxisRouteSeries(signals);
@@ -481,7 +481,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
         }
 
 
-        public virtual void SetTimeOfDayAxisRouteSeriesForEventCount(List<Models.Signal> signals, Chart chart)
+        public virtual void SetTimeOfDayAxisRouteSeriesForEventCount(List<Models.ATSPM_Signals> signals, Chart chart)
         {
             var eventCountOptions = new SignalEventCountAggregationOptions(this);
             Series eventCountSeries = CreateEventCountSeries();
@@ -490,10 +490,10 @@ namespace MOE.Common.Business.WCFServiceLibrary
             chart.Series.Add(eventCountSeries);
         }
 
-        public Series GetTimeXAxisSignalSeries(Models.Signal signal)
+        public Series GetTimeXAxisSignalSeries(Models.ATSPM_Signals atspmSignals)
         {
-            var series = CreateSeries(-1, signal.SignalDescription);
-            var binsContainers = GetBinsContainersBySignal(signal);
+            var series = CreateSeries(-1, atspmSignals.SignalDescription);
+            var binsContainers = GetBinsContainersBySignal(atspmSignals);
             foreach (var container in binsContainers)
             {
                 if (binsContainers.Count > 1)
@@ -536,17 +536,17 @@ namespace MOE.Common.Business.WCFServiceLibrary
             return series;
         }
 
-        private void RemoveApproachesByFilter(FilterSignal filterSignal, Models.Signal signal)
+        private void RemoveApproachesByFilter(FilterSignal filterSignal, Models.ATSPM_Signals atspmSignals)
         {
-            RemoveApproachesFromSignalByDirection(signal);
-            RemoveDetectorsFromSignalByMovement(signal);
+            RemoveApproachesFromSignalByDirection(atspmSignals);
+            RemoveDetectorsFromSignalByMovement(atspmSignals);
             var approachRepository = ApproachRepositoryFactory.Create();
             var excludedApproachIds =
                 filterSignal.FilterApproaches.Where(f => f.Exclude).Select(f => f.ApproachId).ToList();
             var excludedApproaches = approachRepository.GetApproachesByIds(excludedApproachIds);
             foreach (var excludedApproach in excludedApproaches)
             {
-                var approachesToExclude = signal.Approaches.Where(a =>
+                var approachesToExclude = atspmSignals.Approaches.Where(a =>
                         a.DirectionTypeID == excludedApproach.DirectionTypeID
                         && a.ProtectedPhaseNumber == excludedApproach.ProtectedPhaseNumber
                         && a.PermissivePhaseNumber == excludedApproach.PermissivePhaseNumber
@@ -556,28 +556,28 @@ namespace MOE.Common.Business.WCFServiceLibrary
                         excludedApproach.IsProtectedPhaseOverlap)
                     .ToList();
                 foreach (var approachToExclude in approachesToExclude)
-                    signal.Approaches.Remove(approachToExclude);
-                foreach (var approach in signal.Approaches)
+                    atspmSignals.Approaches.Remove(approachToExclude);
+                foreach (var approach in atspmSignals.Approaches)
                     foreach (var filterApproach in filterSignal.FilterApproaches.Where(f => !f.Exclude))
                         RemoveDetectorsFromApproachByFilter(filterApproach, approach);
             }
         }
 
-        private void RemoveApproachesFromSignalByDirection(Models.Signal signal)
+        private void RemoveApproachesFromSignalByDirection(Models.ATSPM_Signals atspmSignals)
         {
             var approachesToRemove = new List<Approach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (FilterDirections.Where(f => !f.Include).Select(f => f.DirectionTypeId).ToList()
                     .Contains(approach.DirectionTypeID))
                     approachesToRemove.Add(approach);
             foreach (var approach in approachesToRemove)
-                signal.Approaches.Remove(approach);
+                atspmSignals.Approaches.Remove(approach);
         }
 
-        private void RemoveDetectorsFromSignalByMovement(Models.Signal signal)
+        private void RemoveDetectorsFromSignalByMovement(Models.ATSPM_Signals atspmSignals)
         {
             var detectorsToRemove = new List<Models.Detector>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 foreach (var detector in approach.Detectors)
                     if (FilterMovements.Where(f => !f.Include).Select(f => f.MovementTypeId).ToList()
@@ -845,7 +845,7 @@ namespace MOE.Common.Business.WCFServiceLibrary
         }
 
 
-        protected static void PopulateBinsForRoute(List<Models.Signal> signals, List<BinsContainer> binsContainers, AggregationBySignal aggregationBySignal)
+        protected static void PopulateBinsForRoute(List<Models.ATSPM_Signals> signals, List<BinsContainer> binsContainers, AggregationBySignal aggregationBySignal)
         {
             for (var i = 0; i < binsContainers.Count; i++)
             {
@@ -858,8 +858,8 @@ namespace MOE.Common.Business.WCFServiceLibrary
             }
         }
 
-        protected abstract List<BinsContainer> GetBinsContainersBySignal(Models.Signal signal);
-        public abstract List<BinsContainer> GetBinsContainersByRoute(List<Models.Signal> signals);
+        protected abstract List<BinsContainer> GetBinsContainersBySignal(Models.ATSPM_Signals atspmSignals);
+        public abstract List<BinsContainer> GetBinsContainersByRoute(List<Models.ATSPM_Signals> signals);
     }
 
     public class InvalidBinSizeException : Exception

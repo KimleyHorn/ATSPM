@@ -14,18 +14,18 @@ namespace MOE.Common.Business.DataAggregation
         public const string EIGHTY_FIFTH_PERCENTILE_SPLIT = "EightyFifthPercentileSplit";
         public const string SKIPPED_COUNT = "SkippedCount";
 
-        public PhaseSplitMonitorAggregationByPhase(Models.Signal signal, int phaseNumber, PhaseSplitMonitorAggregationOptions options, AggregatedDataType dataType) 
-            : base(signal, phaseNumber, options, dataType)
+        public PhaseSplitMonitorAggregationByPhase(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhaseSplitMonitorAggregationOptions options, AggregatedDataType dataType) 
+            : base(atspmSignals, phaseNumber, options, dataType)
         {
-            LoadBins(signal, phaseNumber, options, dataType);
+            LoadBins(atspmSignals, phaseNumber, options, dataType);
         }
 
-        protected override void LoadBins(Models.Signal signal, int phaseNumber, PhaseAggregationMetricOptions options,
+        protected override void LoadBins(Models.ATSPM_Signals atspmSignals, int phaseNumber, PhaseAggregationMetricOptions options,
             AggregatedDataType dataType)
         {
             var phaseSplitMonitorAggregationRepository = PhaseSplitMonitorAggregationRepositoryFactory.Create();
             var splitFails = phaseSplitMonitorAggregationRepository.GetSplitMonitorAggregationBySignalIdPhaseNumberAndDateRange(
-                signal.SignalID, phaseNumber, options.StartDate, options.EndDate);
+                atspmSignals.SignalID, phaseNumber, options.StartDate, options.EndDate);
             if (splitFails != null)
             {
                 var concurrentBinContainers = new ConcurrentBag<BinsContainer>();

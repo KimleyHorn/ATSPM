@@ -41,16 +41,16 @@ namespace SPM.Controllers
             return PartialView("GetRouteSignals", aggDataExportViewModel);
         }
 
-        private static FilterSignal GetFilterSignal(MOE.Common.Models.Signal signal)
+        private static FilterSignal GetFilterSignal(MOE.Common.Models.ATSPM_Signals atspmSignals)
         {
             var filterSignal = new FilterSignal
             {
                 Exclude = false,
-                SignalId = signal.SignalID,
-                VersionId = signal.VersionID,
-                Description = signal.SignalDescription
+                SignalId = atspmSignals.SignalID,
+                VersionId = atspmSignals.VersionID,
+                Description = atspmSignals.SignalDescription
             };
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 var filterApproach = new MOE.Common.Business.FilterExtensions.FilterApproach
                 {

@@ -9,7 +9,7 @@ namespace MOE.Common.Models.Repositories
         PhaseTerminationAggregation Add(PhaseTerminationAggregation priorityAggregation);
         void Update(PhaseTerminationAggregation priorityAggregation);
         void Remove(PhaseTerminationAggregation priorityAggregation);
-        List<int> GetAvailablePhaseNumbers(Signal signal, DateTime startDate, DateTime endDate);
+        List<int> GetAvailablePhaseNumbers(ATSPM_Signals atspmSignals, DateTime startDate, DateTime endDate);
         List<PhaseTerminationAggregation> GetPhaseTerminationsAggregationBySignalIdPhaseNumberAndDateRange(string signalId, int phaseNumber, DateTime startDate, DateTime endDate);
     }
 }

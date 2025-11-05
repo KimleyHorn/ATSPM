@@ -822,3 +822,4 @@ RepositoryTests/obj/Debug/
 MOEWcfServiceLibrary/MOEWcfServiceLibrary\.Publish\.xml
 
 *.diagsession
+/MOE.Common/appsettings.json

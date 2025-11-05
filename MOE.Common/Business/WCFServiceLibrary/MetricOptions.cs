@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Configuration;
+using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Web.UI.DataVisualization.Charting;
@@ -49,20 +51,19 @@ namespace MOE.Common.Business.WCFServiceLibrary
     [KnownType(typeof(string[]))]
     public class MetricOptions
     {
-        MOE.Common.Models.Repositories.IMeasuresDefaultsRepository measuresDefaultsRepository =
-           MOE.Common.Models.Repositories.MeasuresDefaultsRepositoryFactory.Create();
+        //IMeasuresDefaultsRepository measuresDefaultsRepository = MeasuresDefaultsRepositoryFactory.Create();
         public MetricOptions()
         {
-            var applicationSettingRepository = ApplicationSettingsRepositoryFactory.Create();
+            //var applicationSettingRepository = ApplicationSettingsRepositoryFactory.Create();
 
-            GeneralSettings generalSettings = applicationSettingRepository.GetGeneralSettings();
+            //GeneralSettings generalSettings = applicationSettingRepository.GetGeneralSettings();
             SignalID = string.Empty;
             YAxisMin = 0;
             Y2AxisMax = 0;
             Y2AxisMin = 0;
             MetricTypeID = 0;
-            MetricFileLocation = generalSettings.ImagePath;
-            MetricWebPath = generalSettings.ImageUrl;
+            //MetricFileLocation = generalSettings.ImagePath;
+            //MetricWebPath = generalSettings.ImageUrl;
             ReturnList = new List<string>();
         }
 
@@ -128,22 +129,22 @@ namespace MOE.Common.Business.WCFServiceLibrary
 
         public void SetDefaults()
         {
-            var measure = GetType().Name.Replace("Options", "");
-            var defaults = measuresDefaultsRepository.GetMeasureDefaultsAsDictionary(measure);
-            foreach (var option in defaults)
-            {
-                var type = GetType().GetProperty(option.Key)?.PropertyType;
+            //var measure = GetType().Name.Replace("Options", "");
+            //var defaults = measuresDefaultsRepository.GetMeasureDefaultsAsDictionary(measure);
+            //foreach (var option in defaults)
+            //{
+            //    var type = GetType().GetProperty(option.Key)?.PropertyType;
 
-                if (option.Value == null || option.Value.ToLower() == "null") continue;
+            //    if (option.Value == null || option.Value.ToLower() == "null") continue;
 
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
-                {
-                    type = Nullable.GetUnderlyingType(type);
-                }
+            //    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            //    {
+            //        type = Nullable.GetUnderlyingType(type);
+            //    }
 
-                var converted = Convert.ChangeType(option.Value, type);
-                GetType().GetProperty(option.Key).SetValue(this, converted);
-            }
+            //    var converted = Convert.ChangeType(option.Value, type);
+            //    GetType().GetProperty(option.Key).SetValue(this, converted);
+            //}
         }
 
         protected void LogMetricRun()
@@ -157,6 +158,28 @@ namespace MOE.Common.Business.WCFServiceLibrary
             appEventRepository.Add(applicationEvent);
         }
 
+        public static string RgbaFromColor(Color c, double? opacity = null)
+        {
+            var a = opacity ?? (c.A / 255.0);
+            return $"rgba({c.R},{c.G},{c.B},{a:0.###})";
+        }
+
+
+        internal void ConfigureGraph(PlotlyObject obj, DateTime start, DateTime end, int xTick, int yTick, TimeZoneInfo zone)
+        {
+            obj.Layout.Title.Text = "Purdue Phase Termination";
+            obj.Layout.XAxis.Title.Text = "Time (Hours:Minutes of Day)";
+            obj.Layout.YAxis.Title.Text = "Phase";
+            obj.Layout.XAxis.Type = "date";
+            obj.Layout.Title.Subtitle.Text = $"SIG{SignalID} between {StartDate} and {EndDate}";
+            obj.Layout.XAxis.DTick = 3600000;
+            obj.Layout.YAxis.DTick = 1;
+            var startLocal = TimeZoneInfo.ConvertTime(StartDate, zone);
+            var endLocal = TimeZoneInfo.ConvertTime(EndDate, zone);
+
+            obj.Layout.XAxis.Range.Add(startLocal.ToString("o", CultureInfo.InvariantCulture));
+            obj.Layout.XAxis.Range.Add(endLocal.ToString("o", CultureInfo.InvariantCulture));
+        }
         public string GetSignalLocation()
         {
             var signalRepository = SignalsRepositoryFactory.Create();

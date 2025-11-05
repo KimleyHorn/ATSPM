@@ -10,23 +10,23 @@ namespace MOE.Common.Business.DataAggregation
     {
 
         public List<PhaseSplitMonitorAggregationByPhase> SplitMonitorAggregations { get; }
-        public PhaseSplitMonitorAggregationBySignal(PhaseSplitMonitorAggregationOptions options, Models.Signal signal) : base(
-            options, signal)
+        public PhaseSplitMonitorAggregationBySignal(PhaseSplitMonitorAggregationOptions options, Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             SplitMonitorAggregations = new List<PhaseSplitMonitorAggregationByPhase>();
-            GetSplitMonitorAggregationContainersForAllPhases(options, signal);
+            GetSplitMonitorAggregationContainersForAllPhases(options, atspmSignals);
             LoadBins(null, null);
         }
 
-        public PhaseSplitMonitorAggregationBySignal(PhaseSplitMonitorAggregationOptions options, Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+        public PhaseSplitMonitorAggregationBySignal(PhaseSplitMonitorAggregationOptions options, Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             SplitMonitorAggregations = new List<PhaseSplitMonitorAggregationByPhase>();
-            SplitMonitorAggregations.Add(new PhaseSplitMonitorAggregationByPhase(signal, phaseNumber, options, options.SelectedAggregatedDataType));
+            SplitMonitorAggregations.Add(new PhaseSplitMonitorAggregationByPhase(atspmSignals, phaseNumber, options, options.SelectedAggregatedDataType));
             LoadBins(null, null);
         }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -40,7 +40,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             {
@@ -55,23 +55,23 @@ namespace MOE.Common.Business.DataAggregation
         }
 
         private void GetSplitMonitorAggregationContainersForAllPhases(
-            PhaseSplitMonitorAggregationOptions options, Models.Signal signal)
+            PhaseSplitMonitorAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            List<int> availablePhases = GetAvailablePhasesForSignal(options, signal);
+            List<int> availablePhases = GetAvailablePhasesForSignal(options, atspmSignals);
             foreach (var phaseNumber in availablePhases)
             {
                 SplitMonitorAggregations.Add(
-                    new PhaseSplitMonitorAggregationByPhase(signal, phaseNumber, options,
+                    new PhaseSplitMonitorAggregationByPhase(atspmSignals, phaseNumber, options,
                         options.SelectedAggregatedDataType));
             }
         }
 
-        private static List<int> GetAvailablePhasesForSignal(PhaseSplitMonitorAggregationOptions options, Models.Signal signal)
+        private static List<int> GetAvailablePhasesForSignal(PhaseSplitMonitorAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
             var phaseTerminationAggregationRepository =
                 Models.Repositories.PhaseSplitMonitorAggregationRepositoryFactory.Create();
             var availablePhases =
-                phaseTerminationAggregationRepository.GetAvailablePhaseNumbers(signal, options.StartDate,
+                phaseTerminationAggregationRepository.GetAvailablePhaseNumbers(atspmSignals, options.StartDate,
                     options.EndDate);
             return availablePhases;
         }

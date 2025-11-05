@@ -9,20 +9,20 @@ namespace MOE.Common.Business.DataAggregation
     public class YellowRedActivationsAggregationBySignal : AggregationBySignal
     {
         public YellowRedActivationsAggregationBySignal(ApproachYellowRedActivationsAggregationOptions options,
-            Models.Signal signal) : base(
-            options, signal)
+            Models.ATSPM_Signals atspmSignals) : base(
+            options, atspmSignals)
         {
             ApproachYellowRedActivationsures = new List<YellowRedActivationsAggregationByApproach>();
-            GetApproachYellowRedActivationsAggregationContainersForAllApporaches(options, signal);
+            GetApproachYellowRedActivationsAggregationContainersForAllApporaches(options, atspmSignals);
             LoadBins(null, null);
         }
 
         public YellowRedActivationsAggregationBySignal(ApproachYellowRedActivationsAggregationOptions options,
-            Models.Signal signal,
-            int phaseNumber) : base(options, signal)
+            Models.ATSPM_Signals atspmSignals,
+            int phaseNumber) : base(options, atspmSignals)
         {
             ApproachYellowRedActivationsures = new List<YellowRedActivationsAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.ProtectedPhaseNumber == phaseNumber)
                 {
                     ApproachYellowRedActivationsures.Add(
@@ -40,11 +40,11 @@ namespace MOE.Common.Business.DataAggregation
         }
 
         public YellowRedActivationsAggregationBySignal(ApproachYellowRedActivationsAggregationOptions options,
-            Models.Signal signal,
-            DirectionType direction) : base(options, signal)
+            Models.ATSPM_Signals atspmSignals,
+            DirectionType direction) : base(options, atspmSignals)
         {
             ApproachYellowRedActivationsures = new List<YellowRedActivationsAggregationByApproach>();
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
                 if (approach.DirectionType.DirectionTypeID == direction.DirectionTypeID)
                 {
                     ApproachYellowRedActivationsures.Add(
@@ -63,7 +63,7 @@ namespace MOE.Common.Business.DataAggregation
 
         public List<YellowRedActivationsAggregationByApproach> ApproachYellowRedActivationsures { get; }
 
-        protected override void LoadBins(SignalAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(SignalAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -77,7 +77,7 @@ namespace MOE.Common.Business.DataAggregation
             }
         }
 
-        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.Signal signal)
+        protected override void LoadBins(ApproachAggregationMetricOptions options, Models.ATSPM_Signals atspmSignals)
         {
             for (var i = 0; i < BinsContainers.Count; i++)
             for (var binIndex = 0; binIndex < BinsContainers[i].Bins.Count; binIndex++)
@@ -92,9 +92,9 @@ namespace MOE.Common.Business.DataAggregation
         }
 
         private void GetApproachYellowRedActivationsAggregationContainersForAllApporaches(
-            ApproachYellowRedActivationsAggregationOptions options, Models.Signal signal)
+            ApproachYellowRedActivationsAggregationOptions options, Models.ATSPM_Signals atspmSignals)
         {
-            foreach (var approach in signal.Approaches)
+            foreach (var approach in atspmSignals.Approaches)
             {
                 ApproachYellowRedActivationsures.Add(
                     new YellowRedActivationsAggregationByApproach(approach, options, options.StartDate,

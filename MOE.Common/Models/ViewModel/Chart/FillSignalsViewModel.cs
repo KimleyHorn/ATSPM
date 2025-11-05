@@ -44,7 +44,7 @@ namespace MOE.Common.Models.ViewModel.Chart
         public string FilterCriteria { get; set; }
 
         public List<MetricsFilterType> Filters { get; set; }
-        public PagedList<Signal> Signals { get; private set; }
+        public PagedList<ATSPM_Signals> Signals { get; private set; }
 
 
         public void SetPagedList()

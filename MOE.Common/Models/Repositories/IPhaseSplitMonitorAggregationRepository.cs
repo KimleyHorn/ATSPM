@@ -10,6 +10,6 @@ namespace MOE.Common.Models.Repositories
         void Update(PhaseSplitMonitorAggregation splitMonitorAggregation);
         void Remove(PhaseSplitMonitorAggregation splitMonitorAggregation);
         List<PhaseSplitMonitorAggregation> GetSplitMonitorAggregationBySignalIdPhaseNumberAndDateRange(string signalId, int phaseNumber, DateTime startDate, DateTime endDate);
-        List<int> GetAvailablePhaseNumbers(Signal signal, DateTime startDate, DateTime endDate);
+        List<int> GetAvailablePhaseNumbers(ATSPM_Signals atspmSignals, DateTime startDate, DateTime endDate);
     }
 }

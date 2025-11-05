@@ -7,10 +7,10 @@ namespace MOE.Common.Business.PEDDelay
 {
     public class PedPhase : ControllerEventLogs
     {
-        public PedPhase(Approach approach, Signal signal, int timeBuffer, DateTime startDate, DateTime endDate,
-            PlansBase plansData) : base(signal.SignalID, startDate, endDate, approach.GetPedDetectorsFromApproach(), approach.IsPedestrianPhaseOverlap ? new List<int> {67, 68, 45, 90} : new List<int> { 21, 22, 45, 90 })
+        public PedPhase(Approach approach, ATSPM_Signals atspmSignals, int timeBuffer, DateTime startDate, DateTime endDate,
+            PlansBase plansData) : base(atspmSignals.SignalID, startDate, endDate, approach.GetPedDetectorsFromApproach(), approach.IsPedestrianPhaseOverlap ? new List<int> {67, 68, 45, 90} : new List<int> { 21, 22, 45, 90 })
         {
-            SignalID = signal.SignalID;
+            SignalID = atspmSignals.SignalID;
             TimeBuffer = timeBuffer;
             StartDate = startDate;
             EndDate = endDate;
