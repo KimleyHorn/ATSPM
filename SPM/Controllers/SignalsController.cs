@@ -368,7 +368,7 @@ namespace SPM.Controllers
                 signal.ControllerTypeID = controllerType.ControllerTypeID;
             signal.Latitude = signalInformation.GetValue<string>(5, 2) != null ? signalInformation.GetValue<string>(5, 2) : "0";
             signal.Longitude = signalInformation.GetValue<string>(5, 4) != null ? signalInformation.GetValue<string>(5, 4) : "0"; ;
-            signal.IPAddress = signalInformation.GetValue<string>(5, 6) != null ? signalInformation.GetValue<string>(5, 2) : "1.1.1.1";;
+            signal.IPAddress = signalInformation.GetValue<string>(5, 6) != null ? signalInformation.GetValue<string>(5, 6) : "1.1.1.1";;
             // if the lat long or IP are null, give them default values
             signal.VersionList = new List<Signal> { signal };
             _signalsRepository.AddOrUpdate(signal);
