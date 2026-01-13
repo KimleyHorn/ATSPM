@@ -109,6 +109,11 @@ namespace FTPfromAllControllers
 
         public static bool CheckIfIPAddressIsValid(MOE.Common.Models.Signal signal)
         {
+            var checkIp = ConfigurationManager.AppSettings["CheckIPAddress"];
+            if (checkIp != null && checkIp.ToLower() == "false")
+            {
+                return true;
+            }
             bool hasValidIP = false;
             IPAddress ip;
             if (signal.IPAddress == "0")

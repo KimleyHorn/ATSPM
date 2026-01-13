@@ -61,29 +61,29 @@ namespace STFPFromAllControllers
                                 Directory.CreateDirectory(signalFtpOptions.LocalDirectory + signal.SignalID);
                             }
 
-                        //Get the records over FTP
-                        if (CheckIfIPAddressIsValid(signal))
-                        {
-                            try
+                            //Get the records over FTP
+                            if (CheckIfIPAddressIsValid(signal))
                             {
-                                signalFtp.GetCubicFilesAsyncPpk(signalFtpOptions.PpkLocation,
-                                    true);
-                            }
-                            catch (AggregateException ex)
-                            {
-                                Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-                                errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
-                                    MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
-                                    "Error At Highest Level for signal " + signal.SignalID);
+                                try
+                                {
+                                    signalFtp.GetCubicFilesAsyncPpk(signalFtpOptions.PpkLocation,
+                                        true);
+                                }
+                                catch (AggregateException ex)
+                                {
+                                    Console.WriteLine("Error At Highest Level for signal " + ex.Message);
+                                    errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
+                                        MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
+                                        "Error At Highest Level for signal " + signal.SignalID);
+                                }
                             }
                         }
-                    }
-                    catch (AggregateException ex)
-                    {
-                        Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-                        errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
-                            MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
-                            "Error At Highest Level for signal " + signal.SignalID);
+                        catch (AggregateException ex)
+                        {
+                            Console.WriteLine("Error At Highest Level for signal " + ex.Message);
+                            errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
+                                MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
+                                "Error At Highest Level for signal " + signal.SignalID);
 
                         }
 
@@ -145,6 +145,11 @@ namespace STFPFromAllControllers
 
         public static bool CheckIfIPAddressIsValid(MOE.Common.Models.Signal signal)
         {
+            var checkIp = ConfigurationManager.AppSettings["CheckIPAddress"];
+            if (checkIp != null && checkIp.ToLower() == "false")
+            {
+                return true;
+            }
             if (signal.IPAddress == "0" || signal.IPAddress == "0.0.0.0")
                 return false;
 
