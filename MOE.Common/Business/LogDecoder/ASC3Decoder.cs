@@ -138,7 +138,7 @@ namespace MOE.Common.Business.LogDecoder
             }
         }
 
-        private static string DecompressFile(string CompressedFileName, string cwd)
+        public static string DecompressFile(string CompressedFileName, string cwd)
         {
             var DecompressedFileName = cwd + Path.GetFileNameWithoutExtension(CompressedFileName);
             FileStream compressedFileStream = File.Open(CompressedFileName, FileMode.Open);
