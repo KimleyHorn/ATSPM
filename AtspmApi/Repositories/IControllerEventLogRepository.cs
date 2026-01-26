@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using AtspmApi.Models;
 
 namespace AtspmApi.Repositories
@@ -56,8 +57,13 @@ namespace AtspmApi.Repositories
         //int GetRecordCountByParameterAndEvent(string signalId, DateTime startTime, DateTime endTime,
         //    List<int> eventParameters, List<int> events);
 
-        //List<Controller_Event_Log> GetRecordsByParameterAndEvent(string signalId, DateTime startTime, DateTime endTime,
-        //    List<int> eventParameters, List<int> eventCodes);
+        List<Controller_Event_Log> GetRecordsByParameterAndEvent(string signalId, DateTime startTime, DateTime endTime,
+            List<int> eventParameters, List<int> eventCodes);
+
+        Task<List<Controller_Event_Log>> GetRecordsByEventCode(List<String> idList, DateTime startTime, DateTime endTime,
+            List<int> eventCodes);
+        Task<List<Controller_Event_Log>> GetAllRecordsByEventCode(DateTime startTime, DateTime endTime,
+            List<int> eventCodes);
 
         //List<Controller_Event_Log> GetAllAggregationCodes(string signalId, DateTime startTime, DateTime endTime);
 

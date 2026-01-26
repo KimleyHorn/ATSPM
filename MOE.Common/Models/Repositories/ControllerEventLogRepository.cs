@@ -352,6 +352,31 @@ namespace MOE.Common.Models.Repositories
         }
 
 
+        public bool CheckIfSingleRecordExists(string signalID, DateTime timestamp, int EventCode, int EventParam)
+        {
+            try
+            {
+                return _db.Controller_Event_Log.Any(r => r.SignalID == signalID
+                                                        && r.Timestamp == timestamp
+                                                        && r.EventCode == EventCode
+                                                        && r.EventParam == EventParam);
+            }
+            catch (Exception ex)
+            {
+                var logRepository =
+                    ApplicationEventRepositoryFactory.Create();
+                var e = new ApplicationEvent();
+                e.ApplicationName = "MOE.Common";
+                e.Class = GetType().ToString();
+                e.Function = "CheckIfSingleRecordExists";
+                e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
+                e.Timestamp = DateTime.Now;
+                e.Description = ex.Message;
+                logRepository.Add(e);
+                throw;
+            }
+        }
+
         public List<Controller_Event_Log> GetSignalEventsByEventCode(string signalId,
             DateTime startTime, DateTime endTime, int eventCode)
         {
