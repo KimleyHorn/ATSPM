@@ -546,6 +546,11 @@ namespace MOE.CommonTests.Models
             throw new NotImplementedException();
         }
 
+        public bool CheckIfSingleRecordExists(string signalID, DateTime timestamp, int EventCode, int EventParam)
+        {
+            throw new NotImplementedException();
+        }
+
         public List<Controller_Event_Log> GetTopEventsBeforeDateByEventCodesParam(string signalId, DateTime timestamp, List<int> eventCodes, int param, int top)
         {
             throw new NotImplementedException();
