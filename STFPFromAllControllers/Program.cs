@@ -38,7 +38,7 @@ namespace STFPFromAllControllers
                     ConfigurationManager.AppSettings["SshFingerprint"],
                     Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"])
                 );
-                var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
+                                var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
 
 
                 var db = new MOE.Common.Models.SPM();
@@ -63,22 +63,21 @@ namespace STFPFromAllControllers
                             }
 
                             //Get the records over FTP
-                            //if (CheckIfIPAddressIsValid(signal))
-                            //{
-                            try
+                            if (CheckIfIPAddressIsValid(signal))
                             {
-                                Console.WriteLine("Starting signal " + signal.SignalID);
-                                signalFtp.GetCubicFilesAsyncPpk(signalFtpOptions.PpkLocation,
-                                    true);
+                                try
+                                {
+                                    signalFtp.GetCubicFilesAsyncPpk(signalFtpOptions.PpkLocation,
+                                        true);
+                                }
+                                catch (AggregateException ex)
+                                {
+                                    Console.WriteLine("Error At Highest Level for signal " + ex.Message);
+                                    errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
+                                        MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
+                                        "Error At Highest Level for signal " + signal.SignalID);
+                                }
                             }
-                            catch (AggregateException ex)
-                            {
-                                Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-                                errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
-                                    MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
-                                    "Error At Highest Level for signal " + signal.SignalID);
-                            }
-                            //}
                         }
                         catch (AggregateException ex)
                         {
@@ -108,8 +107,8 @@ namespace STFPFromAllControllers
                             }
 
                             //Get the records over FTP
-                            //if (CheckIfIPAddressIsValid(signal))
-                            //{
+                            if (CheckIfIPAddressIsValid(signal))
+                            {
                                 try
                                 {
                                     signalFtp.GetCubicFilesAsync(
@@ -123,11 +122,11 @@ namespace STFPFromAllControllers
                                         "Error At Highest Level for signal " + signal.SignalID);
                                 }
 
-                            //}
-                            //else
-                            //{
-                            //    Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable");
-                            //}
+                            }
+                            else
+                            {
+                                Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable");
+                            }
                         }
                         catch (AggregateException ex)
                         {
@@ -143,11 +142,15 @@ namespace STFPFromAllControllers
             {
                 Console.WriteLine("Error At Highest Level for signal " + ex.Message);
             }
-            
         }
 
         public static bool CheckIfIPAddressIsValid(MOE.Common.Models.Signal signal)
         {
+            var checkIp = ConfigurationManager.AppSettings["CheckIPAddress"];
+            if (checkIp != null && checkIp.ToLower() == "false")
+            {
+                return true;
+            }
             if (signal.IPAddress == "0" || signal.IPAddress == "0.0.0.0")
                 return false;
 

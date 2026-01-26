@@ -696,7 +696,7 @@ namespace MOE.Common.Business
 
         public static bool BulktoDb(DataTable elTable, BulkCopyOptions options, string tableName)
         {
-            //MOE.Common.Models.Repositories.IApplicationEventRepository errorRepository = MOE.Common.Models.Repositories.ApplicationEventRepositoryFactory.Create();
+            MOE.Common.Models.Repositories.IApplicationEventRepository errorRepository = MOE.Common.Models.Repositories.ApplicationEventRepositoryFactory.Create();
             using (options.Connection)
             {
                 using (var bulkCopy =
@@ -762,9 +762,9 @@ namespace MOE.Common.Business
                                 {
                                     if (Properties.Settings.Default.WriteToConsole)
                                     {
-                                        //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
-                                        //    Models.ApplicationEvent.SeverityLevels.Medium,
-                                        //    "There is a permission error - " + sigId + " - " + ex.Message);
+                                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
+                                            Models.ApplicationEvent.SeverityLevels.Medium,
+                                            "There is a permission error - " + sigId + " - " + ex.Message);
                                         Console.WriteLine("**** There is a permission error - " + sigId + " *****");
                                     }
                                 }
@@ -772,10 +772,10 @@ namespace MOE.Common.Business
                                 {
                                     if (Properties.Settings.Default.WriteToConsole)
                                     {
-                                        //Console.WriteLine("****DATABASE ERROR*****"); 
-                                        //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
-                                        //    Models.ApplicationEvent.SeverityLevels.Medium,
-                                        //    "General Error - " + sigId + " - " + ex.Message);
+                                        Console.WriteLine("****DATABASE ERROR*****");
+                                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
+                                            Models.ApplicationEvent.SeverityLevels.Medium,
+                                            "General Error - " + sigId + " - " + ex.Message);
                                         Console.WriteLine("DATABASE ERROR - " + sigId + " - " + ex.Message);
                                     }
                                 }
@@ -784,9 +784,9 @@ namespace MOE.Common.Business
                             }
                             catch (Exception ex)
                             {
-                                //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_Reg.ex",
-                                //    Models.ApplicationEvent.SeverityLevels.Medium,
-                                //    "General Error - " + sigId + " - " + ex.Message);
+                                errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_Reg.ex",
+                                    Models.ApplicationEvent.SeverityLevels.Medium,
+                                    "General Error - " + sigId + " - " + ex.Message);
                                 Console.WriteLine(ex);
                                 return false;
                             }
@@ -1068,7 +1068,6 @@ namespace MOE.Common.Business
 
         public void GetCubicFilesAsync(string filePath)
         {
-            Console.WriteLine("INTO CUBIC");
             var errorRepository = ApplicationEventRepositoryFactory.Create();
             string username = null;
             string password = null;
@@ -1276,6 +1275,8 @@ namespace MOE.Common.Business
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
+                    throw;
+
                 }
             });
 
@@ -1286,6 +1287,8 @@ namespace MOE.Common.Business
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                throw;
+
             }
         }
 

@@ -20,10 +20,19 @@
             `https://api.tomtom.com/style/1/style/22.*/?` +
             `key=${apiKey}&map=2/basic_street-light`;
 
-        const pathSegments = window.location.pathname.split('/');
-        // The first element after the domain is typically at index 1 (index 0 is an empty string for leading slash)
-        const firstPathElement = pathSegments[1];
-        console.log(firstPathElement); // Example: "blog" if the URL is "https://www.example.com/blog/article"
+        const normalizePrefix = (prefix) => {
+            if (!prefix) return '';
+            let cleaned = prefix.trim();
+            if (!cleaned.startsWith('/')) {
+                cleaned = '/' + cleaned;
+            }
+            if (cleaned.endsWith('/')) {
+                cleaned = cleaned.slice(0, -1);
+            }
+            return cleaned;
+        };
+
+        const signalsPrefix = normalizePrefix(window.spmConfig && window.spmConfig.signalsUrlPrefix);
 
         fetch(styleUrl)
             .then(res => {
@@ -56,10 +65,8 @@
                 });
                 // **when the map’s style and sources are ready:**
                 map.on('load', () => {
-                    const pathSegments = window.location.pathname.split('/');
-                    const firstPathElement = pathSegments[1];
-                    // Use origin to create an absolute URL
-                    const apiUrl = `${window.location.origin}/Signals/GetSignalsForMap`;
+                    // Use origin to create an absolute URL; allow optional prefix from config
+                    const apiUrl = `${window.location.origin}${signalsPrefix}/Signals/GetSignalsForMap`;
 
                     fetch(apiUrl)
                         .then(res => {

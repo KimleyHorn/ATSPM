@@ -1,4 +1,5 @@
 ﻿@using Microsoft.AspNet.Identity
+@using System.Configuration
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
@@ -32,8 +33,12 @@
         })(window, document, 'script', 'dataLayer', 'GoogleAnalyticsContainerId');</script>
     <!-- End Google Tag Manager -->
     <script src='https://www.google.com/recaptcha/api.js'></script>
+    
+        <script>
+        window.spmConfig = window.spmConfig || {};
+        window.spmConfig.signalsUrlPrefix = '@ConfigurationManager.AppSettings["SignalsUrlPrefix"]';
+    </script>
 
-     
 </head>
 <body>
     <!-- Google Tag Manager (noscript) -->
