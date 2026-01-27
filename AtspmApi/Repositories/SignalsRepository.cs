@@ -23,10 +23,10 @@ namespace AtspmApi.Repositories
         }
 
 
-        //public List<Signal> GetAllSignals()
-        //{
-        //    return GetLatestVersionOfAllSignals();
-        //}
+        public List<Signal> GetAllSignals()
+        {
+            return GetLatestVersionOfAllSignals();
+        }
 
         public Signal GetVersionOfSignalByDate(string signalId, DateTime startDate)
         {
@@ -454,19 +454,19 @@ namespace AtspmApi.Repositories
             return null;
         }
 
-        //public List<Signal> GetLatestVersionOfAllSignals()
-        //{
-        //    var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
-        //        .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionTypes)))
-        //        .Include(signal =>
-        //            signal.Approaches.Select(
-        //                a => a.Detectors.Select(d => d.DetectionTypes.Select(dt => dt.MetricTypes))))
-        //        .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionHardware)))
-        //        .Include(signal => signal.Approaches.Select(a => a.DirectionType))
-        //        .GroupBy(r => r.SignalID)
-        //        .Select(g => g.OrderByDescending(r => r.Start).FirstOrDefault()).ToList();
-        //    return activeSignals;
-        //}
+        public List<Signal> GetLatestVersionOfAllSignals()
+        {
+            var activeSignals = _db.Signals.Where(r => r.VersionActionId != 3)
+                .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionTypes)))
+                .Include(signal =>
+                    signal.Approaches.Select(
+                        a => a.Detectors.Select(d => d.DetectionTypes.Select(dt => dt.MetricTypes))))
+                .Include(signal => signal.Approaches.Select(a => a.Detectors.Select(d => d.DetectionHardware)))
+                .Include(signal => signal.Approaches.Select(a => a.DirectionType))
+                .GroupBy(r => r.SignalID)
+                .Select(g => g.OrderByDescending(r => r.Start).FirstOrDefault()).ToList();
+            return activeSignals;
+        }
 
         //public List<Signal> GetLatestVersionOfAllSignalsForFtp()
         //{

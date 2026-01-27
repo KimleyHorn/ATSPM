@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Data.Entity.Core;
 using System.Data.Entity.Core.Objects;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Web.Management;
 using AtspmApi.Models;
 using MOE.Common.Business.Parquet;
@@ -48,6 +50,32 @@ namespace AtspmApi.Repositories
             return query.ToList();
         }
 
+        public async Task<List<Controller_Event_Log>> GetRecordsByEventCode(List<string> signalIds, DateTime startTime,
+            DateTime endTime, List<int> eventCodes)
+        {
+            var query = _db.Controller_Event_Log.Where(c =>
+                signalIds.Contains(c.SignalID) &&
+                c.Timestamp >= startTime &&
+                c.Timestamp < endTime);
+
+            if (eventCodes != null && eventCodes.Count > 0)
+                query = query.Where(c => eventCodes.Contains(c.EventCode));
+
+            return await query.ToListAsync();
+        }
+        public async Task<List<Controller_Event_Log>> GetAllRecordsByEventCode(DateTime startTime,
+            DateTime endTime, List<int> eventCodes)
+        {
+            var query = _db.Controller_Event_Log.Where(c =>
+                c.Timestamp >= startTime &&
+                c.Timestamp < endTime);
+
+            if (eventCodes != null && eventCodes.Count > 0)
+                query = query.Where(c => eventCodes.Contains(c.EventCode));
+
+            return await query.ToListAsync();
+        }
+
         public List<Controller_Event_Log> GetAllAggregationCodes(string signalId, DateTime startTime, DateTime endTime)
         {
             var codes = new List<int> { 150, 114, 113, 112, 105, 102, 1 };
@@ -70,7 +98,7 @@ namespace AtspmApi.Repositories
                          select cel).Count();
             return count;
         }
-
+      
         //public double GetTmcVolume(DateTime startDate, DateTime endDate, string signalId, int phase)
         //{
         //    var repository =

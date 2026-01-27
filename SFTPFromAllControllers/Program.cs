@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace STFPFromAllControllers
+namespace SFTPFromAllControllers
 {
     class Program
     {
@@ -35,9 +35,10 @@ namespace STFPFromAllControllers
                     Convert.ToBoolean(ConfigurationManager.AppSettings["RequiresPPK"]),
                     ConfigurationManager.AppSettings["PPKLocation"],
                     Convert.ToInt32(ConfigurationManager.AppSettings["RegionalControllerType"]),
-                    ConfigurationManager.AppSettings["SshFingerprint"]
+                    ConfigurationManager.AppSettings["SshFingerprint"],
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"])
                 );
-                var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
+                                var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
 
 
                 var db = new MOE.Common.Models.SPM();

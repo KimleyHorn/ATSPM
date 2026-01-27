@@ -40,23 +40,26 @@ namespace FTPfromAllControllers
                     Convert.ToBoolean(ConfigurationManager.AppSettings["RequiresPPK"]),
                     ConfigurationManager.AppSettings["PPKLocation"],
                     Convert.ToInt32(ConfigurationManager.AppSettings["RegionalControllerType"]),
-                    ConfigurationManager.AppSettings["SshFingerprint"]
+                    ConfigurationManager.AppSettings["SshFingerprint"],
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzipAgency"])
                 );
 
                 SPM db = new MOE.Common.Models.SPM();
                 ISignalsRepository signalsRepository = SignalsRepositoryFactory.Create(db);
-                List<Signal> signals = signalsRepository.GetLatestVersionOfAllSignalsForFtp().ToList();
-
+                List<Signal> signals = signalsRepository.GetLatestVersionOfAllSignalsForFtp().OrderBy(x=>x.SignalID).ToList();
+                //for each signal in signals, console log the name and directory
+                foreach (var signal in signals)
+                {
+                    Console.WriteLine("SignalID: " + signal.SignalID + " IP Address: " + signal.IPAddress);
+                }
 
                 int maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
                 int minutesToWait = Convert.ToInt32(ConfigurationManager.AppSettings["MinutesToWait"]);
-                
-                    //.Where(s =>s.SignalID =="7060");
-                    // EOS Signal at Bangerter and 3500 South
                 var options = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
-                Parallel.ForEach(signals.AsEnumerable(), options, signal =>
-                //foreach (var signal in signals) 
+                //Parallel.ForEach(signals.AsEnumerable(), options, signal =>
+                foreach (var signal in signals) 
                 {
+                    if(signal.ControllerTypeID != 11 && signal.ControllerTypeID != 10) continue;
                     try
                     {
                         MOE.Common.Business.SignalFtp signalFtp =
@@ -65,24 +68,24 @@ namespace FTPfromAllControllers
                         {
                             Directory.CreateDirectory(signalFtpOptions.LocalDirectory + signal.SignalID);
                         }
-                        if (CheckIfIPAddressIsValid(signal))
+                        //if (CheckIfIPAddressIsValid(signal))
+                        //{
+                        try
                         {
-                            try
-                            {
-                                signalFtp.GetCurrentRecords();
-                            }
-                            catch (AggregateException ex)
-                            {
-                                Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-                                errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
-                                    MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
-                                    "Error At Highest Level for signal " + signal.SignalID);
-                            }
+                            signalFtp.GetCurrentRecords();
                         }
-                        else
+                        catch (AggregateException ex)
                         {
-                            Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable");
+                            Console.WriteLine("Error At Highest Level for signal " + ex.Message);
+                            errorRepository.QuickAdd("FTPFromAllControllers", "Main", "Main Loop",
+                                MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
+                                "Error At Highest Level for signal " + signal.SignalID);
                         }
+                        //}
+                        //else
+                        //{
+                        //    Console.WriteLine("Signal " + signal.SignalID + "has failed IP validation. Check IP config and if the signal is pingable");
+                        //}
                     }
                     catch (AggregateException ex)
                     {
@@ -91,8 +94,8 @@ namespace FTPfromAllControllers
                             MOE.Common.Models.ApplicationEvent.SeverityLevels.Medium,
                             "Error At Highest Level for signal " + signal.SignalID);
                     }
-                    //} 
-                });
+                } 
+                //});
                 //string timeNow = DateTime.Now.ToString("t"); 
                 //Console.WriteLine("At {0}, it is time to take a nap. Program will wait for {1} minutes.", timeNow, minutesToWait); 
                 //System.Threading.Thread.Sleep(minutesToWait * 60 * 1000); 
@@ -107,52 +110,47 @@ namespace FTPfromAllControllers
             //} 
         }
 
-        public static bool CheckIfIPAddressIsValid(MOE.Common.Models.Signal signal)
-        {
-            var checkIp = ConfigurationManager.AppSettings["CheckIPAddress"];
-            if (checkIp != null && checkIp.ToLower() == "false")
-            {
-                return true;
-            }
-            bool hasValidIP = false;
-            IPAddress ip;
-            if (signal.IPAddress == "0")
-            {
-                return false;
-            }
-            if (signal.IPAddress == "0.0.0.0")
-            {
-                return false;
-            }
+        //public static bool CheckIfIPAddressIsValid(MOE.Common.Models.Signal signal)
+        //{
+        //    bool hasValidIP = false;
+        //    IPAddress ip;
+        //    if (signal.IPAddress == "0")
+        //    {
+        //        return false;
+        //    }
+        //    if (signal.IPAddress == "0.0.0.0")
+        //    {
+        //        return false;
+        //    }
 
-            //test to see if the address is reachable 
-            if (IPAddress.TryParse(signal.IPAddress, out ip))
-            {
-                Ping pingSender = new Ping();
-                PingOptions pingOptions = new PingOptions();
+        //    //test to see if the address is reachable 
+        //    if (IPAddress.TryParse(signal.IPAddress, out ip))
+        //    {
+        //        Ping pingSender = new Ping();
+        //        PingOptions pingOptions = new PingOptions();
 
-                // Use the default Ttl value which is 128,  
-                // but change the fragmentation behavior. 
-                pingOptions.DontFragment = true;
+        //        // Use the default Ttl value which is 128,  
+        //        // but change the fragmentation behavior. 
+        //        pingOptions.DontFragment = true;
 
-                // Create a buffer of 32 bytes of data to be transmitted.  
-                string data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-                byte[] buffer = Encoding.ASCII.GetBytes(data);
-                int timeout = 120;
-                try
-                {
-                    PingReply reply = pingSender.Send(signal.IPAddress, timeout, buffer, pingOptions);
-                    if (reply != null && reply.Status == IPStatus.Success)
-                    {
-                        hasValidIP = true;
-                    }
-                }
-                catch
-                {
-                    hasValidIP = false;
-                }
-            }
-            return hasValidIP;
-        }
+        //        // Create a buffer of 32 bytes of data to be transmitted.  
+        //        string data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        //        byte[] buffer = Encoding.ASCII.GetBytes(data);
+        //        int timeout = 120;
+        //        try
+        //        {
+        //            PingReply reply = pingSender.Send(signal.IPAddress, timeout, buffer, pingOptions);
+        //            if (reply != null && reply.Status == IPStatus.Success)
+        //            {
+        //                hasValidIP = true;
+        //            }
+        //        }
+        //        catch
+        //        {
+        //            hasValidIP = false;
+        //        }
+        //    }
+        //    return hasValidIP;
+        //}
     }
 }
