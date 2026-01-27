@@ -255,6 +255,9 @@ internal class Program
                     .ToList();
 
                 Log.Debug("Successfully parsed {Count} records from {FileName}", records.Count, fileName);
+
+                // Check for duplicates within the file
+                CheckForDuplicatesInFile(records, fileName, signalID);
             }
             catch (Exception ex)
             {
@@ -267,6 +270,29 @@ internal class Program
         }
 
         return records;
+    }
+
+    private static void CheckForDuplicatesInFile(List<ControllerEventLog> records, string fileName, string signalID)
+    {
+        var duplicateGroups = records
+            .GroupBy(r => new { r.Timestamp, r.EventCode, r.EventParam })
+            .Where(g => g.Count() > 1)
+            .ToList();
+
+        if (duplicateGroups.Count == 0)
+        {
+            Log.Debug("No duplicates found within {FileName}", fileName);
+            return;
+        }
+
+        Log.Warning("Found {DuplicateGroupCount} duplicate groups in {FileName} for SignalId {SignalId}",
+            duplicateGroups.Count, fileName, signalID);
+
+        foreach (var group in duplicateGroups)
+        {
+            Log.Warning("Duplicate records in {FileName}: {Count} occurrences - Timestamp: {Timestamp}, EventCode: {EventCode}, EventParam: {EventParam}",
+                fileName, group.Count(), group.Key.Timestamp, group.Key.EventCode, group.Key.EventParam);
+        }
     }
 
     private static void PopulateDataTable(string signalId, List<ControllerEventLog> records,
