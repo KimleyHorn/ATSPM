@@ -694,9 +694,110 @@ namespace MOE.Common.Business
             return mostRecentTimestamp;
         }
 
+        public static bool CheckFirstRowExists(DataTable elTable, BulkCopyOptions options, string tableName)
+        {
+            //MOE.Common.Models.Repositories.IApplicationEventRepository errorRepository =
+            //    MOE.Common.Models.Repositories.ApplicationEventRepositoryFactory.Create();
+
+            using (options.Connection)
+            {
+                // Attempt to open connection with retry logic
+                for (var i = 1; ; i++)
+                {
+                    try
+                    {
+                        options.Connection.Open();
+                    }
+                    catch (Exception ex)
+                    {
+                        Thread.Sleep(Settings.Default.SleepTime);
+                    }
+                    if (options.Connection.State == ConnectionState.Open)
+                    {
+                        if (Settings.Default.WriteToConsole)
+                            Console.WriteLine("DB connection established");
+                        break;
+                    }
+                }
+
+                // Check if table has rows
+                if (elTable.Rows.Count == 0)
+                {
+                    if (Settings.Default.WriteToConsole)
+                        Console.WriteLine("DataTable is empty, no rows to check");
+                    options.Connection.Close();
+                    return false;
+                }
+
+                // Get the first row
+                var row = elTable.Rows[0];
+                var signalId = row["SignalID"].ToString();
+                var timestamp = row["Timestamp"];
+                var eventCode = row["EventCode"];
+                var eventParam = row["EventParam"];
+
+                if (Settings.Default.WriteToConsole)
+                    Console.WriteLine("Checking if record exists: SignalID={0}, Timestamp={1}, EventCode={2}, EventParam={3}",
+                        signalId, timestamp, eventCode, eventParam);
+
+                try
+                {
+                    // Create and execute query to check existence with all 4 columns
+                    using (var command = options.Connection.CreateCommand())
+                    {
+                        command.CommandText = @"SELECT COUNT(1) FROM " + tableName + @" 
+                                       WHERE SignalID = @SignalID 
+                                       AND Timestamp = @Timestamp 
+                                       AND EventCode = @EventCode 
+                                       AND EventParam = @EventParam";
+
+                        command.Parameters.AddWithValue("@SignalID", signalId);
+                        command.Parameters.AddWithValue("@Timestamp", timestamp);
+                        command.Parameters.AddWithValue("@EventCode", eventCode);
+                        command.Parameters.AddWithValue("@EventParam", eventParam);
+                        command.CommandTimeout = Settings.Default.BulkCopyTimeout;
+
+                        var result = (int)command.ExecuteScalar();
+
+                        if (Settings.Default.WriteToConsole)
+                        {
+                            Console.WriteLine("Record {0} for Signal {1}",
+                                result > 0 ? "EXISTS" : "DOES NOT EXIST",
+                                signalId);
+                        }
+
+                        options.Connection.Close();
+                        return result > 0;
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    if (Settings.Default.WriteToConsole)
+                    {
+                        Console.WriteLine("****DATABASE ERROR*****");
+                        //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "CheckFirstRowExists_SQL.ex",
+                        //    Models.ApplicationEvent.SeverityLevels.Medium,
+                        //    "SQL Error checking existence - " + signalId + " - " + ex.Message);
+                        Console.WriteLine("DATABASE ERROR - " + signalId + " - " + ex.Message);
+                    }
+                    options.Connection.Close();
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "CheckFirstRowExists_Reg.ex",
+                    //    Models.ApplicationEvent.SeverityLevels.Medium,
+                    //    "General Error checking existence - " + signalId + " - " + ex.Message);
+                    Console.WriteLine(ex);
+                    options.Connection.Close();
+                    return false;
+                }
+            }
+        }
+
         public static bool BulktoDb(DataTable elTable, BulkCopyOptions options, string tableName)
         {
-            MOE.Common.Models.Repositories.IApplicationEventRepository errorRepository = MOE.Common.Models.Repositories.ApplicationEventRepositoryFactory.Create();
+            //MOE.Common.Models.Repositories.IApplicationEventRepository errorRepository = MOE.Common.Models.Repositories.ApplicationEventRepositoryFactory.Create();
             using (options.Connection)
             {
                 using (var bulkCopy =
@@ -762,9 +863,9 @@ namespace MOE.Common.Business
                                 {
                                     if (Properties.Settings.Default.WriteToConsole)
                                     {
-                                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
-                                            Models.ApplicationEvent.SeverityLevels.Medium,
-                                            "There is a permission error - " + sigId + " - " + ex.Message);
+                                        //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
+                                        //    Models.ApplicationEvent.SeverityLevels.Medium,
+                                        //    "There is a permission error - " + sigId + " - " + ex.Message);
                                         Console.WriteLine("**** There is a permission error - " + sigId + " *****");
                                     }
                                 }
@@ -773,9 +874,9 @@ namespace MOE.Common.Business
                                     if (Properties.Settings.Default.WriteToConsole)
                                     {
                                         Console.WriteLine("****DATABASE ERROR*****");
-                                        errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
-                                            Models.ApplicationEvent.SeverityLevels.Medium,
-                                            "General Error - " + sigId + " - " + ex.Message);
+                                        //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_SQL.ex",
+                                        //    Models.ApplicationEvent.SeverityLevels.Medium,
+                                        //    "General Error - " + sigId + " - " + ex.Message);
                                         Console.WriteLine("DATABASE ERROR - " + sigId + " - " + ex.Message);
                                     }
                                 }
@@ -784,9 +885,9 @@ namespace MOE.Common.Business
                             }
                             catch (Exception ex)
                             {
-                                errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_Reg.ex",
-                                    Models.ApplicationEvent.SeverityLevels.Medium,
-                                    "General Error - " + sigId + " - " + ex.Message);
+                                //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "BulktoDB_Reg.ex",
+                                //    Models.ApplicationEvent.SeverityLevels.Medium,
+                                //    "General Error - " + sigId + " - " + ex.Message);
                                 Console.WriteLine(ex);
                                 return false;
                             }
