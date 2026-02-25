@@ -10,166 +10,356 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MOE.Common.Business.LogDecoder;
+using Serilog;
+
 
 namespace DecodeAndImportD4Logs
 {
     internal class Program
     {
         public static string _cwd = "";
+
         static void Main(string[] args)
         {
-            var appSettings = ConfigurationManager.AppSettings;
-            var dirList = new List<string>();
-            var cwd = appSettings["D4LogsPath"];
-            _cwd = cwd;
-            var maxFilesToImportPerSignal = Convert.ToInt32(appSettings["MaxFilesPerSignalToImport"]);
-            bool isGzipAgency = Convert.ToBoolean(appSettings["IsGzipAgency"]);
-            string startSignal = null;
-            string endSignal = null;
-            if (args.Length == 2)
-            {
-                startSignal = args[0];
-                endSignal = args[1];
-            }
-            
+            // Configure Serilog
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .MinimumLevel.Debug()
+                .WriteTo.File("log.txt", 
+                    rollingInterval: RollingInterval.Day,
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                .CreateLogger();
 
-            foreach (var s in Directory.GetDirectories(cwd))
+            try
             {
-                ProcessDirectoryDepthFirst(cwd, cwd);
-            }
-
-            foreach (var s in Directory.GetDirectories(cwd))
-            {
-                dirList.Add(s);
-            }
-                var sp = new SimplePartitioner<string>(dirList);
-            var optionsMain = new ParallelOptions { MaxDegreeOfParallelism = Convert.ToInt32(appSettings["MaxThreads"]) };
-            //Parallel.ForEach(sp, optionsMain, dir =>
-            //{
-            foreach (var dir in dirList)
-            {
-                string signalId = "";
-                string[] fileNames;
-                if (isGzipAgency)
-                {
-                    Console.WriteLine("Checking GZIP files for dir: " + dir);
-                    GetFileNamesAndSignalIdGzip(dir, out signalId, out fileNames);
-                }
-                else
-                {
-                    GetFileNamesAndSignalId(dir, out signalId, out fileNames);
-                }
                 
-                if ((args.Length == 2 &&
-                     (string.Compare(signalId, startSignal, comparisonType: StringComparison.OrdinalIgnoreCase) > 0 ||
-                      string.Compare(signalId, startSignal, comparisonType: StringComparison.OrdinalIgnoreCase) == 0) &&
-                     (string.Compare(signalId, endSignal, comparisonType: StringComparison.OrdinalIgnoreCase) < 0 ||
-                      string.Compare(signalId, endSignal, comparisonType: StringComparison.OrdinalIgnoreCase) == 0)) ||
-                    args.Length == 0)
-                {
-                    var toDelete = new ConcurrentBag<string>();
-                    var mergedEventsTable = new BlockingCollection<MOE.Common.Data.MOE.Controller_Event_LogRow>();
-                    if (Convert.ToBoolean(appSettings["WriteToConsole"]))
-                    {
-                        Console.WriteLine("-----------------------------Starting Signal " + dir);
-                    }
+                Log.Information("Application started");
 
+                var appSettings = ConfigurationManager.AppSettings;
+                var dirList = new List<string>();
+                var cwd = appSettings["D4LogsPath"];
+                _cwd = cwd;
+                var maxFilesToImportPerSignal = Convert.ToInt32(appSettings["MaxFilesPerSignalToImport"]);
+                bool isGzipAgency = Convert.ToBoolean(appSettings["IsGzipAgency"]);
+                string startSignal = null;
+                string endSignal = null;
+                if (args.Length == 2)
+                {
+                    startSignal = args[0];
+                    endSignal = args[1];
+                }
+
+                //Log.Information("Processing nested directories");
+                //foreach (var s in Directory.GetDirectories(cwd))
+                //{
+                //    ProcessDirectoryDepthFirst(cwd, cwd);
+                //}
+
+                foreach (var s in Directory.GetDirectories(cwd))
+                {
+                    dirList.Add(s);
+                }
+
+                var sp = new SimplePartitioner<string>(dirList);
+                var optionsMain = new ParallelOptions
+                    { MaxDegreeOfParallelism = Convert.ToInt32(appSettings["MaxThreads"]) };
+                //Parallel.ForEach(sp, optionsMain, dir =>
+                //{
+                foreach (var dir in dirList)
+                {
+                    string signalId = "";
+                    string[] fileNames;
                     if (isGzipAgency)
                     {
-                        for (var i = 0; i < maxFilesToImportPerSignal && i < fileNames.Length; i++)
-                        {
-                            try
-                            {
-                                var fileList = D4Decoder.DecodeD4GzipFile(fileNames[i], signalId, mergedEventsTable,
-                                    Convert.ToDateTime(appSettings["EarliestAcceptableDate"]),cwd);
-                                foreach (var fileName in fileList)
-                                {
-                                    toDelete.Add(fileName);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine(ex.Message);
-                            }
-                        }
-
-                        var elTable = CreateDataTableForImport();
-                        AddEventsToImportTable(mergedEventsTable, elTable);
-                        mergedEventsTable.Dispose();
-                        BulkImportRecordsAndDeleteFiles(appSettings, toDelete, elTable);
+                        Log.Information("Checking GZIP files for dir: {Directory}", dir);
+                        GetFileNamesAndSignalIdGzip(dir, out signalId, out fileNames);
                     }
                     else
                     {
-                        for (var i = 0; i < maxFilesToImportPerSignal && i < fileNames.Length; i++)
-                        {
-                            try
-                            {
-                                D4Decoder.DecodeD4File(fileNames[i], signalId, mergedEventsTable,
-                                    Convert.ToDateTime(appSettings["EarliestAcceptableDate"]));
-                                toDelete.Add(fileNames[i]);
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine(ex.Message);
-                            }
-                        }
-
-                        var elTable = CreateDataTableForImport();
-                        AddEventsToImportTable(mergedEventsTable, elTable);
-                        mergedEventsTable.Dispose();
-                        BulkImportRecordsAndDeleteFiles(appSettings, toDelete, elTable);
+                        GetFileNamesAndSignalId(dir, out signalId, out fileNames);
                     }
 
+                    if ((args.Length == 2 &&
+                         (string.Compare(signalId, startSignal, comparisonType: StringComparison.OrdinalIgnoreCase) > 0 ||
+                          string.Compare(signalId, startSignal, comparisonType: StringComparison.OrdinalIgnoreCase) == 0) &&
+                         (string.Compare(signalId, endSignal, comparisonType: StringComparison.OrdinalIgnoreCase) < 0 ||
+                          string.Compare(signalId, endSignal, comparisonType: StringComparison.OrdinalIgnoreCase) == 0)) ||
+                        args.Length == 0)
+                    {
+                        var toDelete = new ConcurrentBag<string>();
+                        var mergedEventsTable = new BlockingCollection<MOE.Common.Data.MOE.Controller_Event_LogRow>();
+                        if (Convert.ToBoolean(appSettings["WriteToConsole"]))
+                        {
+                            Log.Information("-----------------------------Starting Signal {Directory}", dir);
+                        }
+
+                        if (isGzipAgency)
+                        {
+                            for (var i = 0; i < maxFilesToImportPerSignal && i < fileNames.Length; i++)
+                            {
+                                try
+                                {
+                                    var fileList = D4Decoder.DecodeD4GzipFile(fileNames[i], signalId, mergedEventsTable,
+                                        Convert.ToDateTime(appSettings["EarliestAcceptableDate"]), cwd);
+                                    foreach (var fileName in fileList)
+                                    {
+                                        toDelete.Add(fileName);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error(ex, "Error processing GZIP file: {FileName}", fileNames[i]);
+                                }
+                            }
+
+                            var elTable = CreateDataTableForImport();
+                            AddEventsToImportTable(mergedEventsTable, elTable);
+                            mergedEventsTable.Dispose();
+                            BulkImportRecordsAndDeleteFiles(appSettings, toDelete, elTable);
+                        }
+                        else
+                        {
+                            for (var i = 0; i < maxFilesToImportPerSignal && i < fileNames.Length; i++)
+                            {
+                                try
+                                {
+                                    D4Decoder.DecodeD4File(fileNames[i], signalId, mergedEventsTable,
+                                        Convert.ToDateTime(appSettings["EarliestAcceptableDate"]));
+                                    toDelete.Add(fileNames[i]);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error(ex, "Error processing D4 file: {FileName}", fileNames[i]);
+                                }
+                            }
+
+                            var elTable = CreateDataTableForImport();
+                            AddEventsToImportTable(mergedEventsTable, elTable);
+                            mergedEventsTable.Dispose();
+                            BulkImportRecordsAndDeleteFiles(appSettings, toDelete, elTable);
+                        }
+
+                    }
                 }
+                //});
+
+                Log.Information("Application completed successfully");
             }
-            //});
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Application terminated unexpectedly");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
 
         private static void ProcessDirectoryDepthFirst(string currentDir, string rootDir)
         {
-            // First, recursively process all subdirectories (depth-first)
-            foreach (var subDir in Directory.GetDirectories(currentDir))
+            // Check if directory still exists before processing
+            if (!Directory.Exists(currentDir))
             {
+                Log.Warning("Directory no longer exists (already processed): {Directory}", currentDir);
+                return;
+            }
+
+            // Get subdirectories and store in array to avoid enumeration issues
+            string[] subDirs;
+            try
+            {
+                subDirs = Directory.GetDirectories(currentDir);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                Log.Warning("Directory disappeared during enumeration: {Directory}", currentDir);
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Log.Warning("Access denied to directory: {Directory}", currentDir);
+                return;
+            }
+
+            // Process all subdirectories (depth-first)
+            foreach (var subDir in subDirs)
+            {
+                Log.Debug("Descending into subdirectory: {SubDirectory}", subDir);
                 ProcessDirectoryDepthFirst(subDir, rootDir);
             }
 
-            // Then process the current directory (after all children are processed)
-            // Skip if this is the root directory itself
+            // Double-check directory still exists after processing children
+            if (!Directory.Exists(currentDir))
+            {
+                Log.Warning("Directory was moved/deleted during child processing: {Directory}", currentDir);
+                return;
+            }
+
             if (currentDir == rootDir)
                 return;
 
+            Log.Information("Processing directory: {Directory}", currentDir);
             var folderName = Path.GetFileName(currentDir);
             var destFolderPath = Path.Combine(rootDir, folderName);
 
-            // If folder doesn't exist in main directory, move the entire folder
             if (!Directory.Exists(destFolderPath))
             {
-                Directory.Move(currentDir, destFolderPath);
+                Log.Information("Moving directory {Source} to {Destination}", currentDir, destFolderPath);
+
+                if (!TryMoveDirectory(currentDir, destFolderPath))
+                {
+                    Log.Warning("Cannot move directory (contains locked files). Processing files individually...");
+
+                    try
+                    {
+                        Directory.CreateDirectory(destFolderPath);
+                        ProcessFilesIndividually(currentDir, destFolderPath, rootDir);
+                    }
+                    catch (DirectoryNotFoundException)
+                    {
+                        Log.Warning("Source directory disappeared: {Directory}", currentDir);
+                    }
+                }
             }
             else
             {
-                // Folder exists, so move files from current folder to existing folder
-                foreach (var file in Directory.GetFiles(currentDir))
+                Log.Information("Merging files from {Source} into existing directory {Destination}", currentDir, destFolderPath);
+                try
                 {
-                    var fileName = Path.GetFileName(file);
-                    var destPath = Path.Combine(destFolderPath, fileName);
+                    ProcessFilesIndividually(currentDir, destFolderPath, rootDir);
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    Log.Warning("Source directory disappeared: {Directory}", currentDir);
+                }
+            }
+        }
 
-                    // If file already exists, delete the source file (keep existing)
-                    if (File.Exists(destPath) && rootDir != _cwd)
+        private static void ProcessFilesIndividually(string sourceDir, string destDir, string rootDir)
+        {
+            int skippedFiles = 0;
+            int movedFiles = 0;
+
+            string[] files;
+            try
+            {
+                files = Directory.GetFiles(sourceDir);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                Log.Warning("Source directory no longer exists: {Directory}", sourceDir);
+                return;
+            }
+
+            foreach (var file in files)
+            {
+                if (!File.Exists(file))
+                {
+                    Log.Warning("File disappeared: {FileName}", Path.GetFileName(file));
+                    continue;
+                }
+
+                var fileName = Path.GetFileName(file);
+                var destPath = Path.Combine(destDir, fileName);
+
+                if (File.Exists(destPath))
+                {
+                    try
                     {
-                        File.Delete(file);
+                        Log.Information("TESTING Deleting duplicate file: {FileName}", fileName);
+                        //File.Delete(file);
+                    }
+                    catch (IOException ex)
+                    {
+                        Log.Warning(ex, "Cannot delete duplicate file {FileName}", fileName);
+                        skippedFiles++;
+                    }
+                }
+                else
+                {
+                    if (TryMoveFile(file, destPath))
+                    {
+                        movedFiles++;
                     }
                     else
                     {
-                        File.Move(file, destPath);
+                        Log.Warning("Skipping locked file: {FileName}", fileName);
+                        skippedFiles++;
                     }
                 }
+            }
 
-                // Delete the now-empty subdirectory
-                if (Directory.GetFiles(currentDir).Length == 0 && Directory.GetDirectories(currentDir).Length == 0 && currentDir!= rootDir)
+            Log.Information("Moved {MovedFiles} file(s), skipped {SkippedFiles} file(s)", movedFiles, skippedFiles);
+
+            TryDeleteEmptyDirectory(sourceDir, rootDir);
+        }
+
+        private static bool TryMoveDirectory(string source, string destination)
+        {
+            try
+            {
+                Directory.Move(source, destination);
+                return true;
+            }
+            catch (IOException ex)
+            {
+                Log.Debug(ex, "IOException when moving directory {Source} to {Destination}", source, destination);
+                return false;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Log.Debug(ex, "UnauthorizedAccessException when moving directory {Source} to {Destination}", source, destination);
+                return false;
+            }
+        }
+
+        private static bool TryMoveFile(string source, string destination)
+        {
+            try
+            {
+                File.Move(source, destination);
+                return true;
+            }
+            catch (IOException ex)
+            {
+                Log.Debug(ex, "IOException when moving file {Source} to {Destination}", source, destination);
+                return false;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Log.Debug(ex, "UnauthorizedAccessException when moving file {Source} to {Destination}", source, destination);
+                return false;
+            }
+        }
+
+        private static void TryDeleteEmptyDirectory(string directory, string rootDir)
+        {
+            try
+            {
+                if (!Directory.Exists(directory))
                 {
-                    Directory.Delete(currentDir);
+                    return;
                 }
+
+                if (Directory.GetFiles(directory).Length == 0 &&
+                    Directory.GetDirectories(directory).Length == 0 &&
+                    directory != rootDir)
+                {
+                    Directory.Delete(directory);
+                    Log.Information("Deleted empty directory: {Directory}", directory);
+                }
+                else if (Directory.GetFiles(directory).Length > 0)
+                {
+                    Log.Information("Directory not empty (has locked files): {Directory}", directory);
+                }
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // Already gone, that's fine
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Could not delete directory {Directory}", directory);
             }
         }
 
@@ -180,7 +370,7 @@ namespace DecodeAndImportD4Logs
             signalId = split.Last();
             fileNames = Directory.GetFiles(dir, "*.csv?");
         }
-        
+
         private static void GetFileNamesAndSignalIdGzip(string dir, out string signalId, out string[] fileNames)
         {
 
@@ -192,12 +382,14 @@ namespace DecodeAndImportD4Logs
             //list the directory
             foreach (var file in fileNames)
             {
-                Console.WriteLine(file);
+                Log.Debug("Found file: {FileName}", file);
             }
 
         }
 
-        private static void AddEventsToImportTable(BlockingCollection<MOE.Common.Data.MOE.Controller_Event_LogRow> mergedEventsTable, MOE.Common.Data.MOE.Controller_Event_LogDataTable elTable)
+        private static void AddEventsToImportTable(
+            BlockingCollection<MOE.Common.Data.MOE.Controller_Event_LogRow> mergedEventsTable,
+            MOE.Common.Data.MOE.Controller_Event_LogDataTable elTable)
         {
             foreach (var r in mergedEventsTable)
             {
@@ -208,7 +400,7 @@ namespace DecodeAndImportD4Logs
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    Log.Error(ex, "Error adding event to import table for SignalID: {SignalID}", r.SignalID);
                 }
             }
         }
@@ -219,7 +411,8 @@ namespace DecodeAndImportD4Logs
             return elTable;
         }
 
-        private static void BulkImportRecordsAndDeleteFiles(NameValueCollection appSettings, ConcurrentBag<string> toDelete, MOE.Common.Data.MOE.Controller_Event_LogDataTable elTable)
+        private static void BulkImportRecordsAndDeleteFiles(NameValueCollection appSettings,
+            ConcurrentBag<string> toDelete, MOE.Common.Data.MOE.Controller_Event_LogDataTable elTable)
         {
             var connectionString = ConfigurationManager.ConnectionStrings["SPM"].ConnectionString;
             var destTable = appSettings["DestinationTableNAme"];
@@ -233,7 +426,8 @@ namespace DecodeAndImportD4Logs
                 Convert.ToInt32(appSettings["BulkCopyTimeOut"]));
             if (elTable.Count > 0)
             {
-                if (MOE.Common.Business.SignalFtp.BulktoDb(elTable, options, destTable) && Convert.ToBoolean(appSettings["DeleteFile"]))
+                if (MOE.Common.Business.SignalFtp.BulktoDb(elTable, options, destTable) &&
+                    Convert.ToBoolean(appSettings["DeleteFile"]))
                 {
                     DeleteFiles(toDelete);
                 }
@@ -248,6 +442,7 @@ namespace DecodeAndImportD4Logs
                         td.Add(s);
                     }
                 }
+
                 if (td.Count > 0)
                 {
                     DeleteFiles(td);
@@ -264,11 +459,12 @@ namespace DecodeAndImportD4Logs
                     if (File.Exists(f))
                     {
                         File.Delete(f);
+                        Log.Information("Deleted file: {FileName}", f);
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    Log.Error(e, "Error deleting file: {FileName}", f);
                 }
             }
         }

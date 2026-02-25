@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Validation;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using MOE.Common.Business;
 using MOE.Common.Business.CustomReport;
 using NuGet;
@@ -498,6 +500,60 @@ namespace MOE.Common.Models.Repositories
             activeSignals = activeSignals.Where(s => controllerTypes.Contains(s.ControllerTypeID)).ToList();
 
             return activeSignals;
+        }
+        public List<Signal> GetLatestVersionOfAllSignalsForD4Sftp(string connectionString)
+        {
+            const string sql = @"
+        SELECT 
+            s.SignalID,
+            s.Latitude,
+            s.Longitude,
+            s.PrimaryName,
+            s.SecondaryName,
+            s.IPAddress,
+            s.RegionID,
+            s.ControllerTypeID,
+            s.Enabled,
+            s.VersionID,
+            s.VersionActionId,
+            s.Note,
+            s.Start,
+            s.JurisdictionId,
+            s.Pedsare1to1,
+            s.ConnType,
+            ct.ControllerTypeID,
+            ct.Description,
+            ct.SNMPPort,
+            ct.FTPDirectory,
+            ct.ActiveFTP,
+            ct.UserName,
+            ct.Password
+        FROM dbo.Signals s
+        INNER JOIN dbo.ControllerTypes ct ON ct.ControllerTypeID = s.ControllerTypeID
+        INNER JOIN (
+            SELECT SignalID, MAX(Start) AS LatestStart
+            FROM dbo.Signals
+            WHERE VersionActionId != 3
+            GROUP BY SignalID
+        ) latest ON s.SignalID = latest.SignalID
+               AND s.Start = latest.LatestStart
+        WHERE s.VersionActionId != 3
+          AND s.ControllerTypeID = 30";
+
+            using (var db = new SqlConnection(connectionString))
+            {
+                var signals = db.Query<Signal, ControllerType, Signal>(
+                    sql,
+                    (signal, controllerType) =>
+                    {
+                        signal.ControllerType = controllerType;
+                        return signal;
+                    },
+                    splitOn: "ControllerTypeID"
+                ).ToList();
+
+                return signals;
+            }
         }
 
         public List<Signal> GetLatestVersionOfAllSignalsForSftp(int controllerType)

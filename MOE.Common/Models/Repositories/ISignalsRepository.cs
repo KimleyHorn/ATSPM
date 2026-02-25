@@ -24,6 +24,7 @@ namespace MOE.Common.Models.Repositories
         IQueryable<Signal> GetLatestVersionOfAllSignalsAsQueryable();
         List<Signal> GetLatestVersionOfAllSignalsForFtp();
         List<Signal> GetLatestVersionOfAllSignalsForSftp();
+        List<Signal> GetLatestVersionOfAllSignalsForD4Sftp(string connectionString);
         List<Signal> GetLatestVersionOfAllSignalsForSftp(int controllerTypeId);
         int CheckVersionWithFirstDate(string signalId);
         List<Signal> GetLatestVerionOfAllSignalsByControllerType(int controllerTypeId);

@@ -393,6 +393,11 @@ namespace MOE.CommonTests.Models
             throw new NotImplementedException();
         }
 
+        public List<Signal> GetLatestVersionOfAllSignalsForD4Sftp(string connectionString)
+        {
+            throw new NotImplementedException();
+        }
+
         public List<Signal> GetLatestVersionOfAllSignalsForSftp(int controllerTypeId)
         {
             throw new NotImplementedException();
