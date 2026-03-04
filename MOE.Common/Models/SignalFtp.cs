@@ -1457,7 +1457,9 @@ namespace MOE.Common.Business
             string ppkLocation,
             int regionControllerType,
             string sshFingerprint,
-            bool isGzip)
+            bool isGzip,
+            bool usePhysicalLocation
+            )
         {
             SnmpTimeout = snmpTimeout;
             SnmpRetry = snmpRetry;
@@ -1475,6 +1477,7 @@ namespace MOE.Common.Business
             RegionControllerType = regionControllerType;
             SshFingerprint = sshFingerprint;
             IsGzip = isGzip;
+            UsePhysicalLocation = usePhysicalLocation;
         }
 
         public int SnmpTimeout { get; set; }
@@ -1493,6 +1496,7 @@ namespace MOE.Common.Business
         public int RegionControllerType { get; set; }
         public string SshFingerprint { get; set; }
         public bool IsGzip { get; set; }
+        public bool UsePhysicalLocation { get; set; }
 
     }
 

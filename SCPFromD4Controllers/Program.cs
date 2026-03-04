@@ -27,7 +27,6 @@ namespace SCPFromD4Controllers
                 Log.Information("Application starting up at {Time}", DateTime.Now);
 
                 var connectionString = ConfigurationManager.ConnectionStrings["SPM"].ConnectionString;
-                var credentialsPath = ConfigurationManager.AppSettings["SFTP_CREDENTIALS_FILE_PATH"];
 
                 var signalFtpOptions = new SignalFtpOptions(
                     Convert.ToInt32(ConfigurationManager.AppSettings["SNMPTimeout"]),
@@ -47,7 +46,8 @@ namespace SCPFromD4Controllers
                         ? Convert.ToInt32(ConfigurationManager.AppSettings["RegionalControllerType"])
                         : 0,
                     ConfigurationManager.AppSettings["SshFingerprint"],
-                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"])
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"]),
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["UsePhysicalLocation"])
                 );
 
                 Log.Information("Querying signal list from database...");
@@ -55,64 +55,33 @@ namespace SCPFromD4Controllers
                 var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
                 Log.Information("Found {Count} signal(s) to process.", signalList.Count);
 
-                if (signalFtpOptions.RequiresPpk)
+                foreach (var signal in signalList)
                 {
-                    foreach (var signal in signalList)
+                    try
                     {
-                        try
-                        {
-                            EnsureLocalDirectory(signalFtpOptions.LocalDirectory, signal.SignalID);
 
+                        var options = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
+
+                        Parallel.ForEach(signalList, options, signal =>
+                        {
                             try
                             {
-                                //var signalFtp = new SignalFtp(signal, signalFtpOptions);
-
-                                if (!Directory.Exists(signalFtpOptions.LocalDirectory + signal.SignalID))
-                                {
-                                    Directory.CreateDirectory(signalFtpOptions.LocalDirectory + signal.SignalID);
-                                }
-
-                                try
-                                {
-                                    //signalFtp.GetCubicFilesAsyncPpk(signalFtpOptions.PpkLocation,
-                                    //    true);
-                                }
-                                catch (AggregateException ex)
-                                {
-                                    Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-                                }
-
+                                EnsureLocalDirectory(signalFtpOptions.LocalDirectory, signal.SignalID);
+                                GetD4Files(signal, signalFtpOptions, connectionString);
                             }
-                            catch (AggregateException ex)
+                            catch (Exception ex)
                             {
-                                Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-
+                                Log.Error(ex, "Error at highest level for signal {SignalID}.", signal.SignalID);
                             }
+                        });
 
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Error(ex, "Signal {SignalID}: Error in PPK path.", signal.SignalID);
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Signal {SignalID}: Error in PPK path.", signal.SignalID);
                     }
                 }
-                else
-                {
-                    var options = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
 
-                    Parallel.ForEach(signalList, options, signal =>
-                    {
-                        try
-                        {
-                            EnsureLocalDirectory(signalFtpOptions.LocalDirectory, signal.SignalID);
-                            GetD4Files(signal, signalFtpOptions, credentialsPath, connectionString);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Error(ex, "Error at highest level for signal {SignalID}.", signal.SignalID);
-                        }
-                    });
-                }
 
                 Log.Information("Processing complete.");
             }
@@ -170,7 +139,8 @@ namespace SCPFromD4Controllers
                     ct.FTPDirectory,
                     ct.ActiveFTP,
                     ct.UserName,
-                    ct.Password
+                    ct.Password,
+                    ct.PhysicalLocation
                 FROM dbo.Signals s
                 INNER JOIN dbo.ControllerTypes ct ON ct.ControllerTypeID = s.ControllerTypeID
                 INNER JOIN (
@@ -333,37 +303,22 @@ namespace SCPFromD4Controllers
         // -------------------------------------------------------------------------
 
         private static void GetD4Files(
-            Signal signal, SignalFtpOptions options, string credentialsPath, string connectionString)
+            Signal signal, SignalFtpOptions options, string connectionString)
         {
-            string username = null;
-            string password = null;
-
-            try
-            {
-                using var reader = new StreamReader(credentialsPath);
-                username = reader.ReadLine();
-                password = reader.ReadLine();
-            }
-            catch (FileNotFoundException ex)
-            {
-                Log.Error(ex, "Credentials file not found: {Path}", credentialsPath);
-                return;
-            }
-            catch (IOException ex)
-            {
-                Log.Error(ex, "I/O error reading credentials: {Path}", credentialsPath);
-                return;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Unexpected error reading credentials: {Path}", credentialsPath);
-                return;
-            }
-
+            string username = signal.ControllerType.UserName;
+            string password = signal.ControllerType.Password;
             string host = signal.IPAddress;
             string remoteDirectory = signal.ControllerType.FTPDirectory;
             string localDirectory = Path.Combine(options.LocalDirectory, signal.SignalID) + @"\";
             string connType = GetOrDetectConnType(signal, connectionString, host, username, password);
+
+            //here is the switch on the physical location. If the UsePhysicalLocation flag is set, we will override the remote directory with the physical location of the controller
+            if (options.UsePhysicalLocation)
+            {
+                remoteDirectory = signal.ControllerType.PhysicalLocation;
+                Log.Information("Signal {SignalID}: Using physical location for connection: {Host}",
+                    signal.SignalID, host);
+            }
 
             if (connType == null)
             {
@@ -373,60 +328,100 @@ namespace SCPFromD4Controllers
             }
 
             if (connType.Equals("sftp", StringComparison.OrdinalIgnoreCase))
-                FetchViaSftp(signal, host, username, password, remoteDirectory, localDirectory);
-            else if (connType.Equals("ftp", StringComparison.OrdinalIgnoreCase))
-                FetchViaFtp(signal, options, host, username, password, remoteDirectory, localDirectory);
-        }
+            {
+                string ppkLocation = options.PpkLocation;
 
-        // -------------------------------------------------------------------------
-        // SFTP
-        // -------------------------------------------------------------------------
+                if (!string.IsNullOrWhiteSpace(ppkLocation) || options.RequiresPpk == false)
+                {
+                    if (!File.Exists(ppkLocation))
+                    {
+                        Log.Error("PPK file not found at path: {PpkLocation}. Skipping signal {SignalID}.",
+                            ppkLocation, signal.SignalID);
+                        return;
+                    }
+
+                    FetchViaSftp(signal, host, username, password, remoteDirectory, localDirectory, ppkLocation);
+                }
+                else
+                {
+                    FetchViaSftp(signal, host, username, password, remoteDirectory, localDirectory);
+                }
+            }
+            else if (connType.Equals("ftp", StringComparison.OrdinalIgnoreCase))
+            {
+                FetchViaFtp(signal, options, host, username, password, remoteDirectory, localDirectory);
+            }
+        }
 
         private static void FetchViaSftp(
             Signal signal, string host, string username, string password,
-            string remoteDirectory, string localDirectory)
+            string remoteDirectory, string localDirectory, string ppkLocation = null)
         {
-            using var sftp = new SftpClient(host, username, password);
-            try
+            SftpClient sftp;
+
+            if (!string.IsNullOrWhiteSpace(ppkLocation))
             {
-                Log.Information("Signal {SignalID}: Connecting via SFTP to {Host}.", signal.SignalID, host);
-                sftp.Connect();
-
-                var files = sftp.ListDirectory(remoteDirectory)
-                    .Where(x => x.FullName.Contains(".dat")
-                                || x.FullName.Contains(".datZ")
-                                || x.FullName.Contains(".gz"))
-                    .ToList();
-
-                Log.Information("Signal {SignalID}: Found {Count} file(s) via SFTP.", signal.SignalID, files.Count);
-
-                foreach (var file in files)
+                try
                 {
-                    try
-                    {
-                        string localPath = Path.Combine(localDirectory, file.Name);
-                        using var fs = File.OpenWrite(localPath);
-                        sftp.DownloadFile(file.FullName, fs);
-                        Log.Information("Signal {SignalID}: Downloaded {File}.", signal.SignalID, file.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Signal {SignalID}: Failed to download {File}.", signal.SignalID, file.Name);
-                    }
+                    var keyFile = new PrivateKeyFile(ppkLocation, password);
+                    var keyAuth = new PrivateKeyAuthenticationMethod(username, keyFile);
+                    var connectionInfo = new ConnectionInfo(host, username, keyAuth);
+                    sftp = new SftpClient(connectionInfo);
                 }
-
-                sftp.Disconnect();
-                Log.Information("Signal {SignalID}: SFTP transfer complete.", signal.SignalID);
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Signal {SignalID}: Failed to load PPK file from {PpkLocation}.",
+                        signal.SignalID, ppkLocation);
+                    return;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                Log.Error(ex, "Signal {SignalID} @ {Host}: SFTP fetch error.", signal.SignalID, host);
+                sftp = new SftpClient(host, username, password);
+            }
+
+            using (sftp)
+            {
+                try
+                {
+                    Log.Information("Signal {SignalID}: Connecting via SFTP to {Host} {AuthMethod}.",
+                        signal.SignalID, host,
+                        ppkLocation != null ? "using PPK key" : "using password");
+
+                    sftp.Connect();
+
+                    var files = sftp.ListDirectory(remoteDirectory)
+                        .Where(x => x.FullName.Contains(".dat")
+                                    || x.FullName.Contains(".datZ")
+                                    || x.FullName.Contains(".gz"))
+                        .ToList();
+
+                    Log.Information("Signal {SignalID}: Found {Count} file(s) via SFTP.", signal.SignalID, files.Count);
+
+                    foreach (var file in files)
+                    {
+                        try
+                        {
+                            string localPath = Path.Combine(localDirectory, file.Name);
+                            using var fs = File.OpenWrite(localPath);
+                            sftp.DownloadFile(file.FullName, fs);
+                            Log.Information("Signal {SignalID}: Downloaded {File}.", signal.SignalID, file.Name);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Signal {SignalID}: Failed to download {File}.", signal.SignalID, file.Name);
+                        }
+                    }
+
+                    sftp.Disconnect();
+                    Log.Information("Signal {SignalID}: SFTP transfer complete.", signal.SignalID);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Signal {SignalID} @ {Host}: SFTP fetch error.", signal.SignalID, host);
+                }
             }
         }
-
-        // -------------------------------------------------------------------------
-        // FTP
-        // -------------------------------------------------------------------------
 
         private static void FetchViaFtp(
             Signal signal, SignalFtpOptions options, string host, string username, string password,
@@ -721,571 +716,3 @@ namespace SCPFromD4Controllers
         }
     }
 }
-//using MOE.Common.Business;
-//using MOE.Common.Models;
-//using System.Configuration;
-//using System.Data;
-//using System.Net;
-//using Dapper;
-//using FluentFTP;
-//using Microsoft.Data.SqlClient;
-//using Serilog;
-
-//namespace SCPFromD4Controllers
-//{
-//    class Program
-//    {
-
-//        static void Main(string[] args)
-//        {
-
-//            try
-//            {
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "alive.txt"),
-//                    "App started at: " + DateTime.Now);
-
-//                // BREADCRUMB 1 - before config reads
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "step1.txt"),
-//                    "Reading config at: " + DateTime.Now);
-
-//                var connectionString = ConfigurationManager.ConnectionStrings["SPM"].ConnectionString;
-//                var credentialsPath = ConfigurationManager.AppSettings["SFTP_CREDENTIALS_FILE_PATH"];
-//                var localDirectory = ConfigurationManager.AppSettings["LocalDirectory"];
-
-//                // BREADCRUMB 2 - config read successfully
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "step2.txt"),
-//                    $"Config read OK at: {DateTime.Now}\nConnString null: {connectionString == null}\nCredPath: {credentialsPath}\nLocalDir: {localDirectory}");
-
-//                // BREADCRUMB 3 - before Serilog init
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "step3.txt"),
-//                    "Initializing Serilog at: " + DateTime.Now);
-
-//                Log.Logger = new LoggerConfiguration()
-//                    .MinimumLevel.Debug()
-//                    .WriteTo.File(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "startup-.log"),
-//                        rollingInterval: RollingInterval.Day)
-//                    .CreateLogger();
-
-//                // BREADCRUMB 4 - Serilog initialized
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "step4.txt"),
-//                    "Serilog initialized at: " + DateTime.Now);
-
-//                Log.Information("Application starting up...");
-
-//                // BREADCRUMB 5 - before DB call
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "step5.txt"),
-//                    "About to query DB at: " + DateTime.Now);
-//                var signalFtpOptions = new SignalFtpOptions(
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["SNMPTimeout"]),
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["SNMPRetry"]),
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["SNMPPort"]),
-//                    Convert.ToBoolean(ConfigurationManager.AppSettings["DeleteFilesAfterFTP"]),
-//                    ConfigurationManager.AppSettings["LocalDirectory"],
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["FTPConnectionTimeoutInSeconds"]),
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["FTPReadTimeoutInSeconds"]),
-//                    Convert.ToBoolean(ConfigurationManager.AppSettings["skipCurrentLog"]),
-//                    Convert.ToBoolean(ConfigurationManager.AppSettings["RenameDuplicateFiles"]),
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["waitBetweenFileDownloadMilliseconds"]),
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["MaximumNumberOfFilesTransferAtOneTime"]),
-//                    Convert.ToBoolean(ConfigurationManager.AppSettings["RequiresPPK"]),
-//                    ConfigurationManager.AppSettings["PPKLocation"],
-//                    Convert.ToInt32(ConfigurationManager.AppSettings["RegionalControllerType"]),
-//                    ConfigurationManager.AppSettings["SshFingerprint"],
-//                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"])
-//                );
-//                var connection = (ConfigurationManager.ConnectionStrings["SPM"].ConnectionString);
-//                var signalList = GetLatestVersionOfAllSignalsForD4Sftp(connection);
-//                // your existing signal list query here
-
-//                // BREADCRUMB 6 - DB query succeeded
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "step6.txt"),
-//                    $"DB query OK at: {DateTime.Now}, Signal count: {signalList.Count}");
-
-//                // rest of your existing code...
-//                //get the
-//                var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
-
-//                var options = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
-//                if (signalFtpOptions.RequiresPpk)
-//                {
-
-//                    //Parallel.ForEach(signals.AsEnumerable(), options, signal =>
-//                    foreach (var signal in signalList)
-//                    {
-//                        try
-//                        {
-//                            //var signalFtp = new SignalFtp(signal, signalFtpOptions);
-
-//                            if (!Directory.Exists(signalFtpOptions.LocalDirectory + signal.SignalID))
-//                            {
-//                                Directory.CreateDirectory(signalFtpOptions.LocalDirectory + signal.SignalID);
-//                            }
-
-//                            try
-//                            {
-//                                //signalFtp.GetCubicFilesAsyncPpk(signalFtpOptions.PpkLocation,
-//                                //    true);
-//                            }
-//                            catch (AggregateException ex)
-//                            {
-//                                Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-//                            }
-
-//                        }
-//                        catch (AggregateException ex)
-//                        {
-//                            Console.WriteLine("Error At Highest Level for signal " + ex.Message);
-
-//                        }
-//                    }
-//                }
-//                else
-//                {
-//                    foreach (var signal in signalList)
-//                    {
-//                        try
-//                        {
-//                            var signalFtp = new SignalFtp(signal, signalFtpOptions);
-
-//                            if (!Directory.Exists(signalFtpOptions.LocalDirectory + signal.SignalID))
-//                            {
-//                                Directory.CreateDirectory(signalFtpOptions.LocalDirectory + signal.SignalID);
-//                            }
-
-//                            signalFtp.GetD4Files(
-//                                ConfigurationManager.AppSettings["SFTP_CREDENTIALS_FILE_PATH"],
-//                                ConfigurationManager.ConnectionStrings["SPM"].ConnectionString);
-//                        }
-//                        catch (Exception ex)
-//                        {
-//                            Log.Error(ex, "Error at highest level for signal {SignalID}.", signal.SignalID);
-//                        }
-//                    }
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.txt"),
-//                    $"Crashed at: {DateTime.Now}\n\nException:\n{ex.ToString()}\n\nInner:\n{ex.InnerException?.ToString()}");
-//            }
-
-//            Log.Logger = new LoggerConfiguration()
-//                .MinimumLevel.Debug()
-//                .WriteTo.File(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "startup-crash-.log"),
-//                    rollingInterval: RollingInterval.Day,
-//                    retainedFileCountLimit: 7).CreateLogger();
-
-//        }
-
-//        public static List<MOE.Common.Models.Signal> GetLatestVersionOfAllSignalsForD4Sftp(string connectionString)
-//        {
-//            const string sql = @"
-//        SELECT 
-//            s.SignalID,
-//            s.Latitude,
-//            s.Longitude,
-//            s.PrimaryName,
-//            s.SecondaryName,
-//            s.IPAddress,
-//            s.RegionID,
-//            s.ControllerTypeID,
-//            s.Enabled,
-//            s.VersionID,
-//            s.VersionActionId,
-//            s.Note,
-//            s.Start,
-//            s.JurisdictionId,
-//            s.Pedsare1to1,
-//            s.ConnType,
-//            ct.ControllerTypeID,
-//            ct.Description,
-//            ct.SNMPPort,
-//            ct.FTPDirectory,
-//            ct.ActiveFTP,
-//            ct.UserName,
-//            ct.Password
-//        FROM dbo.Signals s
-//        INNER JOIN dbo.ControllerTypes ct ON ct.ControllerTypeID = s.ControllerTypeID
-//        INNER JOIN (
-//            SELECT SignalID, MAX(Start) AS LatestStart
-//            FROM dbo.Signals
-//            WHERE VersionActionId != 3
-//            GROUP BY SignalID
-//        ) latest ON s.SignalID = latest.SignalID
-//               AND s.Start = latest.LatestStart
-//        WHERE s.VersionActionId != 3
-//          AND s.ControllerTypeID = 30";
-
-//            using (var db = new SqlConnection(connectionString))
-//            {
-//                var signals = db.Query<MOE.Common.Models.Signal, ControllerType, MOE.Common.Models.Signal>(
-//                    sql,
-//                    (signal, controllerType) =>
-//                    {
-//                        signal.ControllerType = controllerType;
-//                        return signal;
-//                    },
-//                    splitOn: "ControllerTypeID"
-//                ).ToList();
-
-//                return signals;
-//            }
-//        }
-        
-
-//        public void GetD4Files(string filePath, string connectionString)
-//        {
-//            string username = null;
-//            string password = null;
-
-//            try
-//            {
-//                using (var reader = new StreamReader(filePath))
-//                {
-//                    username = reader.ReadLine();
-//                    password = reader.ReadLine();
-//                }
-//            }
-//            catch (FileNotFoundException ex)
-//            {
-//                Log.Error(ex, "Credentials file not found at path: {FilePath}", filePath);
-//                return;
-//            }
-//            catch (IOException ex)
-//            {
-//                Log.Error(ex, "I/O error reading credentials file at path: {FilePath}", filePath);
-//                return;
-//            }
-//            catch (Exception ex)
-//            {
-//                Log.Error(ex, "Unexpected error reading credentials file at path: {FilePath}", filePath);
-//                return;
-//            }
-
-//            string host = Signal.IPAddress;
-//            string remoteDirectory = Signal.ControllerType.FTPDirectory;
-//            string localDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\";
-
-//            string connType = GetOrDetectConnType(connectionString, host, username, password);
-
-//            if (connType == null)
-//            {
-//                Log.Warning("Signal {SignalID} @ {Host}: Could not establish FTP or SFTP connection. Skipping.",
-//                    Signal.SignalID, host);
-//                return;
-//            }
-
-//            if (connType.Equals("sftp", StringComparison.OrdinalIgnoreCase))
-//            {
-//                FetchViaSftp(host, username, password, remoteDirectory, localDirectory);
-//            }
-//            else if (connType.Equals("ftp", StringComparison.OrdinalIgnoreCase))
-//            {
-//                FetchViaFtp(host, username, password, remoteDirectory, localDirectory);
-//            }
-//        }
-
-//        private string GetOrDetectConnType(string connectionString, string host, string username, string password)
-//        {
-//            try
-//            {
-//                using (var db = new SqlConnection(connectionString))
-//                {
-//                    string existingConnType = db.QueryFirstOrDefault<string>(
-//                        "SELECT ConnType FROM dbo.Signals WHERE SignalID = @SignalID",
-//                        new { SignalID = Signal.SignalID });
-
-//                    if (!string.IsNullOrWhiteSpace(existingConnType))
-//                    {
-//                        Log.Information("Signal {SignalID}: ConnType already set to '{ConnType}', skipping detection.",
-//                            Signal.SignalID, existingConnType);
-//                        return existingConnType;
-//                    }
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                Log.Error(ex, "Signal {SignalID}: Failed to query ConnType from database.", Signal.SignalID);
-//                return null;
-//            }
-
-//            Log.Information("Signal {SignalID}: ConnType is null, testing connections...", Signal.SignalID);
-
-//            string detectedType = null;
-
-//            if (TestSftpConnection(host, username, password))
-//            {
-//                detectedType = "sftp";
-//            }
-//            else if (TestFtpConnection(host, username, password))
-//            {
-//                detectedType = "ftp";
-//            }
-
-//            if (detectedType != null)
-//            {
-//                try
-//                {
-//                    using (var db = new SqlConnection(connectionString))
-//                    {
-//                        int rows = db.Execute(
-//                            "UPDATE dbo.Signals SET ConnType = @ConnType WHERE SignalID = @SignalID",
-//                            new { ConnType = detectedType, SignalID = Signal.SignalID });
-
-//                        Log.Information("Signal {SignalID}: Updated ConnType to '{ConnType}' ({Rows} row(s) affected).",
-//                            Signal.SignalID, detectedType, rows);
-//                    }
-//                }
-//                catch (Exception ex)
-//                {
-//                    Log.Error(ex, "Signal {SignalID}: Failed to update ConnType in database.", Signal.SignalID);
-//                }
-//            }
-//            else
-//            {
-//                Log.Warning("Signal {SignalID} @ {Host}: Neither SFTP nor FTP responded. ConnType left as null.",
-//                    Signal.SignalID, host);
-//            }
-
-//            return detectedType;
-//        }
-
-//        private bool TestSftpConnection(string host, string username, string password)
-//        {
-//            try
-//            {
-//                using (var sftp = new SftpClient(host, username, password))
-//                {
-//                    sftp.Connect();
-//                    bool connected = sftp.IsConnected;
-//                    sftp.Disconnect();
-//                    Log.Information("Signal {SignalID}: SFTP connection test {Result}.",
-//                        Signal.SignalID, connected ? "PASSED" : "FAILED");
-//                    return connected;
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                Log.Warning(ex, "Signal {SignalID} @ {Host}: SFTP connection test failed.", Signal.SignalID, host);
-//                return false;
-//            }
-//        }
-
-//        private bool TestFtpConnection(string host, string username, string password)
-//        {
-//            try
-//            {
-//                var request = (FtpWebRequest)WebRequest.Create($"ftp://{host}/");
-//                request.Method = WebRequestMethods.Ftp.ListDirectory;
-//                request.Credentials = new NetworkCredential(username, password);
-//                request.Timeout = 5000;
-
-//                using (var response = (FtpWebResponse)request.GetResponse())
-//                {
-//                    bool success = response.StatusCode == FtpStatusCode.OpeningData
-//                                   || response.StatusCode == FtpStatusCode.DataAlreadyOpen;
-//                    Log.Information("Signal {SignalID}: FTP connection test {Result} — Status: {StatusDescription}",
-//                        Signal.SignalID, success ? "PASSED" : "FAILED", response.StatusDescription);
-//                    return success;
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                Log.Warning(ex, "Signal {SignalID} @ {Host}: FTP connection test failed.", Signal.SignalID, host);
-//                return false;
-//            }
-//        }
-
-//        private void FetchViaSftp(string host, string username, string password, string remoteDirectory,
-//            string localDirectory)
-//        {
-
-//            using (var sftp = new SftpClient(host, username, password))
-//            {
-//                try
-//                {
-//                    Log.Information("Signal {SignalID}: Connecting via SFTP to {Host}.", Signal.SignalID, host);
-//                    sftp.Connect();
-
-//                    var files = sftp.ListDirectory(remoteDirectory)
-//                        .Where(x => x.FullName.Contains(".dat")
-//                                    || x.FullName.Contains(".datZ")
-//                                    || x.FullName.Contains(".gz"))
-//                        .ToList();
-
-//                    Log.Information("Signal {SignalID}: Found {FileCount} D4 file(s) via SFTP.", Signal.SignalID,
-//                        files.Count);
-//                    TransferCubicFiles(files, localDirectory, sftp);
-//                    sftp.Disconnect();
-//                    Log.Information("Signal {SignalID}: SFTP transfer complete.", Signal.SignalID);
-//                }
-//                catch (Exception ex)
-//                {
-//                    Log.Error(ex, "Signal {SignalID} @ {Host}: Error during SFTP file fetch.", Signal.SignalID, host);
-//                }
-//            }
-//        }
-//        private void FetchViaFtp(string host, string username, string password, string remoteDirectory,
-//            string localDirectory)
-//        {
-//            DiagnoseFtpConnection(host, username, password);
-//            try
-//            {
-//                Log.Information("Signal {SignalID}: Connecting via FTP to {Host}.", Signal.SignalID, host);
-
-//                var config = new FtpConfig
-//                {
-//                    ConnectTimeout = 30000,
-//                    ReadTimeout = 180000,
-//                    DataConnectionConnectTimeout = 30000,
-//                    DataConnectionReadTimeout = 180000,
-//                    SocketKeepAlive = true,
-//                    RetryAttempts = 3
-//                };
-
-//                using (var ftp = new FtpClient(host, username, password, config: config))
-//                {
-//                    // Use AutoConnect instead of Connect — it probes the server 
-//                    // for the best connection settings rather than assuming defaults
-//                    ftp.AutoConnect();
-
-//                    if (!ftp.IsConnected)
-//                    {
-//                        Log.Warning("Signal {SignalID}: FTP client failed to connect to {Host}.", Signal.SignalID,
-//                            host);
-//                        return;
-//                    }
-
-//                    Log.Information("Signal {SignalID}: FTP connected to {Host}.", Signal.SignalID, host);
-
-//                    var files = ftp.GetListing(remoteDirectory)
-//                        .Where(x => x.Type == FtpObjectType.File &&
-//                                    (x.Name.Contains(".dat") ||
-//                                     x.Name.Contains(".datZ") ||
-//                                     x.Name.Contains(".gz")))
-//                        .ToList();
-
-//                    Log.Information("Signal {SignalID}: Found {FileCount} D4 file(s) via FTP.",
-//                        Signal.SignalID, files.Count);
-
-//                    foreach (var file in files)
-//                    {
-//                        try
-//                        {
-//                            string localFilePath = Path.Combine(localDirectory, file.Name);
-//                            var status = ftp.DownloadFile(localFilePath, file.FullName);
-
-//                            if (status == FtpStatus.Success)
-//                            {
-//                                Log.Information("Signal {SignalID}: Downloaded {FileName}.",
-//                                    Signal.SignalID, file.Name);
-
-//                                if (ConfigurationManager.AppSettings["DeleteFilesAfterFTP"] == "true")
-//                                {
-//                                    ftp.DeleteFile(file.FullName);
-//                                    Log.Information("Signal {SignalID}: Deleted remote file {FileName}.",
-//                                        Signal.SignalID, file.Name);
-//                                }
-//                            }
-//                            else
-//                            {
-//                                Log.Warning("Signal {SignalID}: Failed to download {FileName}, status: {Status}.",
-//                                    Signal.SignalID, file.Name, status);
-//                            }
-//                        }
-//                        catch (Exception ex)
-//                        {
-//                            Log.Error(ex, "Signal {SignalID}: Error downloading file {FileName}.",
-//                                Signal.SignalID, file.Name);
-//                        }
-//                    }
-
-//                    ftp.Disconnect();
-//                    Log.Information("Signal {SignalID}: FTP transfer complete.", Signal.SignalID);
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                Log.Error(ex, "Signal {SignalID} @ {Host}: Error during FTP file fetch.", Signal.SignalID, host);
-//            }
-//        }
-//        private void DiagnoseFtpConnection(string host, string username, string password)
-//        {
-//            Log.Information("Signal {SignalID}: Starting FTP diagnostics for {Host}", Signal.SignalID, host);
-
-//            // Test 1: Raw TCP connection
-//            try
-//            {
-//                using (var tcp = new System.Net.Sockets.TcpClient())
-//                {
-//                    tcp.Connect(host, 21);
-//                    Log.Information("Signal {SignalID}: TCP port 21 is OPEN on {Host}", Signal.SignalID, host);
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                Log.Error(ex, "Signal {SignalID}: TCP port 21 is CLOSED or unreachable on {Host}", Signal.SignalID,
-//                    host);
-//            }
-
-//            // Test 2: Try every combination FluentFTP supports
-//            var encryptionModes = new[]
-//            {
-//                FtpEncryptionMode.None,
-//                FtpEncryptionMode.Auto,
-//                FtpEncryptionMode.Explicit,
-//                FtpEncryptionMode.Implicit
-//            };
-
-//            var dataConnTypes = new[]
-//            {
-//                FtpDataConnectionType.PASV,
-//                FtpDataConnectionType.PORT,
-//                FtpDataConnectionType.EPSV,
-//                FtpDataConnectionType.AutoPassive,
-//                FtpDataConnectionType.AutoActive
-//            };
-
-//            foreach (var encryption in encryptionModes)
-//            {
-//                foreach (var dataConn in dataConnTypes)
-//                {
-//                    try
-//                    {
-//                        var config = new FtpConfig
-//                        {
-//                            EncryptionMode = encryption,
-//                            DataConnectionType = dataConn,
-//                            ConnectTimeout = 5000,
-//                            ReadTimeout = 5000,
-//                            ValidateAnyCertificate = true
-//                        };
-
-//                        using (var ftp = new FtpClient(host, username, password, config: config))
-//                        {
-//                            ftp.Connect();
-//                            if (ftp.IsConnected)
-//                            {
-//                                Log.Information(
-//                                    "Signal {SignalID}: SUCCESS with Encryption={Encryption}, DataConn={DataConn}",
-//                                    signal.SignalID, encryption, dataConn);
-//                                ftp.Disconnect();
-//                                return; // Log the first working combo and stop
-//                            }
-//                        }
-//                    }
-//                    catch (Exception ex)
-//                    {
-//                        Log.Warning(
-//                            "Signal {SignalID}: FAILED with Encryption={Encryption}, DataConn={DataConn} — {Message}",
-//                            Signal.SignalID, encryption, dataConn, ex.Message);
-//                    }
-//                }
-//            }
-
-//            Log.Error("Signal {SignalID}: All connection combinations failed for {Host}", Signal.SignalID, host);
-//        }
-
-
-//    }
-//}

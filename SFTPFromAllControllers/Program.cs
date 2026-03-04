@@ -36,7 +36,8 @@ namespace SFTPFromAllControllers
                     ConfigurationManager.AppSettings["PPKLocation"],
                     Convert.ToInt32(ConfigurationManager.AppSettings["RegionalControllerType"]),
                     ConfigurationManager.AppSettings["SshFingerprint"],
-                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"])
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"]),
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["UsePhysicalLocation"])
                 );
                                 var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
 
