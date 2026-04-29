@@ -24,8 +24,32 @@ These names are baked into ATSPM and do not change between clients:
 | Partition scheme name | `ps_controller_event_log_daily` |
 | Stored procedure name | `dbo.usp_SlideControllerEventLogPartition` |
 | Job name | `[MOE] Slide Controller_Event_Log Partition` |
-| Clustered index name | `IX_Clustered_Controller_Event_Log_Timestamp` (on `Timestamp`, non-unique) |
+| Clustered index | **Clustered columnstore** named `CCI_Controller_Event_Log` (default — best for ATSPM workloads) — see Phase 3 for rowstore fallback |
 | Nonclustered index | on `(SignalID, Timestamp, EventCode, EventParam)` — confirm exact name per instance |
+
+## Storage strategy: why clustered columnstore
+
+The default for ATSPM `Controller_Event_Log` is a **partitioned clustered
+columnstore index** with a supporting nonclustered btree on
+`(SignalID, Timestamp, EventCode, EventParam)`. Reasoning:
+
+- **Workload fit:** typical ATSPM queries filter by date range + SignalID.
+  - Date range → partition elimination scans only the relevant daily partitions
+  - SignalID → the nonclustered btree seeks within those partitions
+  - Aggregations across many signals → columnstore segment scans win
+- **Storage:** columnstore typically achieves 10–100× compression vs rowstore.
+  Event log tables get very large; this matters.
+- **Maintenance:** the same `pf_*` / `ps_*` objects, same daily proc, same
+  Agent job. `TRUNCATE WITH (PARTITIONS())` works on partitioned columnstore.
+- **Edition support:** clustered columnstore is available in Standard from
+  SQL Server 2016+. Pre-2016 or Standard 2014 → use the rowstore fallback
+  in Phase 3.
+
+The one query pattern columnstore handles **poorly** is
+`SELECT TOP N ... ORDER BY Timestamp DESC` with no `WHERE` clause — no
+partition elimination kicks in and every partition has to be scanned. If
+the app does this regularly, either fix the app to add a date filter or
+add an extra nonclustered btree on `Timestamp DESC`.
 
 ## Per-client decisions to make up front
 
@@ -33,8 +57,8 @@ These names are baked into ATSPM and do not change between clients:
 |----------|---------------|
 | Retention (days) | 90 |
 | Forward buffer at setup (days) | 3 (only needs to be ≥ 2; bump higher only if the daily job won't run immediately) |
-| SQL Server version | confirm — needs `TRUNCATE ... WITH (PARTITIONS())` (2016+) |
-| SQL Server edition | Enterprise → `ONLINE = ON` available; Standard → offline maintenance window |
+| SQL Server version | confirm — needs `TRUNCATE ... WITH (PARTITIONS())` (2016+); columnstore-default path also needs 2016+ |
+| SQL Server edition | Any edition can use partitioning + clustered columnstore on 2016+. `ONLINE = ON` is Enterprise-only (and clustered-columnstore ONLINE rebuild needs Enterprise 2019+); Standard → offline maintenance window |
 | Job owner login | `sa` or the shop's standard job-owner login (never a personal account) |
 | Schedule (UTC) | 00:15 |
 | Error operator | shop's default app-failure / DBA operator |
@@ -164,22 +188,60 @@ Notes:
 
 ## Phase 3 — Rebuild indexes onto the partition scheme
 
-Enterprise edition can add `ONLINE = ON` to these statements. Standard
-edition cannot — the table is locked for the duration of the rebuild.
-Plan a maintenance window on Standard.
+Default path is **clustered columnstore** + a partition-aligned
+nonclustered btree. Use the rowstore fallback at the end only if the
+client is on SQL Server 2014 Standard (no columnstore) or has a specific
+reason to prefer rowstore.
+
+### Default: partitioned clustered columnstore + supporting btree
 
 ```sql
 USE MOE;
 GO
 
--- Clustered — non-unique, on Timestamp only (matches ATSPM stock definition)
+-- Clustered columnstore on the partition scheme
+-- ATSPM queries are mostly date-range + SignalID — columnstore + the
+-- nonclustered btree below covers both seek and scan patterns.
+CREATE CLUSTERED COLUMNSTORE INDEX CCI_Controller_Event_Log
+ON dbo.Controller_Event_Log
+WITH (DROP_EXISTING = ON)   -- add ", ONLINE = ON" only on Enterprise 2019+
+ON ps_controller_event_log_daily(Timestamp);
+GO
+
+-- Nonclustered btree — same shape as the stock ATSPM index. Replace
+-- <NCI_NAME> with the real name from Phase 0.
+CREATE NONCLUSTERED INDEX <NCI_NAME>
+ON dbo.Controller_Event_Log (SignalID, Timestamp, EventCode, EventParam)
+WITH (DROP_EXISTING = ON, DATA_COMPRESSION = PAGE)   -- add ", ONLINE = ON" on Enterprise
+ON ps_controller_event_log_daily(Timestamp);
+GO
+```
+
+ONLINE rebuild caveats:
+
+- **Clustered columnstore ONLINE rebuild** requires SQL Server 2019+ Enterprise.
+  Standard or pre-2019 → rebuild is offline (table locked for the duration).
+- **Rowstore nonclustered ONLINE** is Enterprise-only at any version.
+- Initial creation needs ~1.5–2× table size free in the data file.
+
+If the agency has additional custom indexes on `Controller_Event_Log`,
+each must be rebuilt with `ON ps_controller_event_log_daily(Timestamp)`
+and have `Timestamp` somewhere in the key. Unaligned indexes will make
+`SWITCH` and `TRUNCATE WITH (PARTITIONS())` fail with error 7733.
+
+### Fallback: rowstore (pre-2016 or specific reason)
+
+```sql
+USE MOE;
+GO
+
+-- Clustered rowstore on Timestamp only (matches ATSPM stock pre-columnstore)
 CREATE CLUSTERED INDEX IX_Clustered_Controller_Event_Log_Timestamp
 ON dbo.Controller_Event_Log (Timestamp)
 WITH (DROP_EXISTING = ON)   -- add ", ONLINE = ON" on Enterprise
 ON ps_controller_event_log_daily(Timestamp);
 GO
 
--- Nonclustered — replace <NCI_NAME> with the real name from Phase 0
 CREATE NONCLUSTERED INDEX <NCI_NAME>
 ON dbo.Controller_Event_Log (SignalID, Timestamp, EventCode, EventParam)
 WITH (DROP_EXISTING = ON)   -- add ", ONLINE = ON" on Enterprise
@@ -187,21 +249,18 @@ ON ps_controller_event_log_daily(Timestamp);
 GO
 ```
 
-If the client has additional custom indexes on `Controller_Event_Log`, each
-must be rebuilt with `ON ps_controller_event_log_daily(Timestamp)` and
-have `Timestamp` in its key. Unaligned indexes will make `SWITCH` /
-`TRUNCATE WITH (PARTITIONS())` fail with error 7733.
-
-Verify alignment:
+### Verify alignment (both paths)
 
 ```sql
-SELECT i.name, ds.name AS on_data_space, ds.type_desc
+SELECT i.name, i.type_desc, ds.name AS on_data_space, ds.type_desc AS data_space_type
 FROM sys.indexes i
 JOIN sys.data_spaces ds ON ds.data_space_id = i.data_space_id
 WHERE i.object_id = OBJECT_ID('dbo.Controller_Event_Log') AND i.type > 0;
 ```
 
-Every index should show `type_desc = 'PARTITION_SCHEME'`.
+Every index should show `data_space_type = 'PARTITION_SCHEME'`. The
+clustered index `type_desc` will be either `CLUSTERED COLUMNSTORE` (default
+path) or `CLUSTERED` (fallback path).
 
 ---
 
@@ -490,8 +549,10 @@ Give the DBA team / operations:
 
 5. **Rollback plan** — if partitioning needs to be undone:
    - Disable the job
-   - Rebuild clustered index back onto `[PRIMARY]` (no partition scheme)
-   - Rebuild each nonclustered index the same way
+   - Rebuild the clustered index back onto `[PRIMARY]` (no partition scheme).
+     Use the same index type the agency had before — clustered columnstore
+     stays clustered columnstore, clustered rowstore stays rowstore
+   - Rebuild each nonclustered index the same way (off the partition scheme)
    - Drop the partition scheme, then the partition function
    - Drop the staging table if one was created (pre-2016 path)
 
@@ -520,6 +581,12 @@ Give the DBA team / operations:
       idempotency
 - [ ] Failure-alert path proved end-to-end in Phase 7 (deliberately break it
       and confirm email arrives)
+- [ ] Storage choice matches workload — default to **clustered columnstore**
+      for ATSPM event-log tables; only fall back to rowstore on SQL 2014
+      Standard or with a specific reason
+- [ ] If columnstore: confirm there's no app query that does
+      `ORDER BY Timestamp DESC TOP N` without a `WHERE` — it will scan all
+      partitions. Either fix the query or add a small NCI on `Timestamp DESC`
 - [ ] Disk on the server is actually healthy — check C: and the data drive;
       partition rebuild needs ~1.5–2x table size free during the operation
 
