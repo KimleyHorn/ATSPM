@@ -32,7 +32,7 @@ These names are baked into ATSPM and do not change between clients:
 | Decision | Typical value |
 |----------|---------------|
 | Retention (days) | 90 |
-| Forward buffer (days) | 10 |
+| Forward buffer at setup (days) | 3 (only needs to be ≥ 2; bump higher only if the daily job won't run immediately) |
 | SQL Server version | confirm — needs `TRUNCATE ... WITH (PARTITIONS())` (2016+) |
 | SQL Server edition | Enterprise → `ONLINE = ON` available; Standard → offline maintenance window |
 | Job owner login | `sa` or the shop's standard job-owner login (never a personal account) |
@@ -133,7 +133,7 @@ USE MOE;
 GO
 
 DECLARE @retention_days  int = 90;
-DECLARE @forward_buffer  int = 10;
+DECLARE @forward_buffer  int = 3;     -- only needs to be >= 2; bump if the agent job won't run for a while
 DECLARE @start date = DATEADD(DAY, -@retention_days, CAST(SYSUTCDATETIME() AS date));
 DECLARE @end   date = DATEADD(DAY,  @forward_buffer,  CAST(SYSUTCDATETIME() AS date));
 
@@ -264,7 +264,7 @@ Properties of the proc:
 - **SPLIT of an empty partition** is metadata-only (fast, minimally logged).
 - **TRUNCATE ... WITH (PARTITIONS())** is minimally logged, unlike `DELETE`.
 - **MERGE of an empty boundary** is metadata-only.
-- `@forward_buffer = 2` here (not the 10 from Phase 2) — once the function exists, daily maintenance only needs to stay two days ahead of "now". Phase 2's large initial buffer is a one-time setup cushion.
+- `@forward_buffer = 2` here — once the function exists and the job runs daily, it only needs to stay two days ahead of "now". Phase 2's slightly larger setup buffer (3) is just a one-time cushion in case the first scheduled run is delayed.
 
 ### Pre-2016 fallback
 
@@ -512,8 +512,9 @@ Give the DBA team / operations:
 - [ ] Database Mail profile exists and the chosen operator has a real email
 - [ ] `notify_level_email = 2` + operator assigned, verified via T-SQL query
       (the GUI occasionally silently drops this)
-- [ ] Initial forward buffer ≥ 2 days (set 10 for an initial cushion while
-      access / handoffs settle)
+- [ ] Initial forward buffer ≥ 2 days (3 is the recommended default; only
+      bump higher if you know the daily job won't be running for a while —
+      e.g., still waiting on agent access)
 - [ ] Retention window matches the business requirement (default 90 for ATSPM)
 - [ ] Proc run manually twice in Phase 5 — once to seed, once to confirm
       idempotency
