@@ -100,8 +100,7 @@ namespace NEWDecodeandImportASC3Logs
                 Convert.ToInt32(appSettings["BulkCopyBatchSize"]),
                 Convert.ToInt32(appSettings["BulkCopyTimeOut"]));
 
-            bool moveEnabled = false;
-            bool.TryParse(appSettings["Move"], out moveEnabled);
+            bool moveEnabled = Convert.ToBoolean(appSettings["Move"]);
             string moveLocation = appSettings["MoveLocation"];
             bool useMove = moveEnabled && !string.IsNullOrWhiteSpace(moveLocation);
 
