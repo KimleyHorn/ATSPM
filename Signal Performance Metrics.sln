@@ -135,6 +135,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsvLogReader", "CsvLogReade
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFTPFromAllControllers", "SFTPFromAllControllers\SFTPFromAllControllers.csproj", "{2D4A8B4C-0F52-400F-9065-839C4F508032}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPFromD4Controllers", "SCPFromD4Controllers\SCPFromD4Controllers.csproj", "{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CD_ROM|Any CPU = CD_ROM|Any CPU
@@ -2146,6 +2148,46 @@ Global
 		{2D4A8B4C-0F52-400F-9065-839C4F508032}.SingleImage|x64.Build.0 = Release|Any CPU
 		{2D4A8B4C-0F52-400F-9065-839C4F508032}.SingleImage|x86.ActiveCfg = Release|Any CPU
 		{2D4A8B4C-0F52-400F-9065-839C4F508032}.SingleImage|x86.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|Any CPU.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|Any CPU.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|Mixed Platforms.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|x64.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|x64.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|x86.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.CD_ROM|x86.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|x64.Build.0 = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Debug|x86.Build.0 = Debug|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|Any CPU.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|Any CPU.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|Mixed Platforms.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|x64.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|x64.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|x86.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.DVD-5|x86.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|x64.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|x64.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|x86.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.Release|x86.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|Any CPU.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|Any CPU.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|Mixed Platforms.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|x64.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|x64.Build.0 = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|x86.ActiveCfg = Release|Any CPU
+		{558D2E61-0BB4-05A5-DF84-84998ABC3A5E}.SingleImage|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

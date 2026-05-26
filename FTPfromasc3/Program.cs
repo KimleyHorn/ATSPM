@@ -41,7 +41,8 @@ namespace FTPfromAllControllers
                     ConfigurationManager.AppSettings["PPKLocation"],
                     Convert.ToInt32(ConfigurationManager.AppSettings["RegionalControllerType"]),
                     ConfigurationManager.AppSettings["SshFingerprint"],
-                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzipAgency"])
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzipAgency"]),
+                    Convert.ToBoolean(ConfigurationManager.AppSettings["UsePhysicalPath"])
                 );
 
                 SPM db = new MOE.Common.Models.SPM();

@@ -80,7 +80,7 @@ namespace MOE.Common.Business
             var events = (from row in terminationeventstable
                 where row.EventParam == phasenumber && (row.EventCode == 4 ||
                                                         row.EventCode == 5 || row.EventCode == 6
-                                                        || row.EventCode == 7
+                                                        //|| row.EventCode == 7
                       )
                 select row).ToList();
 

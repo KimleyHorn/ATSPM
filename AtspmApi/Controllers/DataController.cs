@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using System.Web.Http;
 using AtspmApi.Models;
 
@@ -47,8 +48,8 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ControllerType")]  
-        public List<ControllerType>  ControllerType()
+        [Route("api/data/ControllerType")]
+        public List<ControllerType> ControllerType()
         {
             var repo = Repositories.ControllerTypeRepositoryFactory.Create();
             var types = repo.GetControllerTypes();
@@ -57,7 +58,7 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/DirectionType")]  
+        [Route("api/data/DirectionType")]
         public List<DirectionType> DirectionType()
         {
             var repo = Repositories.DirectionTypeRepositoryFactory.Create();
@@ -67,7 +68,7 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/LaneType")]  
+        [Route("api/data/LaneType")]
         public List<LaneType> LaneType()
         {
             var repo = Repositories.LaneTypeRepositoryFactory.Create();
@@ -77,7 +78,7 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/MovementType")]  
+        [Route("api/data/MovementType")]
         public List<MovementType> MovementType()
         {
             var repo = Repositories.MovementTypeRepositoryFactory.Create();
@@ -87,7 +88,7 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/SignalConfig/{Id}")]  
+        [Route("api/data/SignalConfig/{Id}")]
         public Signal SignalConfig(string id)
         {
             var signalRepository = Repositories.SignalsRepositoryFactory.Create();
@@ -99,7 +100,7 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ApproachConfig/{Id}")]  
+        [Route("api/data/ApproachConfig/{Id}")]
         public Approach ApproachConfig(int id)
         {
             var approachRepository = Repositories.ApproachRepositoryFactory.Create();
@@ -109,7 +110,7 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/DetectorConfig/{Id}")]  
+        [Route("api/data/DetectorConfig/{Id}")]
         public Detector DetectorConfig(string id)
         {
             var detectorRepository = Repositories.DetectorRepositoryFactory.Create();
@@ -123,7 +124,7 @@ namespace AtspmApi.Controllers
         public List<Controller_Event_Log> ControllerEventLogsFromSignal([FromBody] EventLogFromSignalRequest request)
         {
             //var identity = (ClaimsIdentity)User.Identity;
-            var startDate = DateTime.Parse(request.StartTime); 
+            var startDate = DateTime.Parse(request.StartTime);
             //StartDate = new DateTime(2019, 10, 1, 0, 0, 0);
             var endDate = DateTime.Parse(request.EndTime);
             //EndDate = new DateTime(2019, 10, 1, 0, 5, 0);
@@ -145,7 +146,290 @@ namespace AtspmApi.Controllers
             return events;
         }
 
-        //[Authorize]
+        [AllowAnonymous]
+        [HttpPost]
+        [Route("api/data/PreemptEventsFromSignal")]
+        public Task<List<Controller_Event_Log>> ControllerPreemptEventLogsFromSignal(
+            [FromBody] EventLogFromSignalRequest request)
+        {
+            try
+            {
+                List<String> signalIds = new List<string>();
+                // Input validation
+                if (request == null)
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("Request cannot be null.")
+                    });
+                }
+                //parse out the string list of signal ids
+                if (string.IsNullOrWhiteSpace(request.SignalId))
+                {
+                    //we're going to get ALL signalId from the signal table
+                }
+                else
+                {
+                    signalIds = request.SignalId.Split(',').Select(s => s.Trim()).ToList();
+                }
+
+                    
+
+                if (string.IsNullOrWhiteSpace(request.StartTime))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("StartTime is required.")
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.EndTime))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("EndTime is required.")
+                    });
+                }
+
+                // Parse and validate dates
+                if (!DateTime.TryParse(request.StartTime, out var startDate))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent(
+                            $"Invalid start time format: {request.StartTime}. Please use a valid DateTime format.")
+                    });
+                }
+                
+
+                if (!DateTime.TryParse(request.EndTime, out var endDate))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent(
+                            $"Invalid end time format: {request.EndTime}. Please use a valid DateTime format.")
+                    });
+                }
+
+                if (startDate >= endDate)
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("Start time must be before end time.")
+                    });
+                }
+
+                // Optional: Validate reasonable date range (e.g., not more than 1 year)
+                var maxDateRange = TimeSpan.FromDays(365); // You can make this configurable later
+                if (endDate - startDate > maxDateRange)
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent($"Date range cannot exceed {maxDateRange.Days} days.")
+                    });
+                }
+
+                // Original logic with error handling
+                var controllerEventLogRepository = Repositories.ControllerEventLogRepositoryFactory.Create();
+                var signalsRepository = Repositories.SignalsRepositoryFactory.Create();
+
+                //var singleSignalCount =
+                //    controllerEventLogRepository.GetRecordCount(request.SignalId, startDate, endDate);
+                //var numberRecordsThreshold =
+                //    Convert.ToInt32(ConfigurationManager.AppSettings["NumberRecordsThreshold"] ?? "10000");
+
+                //if (singleSignalCount > numberRecordsThreshold)
+                //{
+                //    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                //    {
+                //        Content = new StringContent(
+                //            $"Request returns {singleSignalCount:N0} records, which exceeds the limit of {numberRecordsThreshold:N0}. Please shorten the timespan.")
+                //    });
+                //}
+
+
+                var events =
+                    controllerEventLogRepository.GetRecordsByEventCode(signalIds, startDate, endDate,
+                        new List<int> { 101,102,103,104,105,106,107,108,109,110,111,150,81,82,1,9 });
+
+                // Return empty list if null instead of potentially causing issues
+                return events ?? Task.FromResult(new List<Controller_Event_Log>());
+
+            }
+            catch (HttpResponseException)
+            {
+                // Re-throw HttpResponseExceptions as-is (these are our validation errors)
+                throw;
+            }
+            catch (ArgumentException ex)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent($"Invalid argument: {ex.Message}")
+                });
+            }
+            catch (FormatException ex)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent($"Invalid format: {ex.Message}")
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent($"Invalid operation: {ex.Message}")
+                });
+            }
+            catch (TimeoutException)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.RequestTimeout)
+                {
+                    Content = new StringContent("Request timeout. Please try again with a smaller date range.")
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the full exception details somewhere if you have logging available
+                // For now, return a generic error message to avoid exposing internal details
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(
+                        "An unexpected error occurred while processing your request. Please try again later.")
+                });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        [Route("api/data/PreemptEventsForAllSignals")]
+        public Task<List<Controller_Event_Log>> ControllerPreemptEventLogs(
+            [FromBody] EventLogFromSignalRequest request)
+        {
+            try
+            {
+                // Input validation
+                if (request == null)
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("Request cannot be null.")
+                    });
+                }
+                
+
+                if (string.IsNullOrWhiteSpace(request.StartTime))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("StartTime is required.")
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.EndTime))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("EndTime is required.")
+                    });
+                }
+
+                // Parse and validate dates
+                if (!DateTime.TryParse(request.StartTime, out var startDate))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent(
+                            $"Invalid start time format: {request.StartTime}. Please use a valid DateTime format.")
+                    });
+                }
+                
+
+                if (!DateTime.TryParse(request.EndTime, out var endDate))
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent(
+                            $"Invalid end time format: {request.EndTime}. Please use a valid DateTime format.")
+                    });
+                }
+
+                if (startDate >= endDate)
+                {
+                    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new StringContent("Start time must be before end time.")
+                    });
+                }
+
+                // Optional: Validate reasonable date range (e.g., not more than 1 year)
+                //var maxDateRange = TimeSpan.FromDays(365); // You can make this configurable later
+                //if (endDate - startDate > maxDateRange)
+                //{
+                //    throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                //    {
+                //        Content = new StringContent($"Date range cannot exceed {maxDateRange.Days} days.")
+                //    });
+                //}
+
+                // Original logic with error handling
+                var controllerEventLogRepository = Repositories.ControllerEventLogRepositoryFactory.Create();
+
+                var events =
+                    controllerEventLogRepository.GetAllRecordsByEventCode(startDate, endDate,
+                        new List<int> { 101,102,103,104,105,106,107,108,109,110,111,150,81,82,1,9 });
+
+                // Return empty list if null instead of potentially causing issues
+                return events ?? Task.FromResult(new List<Controller_Event_Log>());
+
+            }
+            catch (HttpResponseException)
+            {
+                // Re-throw HttpResponseExceptions as-is (these are our validation errors)
+                throw;
+            }
+            catch (ArgumentException ex)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent($"Invalid argument: {ex.Message}")
+                });
+            }
+            catch (FormatException ex)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent($"Invalid format: {ex.Message}")
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent($"Invalid operation: {ex.Message}")
+                });
+            }
+            catch (TimeoutException)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.RequestTimeout)
+                {
+                    Content = new StringContent("Request timeout. Please try again with a smaller date range.")
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the full exception details somewhere if you have logging available
+                // For now, return a generic error message to avoid exposing internal details
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(
+                        "An unexpected error occurred while processing your request. Please try again later.")
+                });
+            }
+        }
+
+//[Authorize]
         //[HttpGet]
         //[Route("api/data/RouteSignals/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
         //public List<Signal> AllSignalsFromRoutes([FromUri] int[] RouteIds)
@@ -187,13 +471,15 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/controllerEventLogs/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
+        [Route(
+            "api/data/controllerEventLogs/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
         //POSTMAN:
         //http://localhost:50688/api/data/controllerEventLogs?StartTime=2019-10-01T00:00:00&EndTime=2019-10-01T00:00:10&RouteIds=1&RouteIds=2
         //http://staging.udottraffic.utah.gov/AtspmApi/api/data/controllerEventLogs?StartTime=2019-10-01T00:00:00&EndTime=2019-10-01T00:00:10&RouteIds=1&RouteIds=2 
         //Header: Key Authorization, Value Bearer _token_
         //Params: Key id, Value 1219; Key StartTime, Value 2019-10-01T00:00:00; Key EndTime, Value 2019-10-01T00:00:10;
-        public List<Controller_Event_Log> AllControllerEventLogsFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        public List<Controller_Event_Log> AllControllerEventLogsFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             //var identity = (ClaimsIdentity)User.Identity;
             DateTime StartDate = StartTime;
@@ -216,7 +502,9 @@ namespace AtspmApi.Controllers
                 {
                     totalCount += controllerEventLogRepository.GetRecordCount(singleSignal, StartDate, EndDate);
                 }
-                int NumberRecordsThreshold = Convert.ToInt32(ConfigurationManager.AppSettings["NumberRecordsThreshold"]);
+
+                int NumberRecordsThreshold =
+                    Convert.ToInt32(ConfigurationManager.AppSettings["NumberRecordsThreshold"]);
                 if (totalCount > NumberRecordsThreshold)
                 {
                     throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
@@ -229,9 +517,11 @@ namespace AtspmApi.Controllers
                     var totalEvents = new List<Controller_Event_Log>();
                     foreach (var singleSignal in signalIDs)
                     {
-                        var events = controllerEventLogRepository.GetSignalEventsBetweenDates(singleSignal, StartDate, EndDate);
+                        var events =
+                            controllerEventLogRepository.GetSignalEventsBetweenDates(singleSignal, StartDate, EndDate);
                         totalEvents.AddRange(events);
                     }
+
                     return totalEvents;
                 }
             }
@@ -247,8 +537,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/speedEvents/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<Speed_Events> AllSpeedEventsFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/speedEvents/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<Speed_Events> AllSpeedEventsFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             //DateTime StartDate = StartTime;
             //DateTime EndDate = EndTime;
@@ -306,8 +598,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ApproachCycleAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<ApproachCycleAggregation> ApproachCycleAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/ApproachCycleAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<ApproachCycleAggregation> ApproachCycleAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -319,7 +613,9 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var singleApproach in singleSignal.Approaches)
                     {
-                        var approachCycleCount = approachCycleAggRepo.GetApproachCycleCountAggByApproachCount(singleApproach.ApproachID, StartTime, EndTime);
+                        var approachCycleCount =
+                            approachCycleAggRepo.GetApproachCycleCountAggByApproachCount(singleApproach.ApproachID,
+                                StartTime, EndTime);
                         totalCount += approachCycleCount;
                     }
                 }
@@ -339,7 +635,9 @@ namespace AtspmApi.Controllers
                     {
                         foreach (var singleApproach in signal.Approaches)
                         {
-                            var approachCycleAgg = approachCycleAggRepo.ApproachCycleAggByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                            var approachCycleAgg =
+                                approachCycleAggRepo.ApproachCycleAggByApproach(singleApproach.ApproachID, StartTime,
+                                    EndTime);
                             approachCycleAggTotal.AddRange(approachCycleAgg);
                         }
                     }
@@ -358,8 +656,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ApproachEventCountAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<ApproachEventCountAggregation> ApproachEventCountAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/ApproachEventCountAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<ApproachEventCountAggregation> ApproachEventCountAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -371,7 +671,9 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var singleApproach in singleSignal.Approaches)
                     {
-                        var ApproachEventCountCount = ApproachEventCountAggRepo.GetPhaseEventCountAggByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                        var ApproachEventCountCount =
+                            ApproachEventCountAggRepo.GetPhaseEventCountAggByApproach(singleApproach.ApproachID,
+                                StartTime, EndTime);
                         totalCount += ApproachEventCountCount;
                     }
                 }
@@ -391,7 +693,9 @@ namespace AtspmApi.Controllers
                     {
                         foreach (var singleApproach in signal.Approaches)
                         {
-                            var ApproachEventCountAgg = ApproachEventCountAggRepo.GetApproachEventCountAggregationByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                            var ApproachEventCountAgg =
+                                ApproachEventCountAggRepo.GetApproachEventCountAggregationByApproach(
+                                    singleApproach.ApproachID, StartTime, EndTime);
                             ApproachEventCountAggTotal.AddRange(ApproachEventCountAgg);
                         }
                     }
@@ -410,8 +714,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ApproachPcdAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<ApproachPcdAggregation> ApproachPcdAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/ApproachPcdAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<ApproachPcdAggregation> ApproachPcdAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -423,7 +729,9 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var singleApproach in singleSignal.Approaches)
                     {
-                        var ApproachPcdCount = ApproachPcdAggRepo.GetApproachPcdAggCountByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                        var ApproachPcdCount =
+                            ApproachPcdAggRepo.GetApproachPcdAggCountByApproach(singleApproach.ApproachID, StartTime,
+                                EndTime);
                         totalCount += ApproachPcdCount;
                     }
                 }
@@ -443,7 +751,9 @@ namespace AtspmApi.Controllers
                     {
                         foreach (var singleApproach in signal.Approaches)
                         {
-                            var ApproachPcdAgg = ApproachPcdAggRepo.GetApproachPcdsAggByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                            var ApproachPcdAgg =
+                                ApproachPcdAggRepo.GetApproachPcdsAggByApproach(singleApproach.ApproachID, StartTime,
+                                    EndTime);
                             ApproachPcdAggTotal.AddRange(ApproachPcdAgg);
                         }
                     }
@@ -462,8 +772,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ApproachSpeedAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<ApproachSpeedAggregation> ApproachSpeedAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/ApproachSpeedAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<ApproachSpeedAggregation> ApproachSpeedAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -475,7 +787,9 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var singleApproach in singleSignal.Approaches)
                     {
-                        var ApproachSpeedCount = ApproachSpeedAggRepo.GetApproachSpeedCountAggregationByApproachIdAndDateRange(singleApproach.ApproachID, StartTime, EndTime);
+                        var ApproachSpeedCount =
+                            ApproachSpeedAggRepo.GetApproachSpeedCountAggregationByApproachIdAndDateRange(
+                                singleApproach.ApproachID, StartTime, EndTime);
                         totalCount += ApproachSpeedCount;
                     }
                 }
@@ -495,7 +809,9 @@ namespace AtspmApi.Controllers
                     {
                         foreach (var singleApproach in signal.Approaches)
                         {
-                            var ApproachSpeedAgg = ApproachSpeedAggRepo.GetSpeedsByApproachIDandDateRange(singleApproach.ApproachID, StartTime, EndTime);
+                            var ApproachSpeedAgg =
+                                ApproachSpeedAggRepo.GetSpeedsByApproachIDandDateRange(singleApproach.ApproachID,
+                                    StartTime, EndTime);
                             ApproachSpeedAggTotal.AddRange(ApproachSpeedAgg);
                         }
                     }
@@ -514,8 +830,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ApproachSplitFailAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<ApproachSplitFailAggregation> ApproachSplitFailAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/ApproachSplitFailAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<ApproachSplitFailAggregation> ApproachSplitFailAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -527,7 +845,9 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var singleApproach in singleSignal.Approaches)
                     {
-                        var ApproachSplitFailCount = ApproachSplitFailAggRepo.GetApproachSplitFailCountAggByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                        var ApproachSplitFailCount =
+                            ApproachSplitFailAggRepo.GetApproachSplitFailCountAggByApproach(singleApproach.ApproachID,
+                                StartTime, EndTime);
                         totalCount += ApproachSplitFailCount;
                     }
                 }
@@ -547,7 +867,9 @@ namespace AtspmApi.Controllers
                     {
                         foreach (var singleApproach in signal.Approaches)
                         {
-                            var ApproachSplitFailAgg = ApproachSplitFailAggRepo.GetApproachSplitFailsAggregationByApproachId(singleApproach.ApproachID, StartTime, EndTime);
+                            var ApproachSplitFailAgg =
+                                ApproachSplitFailAggRepo.GetApproachSplitFailsAggregationByApproachId(
+                                    singleApproach.ApproachID, StartTime, EndTime);
                             ApproachSplitFailAggTotal.AddRange(ApproachSplitFailAgg);
                         }
                     }
@@ -566,20 +888,25 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/ApproachYellowRedActivationAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<ApproachYellowRedActivationAggregation> ApproachYellowRedActivationsAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/ApproachYellowRedActivationAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<ApproachYellowRedActivationAggregation> ApproachYellowRedActivationsAggFromRoute(DateTime StartTime,
+            DateTime EndTime, [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
             {
                 var ApproachYellowRedActivationsAggTotal = new List<ApproachYellowRedActivationAggregation>();
-                var ApproachYellowRedActivationsAggRepo = Repositories.ApproachYellowRedActivationsAggregationRepositoryFactory.Create();
+                var ApproachYellowRedActivationsAggRepo =
+                    Repositories.ApproachYellowRedActivationsAggregationRepositoryFactory.Create();
                 int totalCount = 0;
                 foreach (var singleSignal in signalList)
                 {
                     foreach (var singleApproach in singleSignal.Approaches)
                     {
-                        var ApproachYellowRedActivationsCount = ApproachYellowRedActivationsAggRepo.GetApproachYellowRedActivationsCountAggByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                        var ApproachYellowRedActivationsCount =
+                            ApproachYellowRedActivationsAggRepo.GetApproachYellowRedActivationsCountAggByApproach(
+                                singleApproach.ApproachID, StartTime, EndTime);
                         totalCount += ApproachYellowRedActivationsCount;
                     }
                 }
@@ -599,7 +926,10 @@ namespace AtspmApi.Controllers
                     {
                         foreach (var singleApproach in signal.Approaches)
                         {
-                            var ApproachYellowRedActivationsAgg = ApproachYellowRedActivationsAggRepo.GetApproachYellowRedActivationssAggregationByApproach(singleApproach.ApproachID, StartTime, EndTime);
+                            var ApproachYellowRedActivationsAgg =
+                                ApproachYellowRedActivationsAggRepo
+                                    .GetApproachYellowRedActivationssAggregationByApproach(singleApproach.ApproachID,
+                                        StartTime, EndTime);
                             ApproachYellowRedActivationsAggTotal.AddRange(ApproachYellowRedActivationsAgg);
                         }
                     }
@@ -618,8 +948,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/PhasePedAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<PhasePedAggregation> PhasePedAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/PhasePedAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<PhasePedAggregation> PhasePedAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -629,8 +961,9 @@ namespace AtspmApi.Controllers
                 int totalCount = 0;
                 foreach (var singleSignal in signalList)
                 {
-                        var PhasePedCount = PhasePedAggRepo.GetPhasePedsAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
-                        totalCount += PhasePedCount;
+                    var PhasePedCount =
+                        PhasePedAggRepo.GetPhasePedsAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
+                    totalCount += PhasePedCount;
                 }
 
                 int NumberRecordsThreshold =
@@ -646,8 +979,8 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var signal in signalList)
                     {
-                             var PhasePedAgg = PhasePedAggRepo.GetPhasePedsAggBySignal(signal.SignalID, StartTime, EndTime);
-                            PhasePedAggTotal.AddRange(PhasePedAgg);
+                        var PhasePedAgg = PhasePedAggRepo.GetPhasePedsAggBySignal(signal.SignalID, StartTime, EndTime);
+                        PhasePedAggTotal.AddRange(PhasePedAgg);
                     }
 
                     return PhasePedAggTotal;
@@ -664,8 +997,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/PhaseTerminationAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<PhaseTerminationAggregation> PhaseTerminationAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/PhaseTerminationAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<PhaseTerminationAggregation> PhaseTerminationAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -675,7 +1010,8 @@ namespace AtspmApi.Controllers
                 int totalCount = 0;
                 foreach (var singleSignal in signalList)
                 {
-                    var PhaseTerminationCount = PhaseTerminationAggRepo.GetPhaseTermAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
+                    var PhaseTerminationCount =
+                        PhaseTerminationAggRepo.GetPhaseTermAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
                     totalCount += PhaseTerminationCount;
                 }
 
@@ -692,7 +1028,9 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var signal in signalList)
                     {
-                        var PhaseTerminationAgg = PhaseTerminationAggRepo.GetPhaseTerminationsAggregationBySignal(signal.SignalID, StartTime, EndTime);
+                        var PhaseTerminationAgg =
+                            PhaseTerminationAggRepo.GetPhaseTerminationsAggregationBySignal(signal.SignalID, StartTime,
+                                EndTime);
                         PhaseTerminationAggTotal.AddRange(PhaseTerminationAgg);
                     }
 
@@ -710,8 +1048,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/PreemptionAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<PreemptionAggregation> PreemptionAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/PreemptionAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<PreemptionAggregation> PreemptionAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -721,7 +1061,8 @@ namespace AtspmApi.Controllers
                 int totalCount = 0;
                 foreach (var singleSignal in signalList)
                 {
-                    var PreemptionCount = PreemptionAggRepo.GetPreemptAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
+                    var PreemptionCount =
+                        PreemptionAggRepo.GetPreemptAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
                     totalCount += PreemptionCount;
                 }
 
@@ -738,7 +1079,8 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var signal in signalList)
                     {
-                        var PreemptionAgg = PreemptionAggRepo.GetPreemptionsBySignalIdAndDateRange(signal.SignalID, StartTime, EndTime);
+                        var PreemptionAgg =
+                            PreemptionAggRepo.GetPreemptionsBySignalIdAndDateRange(signal.SignalID, StartTime, EndTime);
                         PreemptionAggTotal.AddRange(PreemptionAgg);
                     }
 
@@ -756,8 +1098,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/PriorityAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<PriorityAggregation> PriorityAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/PriorityAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<PriorityAggregation> PriorityAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -767,7 +1111,8 @@ namespace AtspmApi.Controllers
                 int totalCount = 0;
                 foreach (var singleSignal in signalList)
                 {
-                    var PriorityCount = PriorityAggRepo.GetPriorityAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
+                    var PriorityCount =
+                        PriorityAggRepo.GetPriorityAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
                     totalCount += PriorityCount;
                 }
 
@@ -784,7 +1129,8 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var signal in signalList)
                     {
-                        var PriorityAgg = PriorityAggRepo.GetPriorityBySignalIdAndDateRange(signal.SignalID, StartTime, EndTime);
+                        var PriorityAgg =
+                            PriorityAggRepo.GetPriorityBySignalIdAndDateRange(signal.SignalID, StartTime, EndTime);
                         PriorityAggTotal.AddRange(PriorityAgg);
                     }
 
@@ -802,8 +1148,10 @@ namespace AtspmApi.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("api/data/SignalEventCountAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")]  //here id is RouteId; each route contains multiple SignalIds
-        public List<SignalEventCountAggregation> SignalEventCountAggFromRoute(DateTime StartTime, DateTime EndTime, [FromUri] int[] RouteIds)
+        [Route(
+            "api/data/SignalEventCountAggregate/{StartTime=StartTime}/{EndTime=EndTime}/{RouteId=Id}")] //here id is RouteId; each route contains multiple SignalIds
+        public List<SignalEventCountAggregation> SignalEventCountAggFromRoute(DateTime StartTime, DateTime EndTime,
+            [FromUri] int[] RouteIds)
         {
             var signalList = GetSignalsFromRoutes(RouteIds);
             if (signalList.Count > 0)
@@ -813,7 +1161,9 @@ namespace AtspmApi.Controllers
                 int totalCount = 0;
                 foreach (var singleSignal in signalList)
                 {
-                    var SignalEventCountCount = SignalEventCountAggRepo.GetSignalEventCountAggCountBySignal(singleSignal.SignalID, StartTime, EndTime);
+                    var SignalEventCountCount =
+                        SignalEventCountAggRepo.GetSignalEventCountAggCountBySignal(singleSignal.SignalID, StartTime,
+                            EndTime);
                     totalCount += SignalEventCountCount;
                 }
 
@@ -830,7 +1180,9 @@ namespace AtspmApi.Controllers
                 {
                     foreach (var signal in signalList)
                     {
-                        var SignalEventCountAgg = SignalEventCountAggRepo.GetSignalEventCountAggregationBySignal(signal.SignalID, StartTime, EndTime);
+                        var SignalEventCountAgg =
+                            SignalEventCountAggRepo.GetSignalEventCountAggregationBySignal(signal.SignalID, StartTime,
+                                EndTime);
                         SignalEventCountAggTotal.AddRange(SignalEventCountAgg);
                     }
 
