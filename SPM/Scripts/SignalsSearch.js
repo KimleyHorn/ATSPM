@@ -2,9 +2,13 @@
     $("#SignalHeader").click(function() {
         GetSignals();
     });
-    //$.validator.unobtrusive.parse($("#SignalSearchContainer"));
-    $.validator.unobtrusive.parse($('form'));
+    parseUnobtrusiveValidation($("form"));
 });
+function parseUnobtrusiveValidation(target) {
+    if ($.validator && $.validator.unobtrusive) {
+        $.validator.unobtrusive.parse(target);
+    }
+}
 function AddEventsForSignalSearch() {
     $("#FilterButton").click(function() { GetSignals(1); });
     $("#ClearFilterButton").click(function() {

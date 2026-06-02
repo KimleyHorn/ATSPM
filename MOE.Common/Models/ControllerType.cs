@@ -40,6 +40,7 @@ namespace MOE.Common.Models
         [DataMember]
         public string Password { get; set; }
 
+        [NotMapped]
         [StringLength(50)]
         [DataMember]
         public string PhysicalLocation { get; set; }

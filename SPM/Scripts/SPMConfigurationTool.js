@@ -2,6 +2,12 @@
     $("#collapseTwo").removeClass("show");
 });
 
+function parseUnobtrusiveValidation(target) {
+    if ($.validator && $.validator.unobtrusive) {
+        $.validator.unobtrusive.parse(target);
+    }
+}
+
 function LoadSignalEdit(signalID) {
     $.ajax({
         url: urlpathGetSignalEdit + "/" + signalID,
@@ -16,7 +22,7 @@ function LoadSignalEdit(signalID) {
             $("#ConfigurationTableHeader").click(function () {
                 GetConfigurationTable(signalID);
             });
-            $.validator.unobtrusive.parse($("#SignalEdit"));
+            parseUnobtrusiveValidation($("#SignalEdit"));
         },
         complete: function() {
             RemoveHiddenInputFromCheckboxes();
@@ -51,7 +57,7 @@ function LoadVersionByVersionID(vId) {
             $("#ConfigurationTableHeader").click(function () {
                 GetConfigurationTableForVersion(vId);
             });
-            $.validator.unobtrusive.parse($("#SignalEdit"));
+            parseUnobtrusiveValidation($("#SignalEdit"));
         },
         complete: function() {
             RemoveHiddenInputFromCheckboxes();

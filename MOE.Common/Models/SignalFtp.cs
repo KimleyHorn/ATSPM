@@ -187,13 +187,6 @@ namespace MOE.Common.Business
             FtpClient ftpClient = new FtpClient(Signal.IPAddress);
             ftpClient.Credentials =
                 new NetworkCredential(Signal.ControllerType.UserName, Signal.ControllerType.Password);
-            //ftpClient.ConnectTimeout = SignalFtpOptions.FtpConectionTimeoutInSeconds * 1000;
-            //ftpClient.ReadTimeout = SignalFtpOptions.FtpReadTimeoutInSeconds * 1000;
-            //if (Signal.ControllerType.ActiveFTP)
-            //{
-            //    //    ftpClient.DataConnectionType = FtpDataConnectionType.AutoActive; 
-            //    ftpClient.DataConnectionType = FtpDataConnectionType.AutoActive;
-            //}
 
             var filePattern = ".dat";
             var maximumFilesToTransfer = SignalFtpOptions.MaximumNumberOfFilesTransferAtOneTime;
@@ -213,10 +206,11 @@ namespace MOE.Common.Business
                 try
                 {
                     ftpClient.Connect();
-                    Console.WriteLine("Setting the CWD");
-                    ftpClient.SetWorkingDirectory("/");
-                    Console.WriteLine("Set the CWD to " + ftpClient.GetWorkingDirectory());
-                    //console the directory list
+                    //log connected
+                    Console.WriteLine("Connected to FTP server");
+                    //list the directory
+                    Console.WriteLine("Current working directory is " + ftpClient.GetWorkingDirectory());
+                    //list the contents of the directory to make sure it looks right.
                     Console.WriteLine("Listing: ");
                     foreach (var listingFtpListItem in ftpClient.GetListing())
                     {
@@ -261,113 +255,70 @@ namespace MOE.Common.Business
                     return;
                 }
 
-                //var dirs = ftpClient.GetListing("/set1");
                 if (ftpClient.IsConnected && ftpClient.DirectoryExists(Signal.ControllerType.FTPDirectory))
                 {
                     Console.WriteLine("CONNECTED & Directory Exists");
                     try
                     {
                         FtpListItem[] remoteFiles = ftpClient.GetListing(Signal.ControllerType.FTPDirectory);
-                        //print each file
                         var signalDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID + "\\";
-                        Console.WriteLine("Attempting to download directory " + Signal.ControllerType.FTPDirectory +
+                        Directory.CreateDirectory(signalDirectory);
+                        Console.WriteLine("Attempting to download files from " + Signal.ControllerType.FTPDirectory +
                                           " to " + signalDirectory);
-                        ftpClient.DownloadDirectory(signalDirectory, Signal.ControllerType.FTPDirectory);
-                        //delete the contents of the directory
-                        foreach (FtpListItem item in ftpClient.GetListing(Signal.ControllerType.FTPDirectory))
-                        {
-                            // Skip the . and .. entries
-                            if (item.Name == "." || item.Name == "..")
-                                continue;
 
-                            if (item.Type == FtpObjectType.File)
-                            {
-                                // Delete file
-                                ftpClient.DeleteFile(item.FullName);
-                            }
-                            else if (item.Type == FtpObjectType.Directory)
-                            {
-                                // Delete directory recursively
-                                ftpClient.DeleteDirectory(item.FullName);
-                            }
-                        }
-                        //ftpClient.DeleteDirectory(signalDirectory);
-
-
-                        //foreach (FtpListItem remoteFile in remoteFiles)
-                        //{
-                        //    Console.WriteLine(remoteFile.FullName);
-                        //    ftpClient.DownloadFile(SignalFtpOptions.LocalDirectory,remoteFile.FullName);
-                        //    Thread.Sleep(100);
-                        //}
+                        var remoteFilePaths = remoteFiles != null
+                            ? remoteFiles.Where(x => x != null && x.Type == FtpObjectType.File && !string.IsNullOrWhiteSpace(x.FullName))
+                                .Select(x => x.FullName)
+                                .ToList()
+                            : new List<string>();
+                        var candidateFiles = GetFtpFilesToTransfer(remoteFilePaths, filePattern, maximumFilesToTransfer);
                         var retrievedFiles = new List<string>();
-                        if (remoteFiles != null)
+
+                        foreach (var remoteFile in candidateFiles)
                         {
-                            DateTime localDate = DateTime.Now;
-                            if (SignalFtpOptions.SkipCurrentLog)
+                            try
                             {
-                                localDate = localDate.AddMinutes(-16);
+                                if (TransferFtpFile(ftpClient, remoteFile, signalDirectory))
+                                {
+                                    retrievedFiles.Add(Path.GetFileName(remoteFile));
+                                }
+                            }
+                            catch (AggregateException)
+                            {
+                                errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal",
+                                    "GetCurrentRecords_TransferFiles",
+                                    Models.ApplicationEvent.SeverityLevels.Medium,
+                                    Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Transfer Task Timed Out");
+                                break;
+                            }
+                            catch (Exception ex)
+                            {
+                                string errorMessage =
+                                    "Exception:" + ex.Message + " While transferring file: " + Path.GetFileName(remoteFile) +
+                                    " from signal " + Signal.SignalID + " @ " + Signal.ControllerType.FTPDirectory + " on " + Signal.IPAddress + " to " +
+                                    signalDirectory;
+                                Console.WriteLine(errorMessage);
+                                errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal",
+                                    "GetCurrentRecords_TransferFiles",
+                                    Models.ApplicationEvent.SeverityLevels.Medium, errorMessage);
+                                break;
+                            }
+
+                            if (SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds > 0)
+                                Thread.Sleep(SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds);
+                        }
+
+                        if (SignalFtpOptions.DeleteAfterFtp)
+                        {
+                            if (Signal.ControllerTypeID == 9)
+                            {
+                                ftpClient.Disconnect();
+                                DeleteAllEosFiles(Signal, retrievedFiles);
                             }
                             else
                             {
-                                localDate = localDate.AddMinutes(120);
+                                DeleteFilesFromFtpServer(ftpClient, retrievedFiles);
                             }
-
-                            //var fileTransferedCounter = 1;
-                            //foreach (var ftpFile in remoteFiles)
-                            //{
-                            //    if (fileTransferedCounter > maximumFilesToTransfer) { break; }
-                            //    if (ftpFile.Type == FtpFileSystemObjectType.File && ftpFile.Name.Contains(filePattern) && ftpFile.Created < localDate)
-                            //    {
-                            //        try
-                            //        {
-                            //            if (TransferFile(ftpClient, ftpFile))
-                            //            {
-                            //                retrievedFiles.Add(ftpFile.Name);
-                            //                fileTransferedCounter++;
-                            //            }
-                            //        }
-                            //        //If there is an error, Print the error and try the file again. 
-                            //        catch (AggregateException)
-                            //        {
-                            //            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal",
-                            //                "GetCurrentRecords_TransferFiles",
-                            //                Models.ApplicationEvent.SeverityLevels.Medium,
-                            //                Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Transfer Task Timed Out");
-                            //            break;
-                            //        }
-                            //        catch (Exception ex)
-                            //        {
-                            //            string errorMessage =
-                            //                "Exception:" + ex.Message + " While Transfering file: " + ftpFile +
-                            //                " from signal" + Signal.SignalID + " @ " + Signal.ControllerType.FTPDirectory + " on " + Signal.IPAddress + " to " +
-                            //                SignalFtpOptions.LocalDirectory + Signal.SignalID;
-                            //            Console.WriteLine(errorMessage);
-                            //            errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal",
-                            //                "GetCurrentRecords_TransferFiles",
-                            //                Models.ApplicationEvent.SeverityLevels.Medium, errorMessage);
-                            //            //retryFiles.Add(ftpFile.Name); 
-                            //            break;
-                            //        }
-                            //        if (SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds > 0)
-                            //            Thread.Sleep(SignalFtpOptions.WaitBetweenFileDownloadInMilliseconds);
-                            //    }
-                            //}
-                            //Delete the files we downloaded.  We don't want to have to deal with the file more than once.  If we delete the file form the controller once we capture it, it will reduce redundancy. 
-                            if (SignalFtpOptions.DeleteAfterFtp)
-                            {
-                                if (Signal.ControllerTypeID == 9)
-
-                                {
-                                    ftpClient.Disconnect();
-                                    DeleteAllEosFiles(Signal, retrievedFiles);
-                                }
-                                else
-                                {
-                                    DeleteFilesFromFtpServer(ftpClient, retrievedFiles); //, Token); 
-                                }
-                            }
-
                         }
                     }
                     catch (Exception ex)
@@ -377,7 +328,6 @@ namespace MOE.Common.Business
                             Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
                         Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
                     }
-                    //ftp.Close(); 
                 }
                 else
                 {
@@ -392,7 +342,6 @@ namespace MOE.Common.Business
                     {
                         var currentFtpDirectory = ftpClient.GetWorkingDirectory();
                         Console.WriteLine("Directory doesn't exist");
-                        //list existing directories and create an error message and log it.
                         var dirs = ftpClient.GetListing("/");
                         var errorDescription = "Available Directories: ";
                         foreach (var dir in dirs)
@@ -406,38 +355,136 @@ namespace MOE.Common.Business
                             Signal.ControllerType.FTPDirectory + " " + errorDescription + " Tested Directory: " + ".." +
                             Signal.ControllerType.FTPDirectory + " CurrentWorkingDirectory: " + currentFtpDirectory);
                     }
-
-                    //errorRepository.QuickAdd("FTPFromAllcontrollers", "Signal", "GetCurrentRecords_ConnectToController", Models.ApplicationEvent.SeverityLevels.Medium, Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
-                    //Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + "Cannot find directory " + Signal.ControllerType.FTPDirectory);
                     return;
                 }
+            }
+        }
 
-                //Turn Logging off. 
-                //The ASC3 controller stoploggin if the current file is removed.  to make sure logging continues, we must turn the loggin feature off on the  
-                //controller, then turn it back on. 
-                try
-                {
-                    if (SignalFtpOptions.SkipCurrentLog && CheckAsc3LoggingOverSnmp())
-                    {
-                        //Do Nothing 
-                    }
-                    else
-                    {
-                        try
-                        {
-                            TurnOffAsc3LoggingOverSnmp();
-                            Thread.Sleep(SignalFtpOptions.SnmpTimeout);
-                            TurnOnAsc3LoggingOverSnmp();
-                        }
-                        catch
-                        {
+        private List<string> GetFtpFilesToTransfer(List<string> remoteFiles, string filePattern, int maximumFilesToTransfer)
+        {
+            if (remoteFiles == null)
+            {
+                Log.Warning("GetFtpFilesToTransfer called with null remoteFiles. SignalId={SignalId}", Signal != null ? Signal.SignalID : null);
+                return new List<string>();
+            }
 
-                        }
-                    }
-                }
-                catch
-                {
-                }
+            Log.Debug("Evaluating remote files. SignalId={SignalId}, RemoteFileCount={RemoteFileCount}, FilePattern={FilePattern}, MaximumFilesToTransfer={MaximumFilesToTransfer}",
+                Signal.SignalID, remoteFiles.Count, filePattern, maximumFilesToTransfer);
+
+            var matchingFiles = remoteFiles
+                .Where(x => !string.IsNullOrWhiteSpace(x) &&
+                            Path.GetFileName(x).EndsWith(filePattern, StringComparison.OrdinalIgnoreCase) &&
+                            IsFileReadyForDownload(Path.GetFileName(x)))
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (maximumFilesToTransfer > 0)
+            {
+                return matchingFiles.Take(maximumFilesToTransfer).ToList();
+            }
+
+            return matchingFiles;
+        }
+
+        private bool TransferFtpFile(FtpClient ftpClient, string remoteFilePath, string signalDirectory)
+        {
+            string localFileName = Path.GetFileName(remoteFilePath);
+
+            if (SignalFtpOptions.RenameDuplicateFiles &&
+                File.Exists(Path.Combine(signalDirectory, localFileName)))
+            {
+                string extension = Path.GetExtension(localFileName);
+                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(localFileName);
+                localFileName = fileNameWithoutExtension + "-" + Convert.ToInt32(DateTime.Now.TimeOfDay.TotalSeconds) + extension;
+            }
+
+            string localFilePath = Path.Combine(signalDirectory, localFileName);
+            Log.Debug("Downloading FTP file. SignalId={SignalId}, RemoteFile={RemoteFile}, LocalFilePath={LocalFilePath}", Signal.SignalID, remoteFilePath, localFilePath);
+            var downloadStatus = ftpClient.DownloadFile(localFilePath, remoteFilePath);
+            Log.Debug("FTP download status. SignalId={SignalId}, RemoteFile={RemoteFile}, Status={Status}", Signal.SignalID, remoteFilePath, downloadStatus);
+
+            if (downloadStatus != FtpStatus.Success)
+            {
+                var errorLog = ApplicationEventRepositoryFactory.Create();
+                errorLog.QuickAdd("FTPFromAllControllers",
+                    "MOE.Common.Business.SignalFTP", "TransferFile", ApplicationEvent.SeverityLevels.High,
+                    Signal.ControllerType.FTPDirectory + " @ " + Signal.IPAddress + " - " +
+                    "Unable to download file " + remoteFilePath);
+                Console.WriteLine(@"Unable to download file " + remoteFilePath);
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool IsFileReadyForDownload(string fileName)
+        {
+            if (!SignalFtpOptions.SkipCurrentLog)
+            {
+                return true;
+            }
+
+            DateTime fileWindowStart;
+            if (!TryParseControllerLogStartTime(fileName, out fileWindowStart))
+            {
+                Log.Debug("Could not parse controller log timestamp from file name. SignalId={SignalId}, FileName={FileName}. Defaulting to download.", Signal.SignalID, fileName);
+                return true;
+            }
+
+            var readyForDownload = fileWindowStart.AddMinutes(15) < DateTime.Now;
+            Log.Debug("Evaluated SkipCurrentLog window. SignalId={SignalId}, FileName={FileName}, FileWindowStart={FileWindowStart}, DownloadAllowed={DownloadAllowed}",
+                Signal.SignalID, fileName, fileWindowStart, readyForDownload);
+            return readyForDownload;
+        }
+
+        private bool TryParseControllerLogStartTime(string fileName, out DateTime fileWindowStart)
+        {
+            fileWindowStart = DateTime.MinValue;
+
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+            if (string.IsNullOrWhiteSpace(fileNameWithoutExtension))
+            {
+                return false;
+            }
+
+            string[] parts = fileNameWithoutExtension.Split('_');
+            if (parts.Length < 4)
+            {
+                return false;
+            }
+
+            string yearPart = parts[parts.Length - 4];
+            string monthPart = parts[parts.Length - 3];
+            string dayPart = parts[parts.Length - 2];
+            string timePart = parts[parts.Length - 1];
+
+            int year;
+            int month;
+            int day;
+            int hourMinute;
+            if (!int.TryParse(yearPart, out year) ||
+                !int.TryParse(monthPart, out month) ||
+                !int.TryParse(dayPart, out day) ||
+                !int.TryParse(timePart, out hourMinute))
+            {
+                return false;
+            }
+
+            int hour = hourMinute / 100;
+            int minute = hourMinute % 100;
+
+            try
+            {
+                fileWindowStart = new DateTime(year, month, day, hour, minute, 0);
+                Log.Debug("Parsed controller log timestamp. SignalId={SignalId}, FileName={FileName}, ParsedStart={ParsedStart}",
+                    Signal != null ? Signal.SignalID : null, fileName, fileWindowStart);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Failed to build DateTime from parsed controller log timestamp. SignalId={SignalId}, FileName={FileName}, Year={Year}, Month={Month}, Day={Day}, Hour={Hour}, Minute={Minute}",
+                    Signal != null ? Signal.SignalID : null, fileName, year, month, day, hour, minute);
+                return false;
             }
         }
 

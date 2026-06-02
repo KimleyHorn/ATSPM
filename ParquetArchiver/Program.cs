@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -121,6 +122,8 @@ namespace ParquetArchiver
             var totalWatch = new Stopwatch();
             totalWatch.Start();
 
+            LogRuntimeConfiguration(start, end, useStartAndEndDates);
+
             var dateList = GetDateRange(start, end).ToList();
             if (!useStartAndEndDates)
             {
@@ -154,10 +157,17 @@ namespace ParquetArchiver
             {
                 try
                 {
+                    var nextDate = date + TimeSpan.FromDays(1);
                     Log.Information("Getting distinct signals in event log table.");
                     var eventLogRepo = ControllerEventLogRepositoryFactory.Create();
-                    var signalsToArchive = eventLogRepo.GetSignalIdsInControllerEventLog(date, date + TimeSpan.FromDays(1));
+                    Log.Information("Archive query window: {ArchiveDateStart:yyyy-MM-dd HH:mm:ss} to {ArchiveDateEnd:yyyy-MM-dd HH:mm:ss} (end exclusive)",
+                        date, nextDate);
+                    var signalsToArchive = eventLogRepo.GetSignalIdsInControllerEventLog(date, nextDate);
                     Log.Information($"{signalsToArchive.Count} signals found on {date.ToLongDateString()}.");
+                    if (!signalsToArchive.Any())
+                    {
+                        LogMissingSignalDiagnostics(eventLogRepo, date, nextDate);
+                    }
                     
                     var tasks = signalsToArchive.Select(async signal =>
                     {
@@ -544,6 +554,61 @@ namespace ParquetArchiver
             {
                 yield return startDate;
                 startDate = startDate.AddDays(1);
+            }
+        }
+
+        private static void LogRuntimeConfiguration(DateTime start, DateTime end, bool useStartAndEndDates)
+        {
+            Log.Information("ParquetArchiver runtime settings: UseStartAndEndDates={UseStartAndEndDates}, Start={Start:yyyy-MM-dd HH:mm:ss}, End={End:yyyy-MM-dd HH:mm:ss}, DaysAgoToRun={DaysAgoToRun}, DaysBackToCheck={DaysBackToCheck}, StorageLocation={StorageLocation}, LocalArchiveDirectory={LocalArchiveDirectory}, FilePathPrefix={FilePathPrefix}",
+                useStartAndEndDates,
+                start,
+                end,
+                ParquetArchive.GetSetting(DAYS_AGO_TO_RUN),
+                ParquetArchive.GetSetting(DAYS_BACK_TO_CHECK),
+                StorageLocation,
+                ParquetArchive.GetSetting(LOCAL_ARCHIVE_DIRECTORY),
+                FilePathPrefix);
+
+            var spmConnection = ConfigurationManager.ConnectionStrings["SPM"]?.ConnectionString;
+            if (string.IsNullOrWhiteSpace(spmConnection))
+            {
+                Log.Warning("SPM connection string is empty or missing.");
+                return;
+            }
+
+            try
+            {
+                var builder = new SqlConnectionStringBuilder(spmConnection);
+                Log.Information("SPM database target: DataSource={DataSource}, InitialCatalog={InitialCatalog}, IntegratedSecurity={IntegratedSecurity}, UserID={UserID}",
+                    builder.DataSource,
+                    builder.InitialCatalog,
+                    builder.IntegratedSecurity,
+                    string.IsNullOrWhiteSpace(builder.UserID) ? "(not set)" : builder.UserID);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Unable to parse SPM connection string for diagnostics.");
+            }
+        }
+
+        private static void LogMissingSignalDiagnostics(IControllerEventLogRepository eventLogRepo, DateTime start, DateTime end)
+        {
+            try
+            {
+                var diagnostics = eventLogRepo.GetArchiveDiagnostics(start, end);
+                Log.Warning("No signals were returned for {ArchiveDate:yyyy-MM-dd}. Database diagnostics: TotalRecordsInRange={TotalRecordsInRange}, DistinctSignalsInRange={DistinctSignalsInRange}, EarliestRecordInDatabase={EarliestRecordInDatabase}, LatestRecordInDatabase={LatestRecordInDatabase}, ClosestRecordBeforeRange={ClosestRecordBeforeRange}, ClosestRecordAfterRange={ClosestRecordAfterRange}",
+                    start,
+                    diagnostics.TotalRecordsInRange,
+                    diagnostics.DistinctSignalsInRange,
+                    diagnostics.EarliestRecordInDatabase,
+                    diagnostics.LatestRecordInDatabase,
+                    diagnostics.ClosestRecordBeforeRange,
+                    diagnostics.ClosestRecordAfterRange);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Unable to gather database diagnostics for archive window {ArchiveDateStart:yyyy-MM-dd HH:mm:ss} to {ArchiveDateEnd:yyyy-MM-dd HH:mm:ss}.",
+                    start, end);
             }
         }
 

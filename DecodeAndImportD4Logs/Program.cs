@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MOE.Common.Business.LogDecoder;
+using MOE.Common.Models;
 using Serilog;
 
 
@@ -36,6 +37,7 @@ namespace DecodeAndImportD4Logs
                 Log.Information("Application started");
 
                 var appSettings = ConfigurationManager.AppSettings;
+                ValidateDatabase(appSettings);
                 var dirList = new List<string>();
                 var cwd = appSettings["D4LogsPath"];
                 _cwd = cwd;
@@ -152,6 +154,41 @@ namespace DecodeAndImportD4Logs
             finally
             {
                 Log.CloseAndFlush();
+            }
+        }
+
+        private static void ValidateDatabase(NameValueCollection appSettings)
+        {
+            var connectionString = ConfigurationManager.ConnectionStrings["SPM"].ConnectionString;
+            var applyPendingMigrations = false;
+            bool.TryParse(appSettings["ApplyPendingMigrationsOnStartup"], out applyPendingMigrations);
+
+            var status = SPM.GetDatabaseMigrationStatus(connectionString);
+            Log.Information("Database migration status for {DataSource}/{DatabaseName}: {Summary}",
+                status.DataSource, status.DatabaseName, status.Summary);
+            Log.Information("Last applied migration: {LastAppliedMigration}. Last known migration: {LastKnownMigration}.",
+                status.LastAppliedMigration ?? "(none)", status.LastKnownMigration ?? "(none)");
+
+            if (status.PendingMigrations.Any())
+            {
+                Log.Warning("Pending EF migrations detected: {PendingMigrations}",
+                    string.Join(", ", status.PendingMigrations));
+
+                if (!applyPendingMigrations)
+                {
+                    throw new InvalidOperationException(
+                        "Pending EF migrations were found for the SPM database. Set ApplyPendingMigrationsOnStartup=true to let this tool apply them automatically, or run Update-Database for MOE.Common before importing D4 logs.");
+                }
+
+                status = SPM.EnsureDatabaseIsCurrent(connectionString);
+                Log.Information("Applied pending migrations. Database is now at migration {LastAppliedMigration}.",
+                    status.LastAppliedMigration ?? "(none)");
+            }
+
+            if (!status.IsModelCompatible)
+            {
+                throw new InvalidOperationException(
+                    $"{status.Summary} Add a new migration in MOE.Common, then update the database before running the D4 importer.");
             }
         }
 

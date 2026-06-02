@@ -1201,6 +1201,7 @@
     <Compile Include="Models\Repositories\ApproachRepository.cs" />
     <Compile Include="Models\Repositories\ApproachRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\ControllerTypeRepository.cs" />
+    <Compile Include="Models\Repositories\ControllerEventLogArchiveDiagnostics.cs" />
     <Compile Include="Models\Repositories\ControllerEventLogRepository.cs" />
     <Compile Include="Models\Repositories\ControllerEventLogRepositoryFactory.cs" />
     <Compile Include="Models\Repositories\DetectorCommentRepository.cs" />
