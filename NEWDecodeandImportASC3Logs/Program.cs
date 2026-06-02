@@ -75,7 +75,7 @@ namespace NEWDecodeandImportASC3Logs
                     MOE.Common.Data.MOE.Controller_Event_LogDataTable elTable = CreateDataTableForImport();
                     AddEventsToImportTable(mergedEventsTable, elTable);
                     mergedEventsTable.Dispose();
-                    BulkImportRecordsAndDeleteFiles(appSettings, toDelete, elTable);
+                    BulkImportRecordsAndDeleteFiles(appSettings, toDelete, elTable, signalId);
                 }
             });
         }
@@ -87,7 +87,7 @@ namespace NEWDecodeandImportASC3Logs
             fileNames = Directory.GetFiles(dir, "*.dat?");
         }
 
-        private static void BulkImportRecordsAndDeleteFiles(NameValueCollection appSettings, ConcurrentBag<string> toDelete, MOE.Common.Data.MOE.Controller_Event_LogDataTable elTable)
+        private static void BulkImportRecordsAndDeleteFiles(NameValueCollection appSettings, ConcurrentBag<string> toDelete, MOE.Common.Data.MOE.Controller_Event_LogDataTable elTable, string signalId)
         {
             string connectionString = ConfigurationManager.ConnectionStrings["SPM"].ConnectionString;
             string destTable = appSettings["DestinationTableNAme"];
@@ -99,11 +99,34 @@ namespace NEWDecodeandImportASC3Logs
                 Convert.ToDateTime(appSettings["EarliestAcceptableDate"]),
                 Convert.ToInt32(appSettings["BulkCopyBatchSize"]),
                 Convert.ToInt32(appSettings["BulkCopyTimeOut"]));
+
+            bool moveEnabled = Convert.ToBoolean(appSettings["Move"]);
+            string moveLocation = appSettings["MoveLocation"];
+            bool useMove = moveEnabled && !string.IsNullOrWhiteSpace(moveLocation);
+
+            bool deleteEnabled = Convert.ToBoolean(appSettings["DeleteFile"]);
+            bool writeToConsole = Convert.ToBoolean(appSettings["WriteToConsole"]);
+
+            if (writeToConsole)
+            {
+                Console.WriteLine("[Signal " + signalId + "] Move=" + moveEnabled +
+                                  ", MoveLocation='" + moveLocation + "', useMove=" + useMove +
+                                  ", DeleteFile=" + deleteEnabled +
+                                  ", FilesQueued=" + toDelete.Count);
+            }
+
             if (elTable.Count > 0)
             {
-                if (MOE.Common.Business.SignalFtp.BulktoDb(elTable, options, destTable) && Convert.ToBoolean(appSettings["DeleteFile"]))
+                if (MOE.Common.Business.SignalFtp.BulktoDb(elTable, options, destTable))
                 {
-                    DeleteFiles(toDelete);
+                    if (useMove)
+                    {
+                        MoveFiles(toDelete, moveLocation, signalId, writeToConsole);
+                    }
+                    else if (deleteEnabled)
+                    {
+                        DeleteFiles(toDelete);
+                    }
                 }
             }
             else
@@ -118,7 +141,14 @@ namespace NEWDecodeandImportASC3Logs
                 }
                 if (td.Count > 0)
                 {
-                    DeleteFiles(td);
+                    if (useMove)
+                    {
+                        MoveFiles(td, moveLocation, signalId, writeToConsole);
+                    }
+                    else
+                    {
+                        DeleteFiles(td);
+                    }
                 }
             }
         }
@@ -181,6 +211,54 @@ namespace NEWDecodeandImportASC3Logs
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
+                }
+            }
+        }
+
+        public static void MoveFiles(ConcurrentBag<string> files, string moveLocation, string signalId,
+            bool writeToConsole)
+        {
+            string destDir;
+            try
+            {
+                destDir = Path.Combine(moveLocation, signalId);
+                Directory.CreateDirectory(destDir);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Failed to create destination directory under '" + moveLocation + "' for signal " + signalId + ": " + e);
+                return;
+            }
+
+            foreach (string f in files)
+            {
+                try
+                {
+                    if (!File.Exists(f))
+                    {
+                        continue;
+                    }
+
+                    string destPath = Path.Combine(destDir, Path.GetFileName(f));
+
+                    // handle name collisions by appending a timestamp before the extension
+                    if (File.Exists(destPath))
+                    {
+                        string nameNoExt = Path.GetFileNameWithoutExtension(destPath);
+                        string ext = Path.GetExtension(destPath);
+                        string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
+                        destPath = Path.Combine(destDir, nameNoExt + "_" + stamp + ext);
+                    }
+
+                    File.Move(f, destPath);
+                    if (writeToConsole)
+                    {
+                        Console.WriteLine("Moved " + f + " -> " + destPath);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failed to move file '" + f + "': " + e);
                 }
             }
         }

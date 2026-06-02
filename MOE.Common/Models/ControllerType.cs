@@ -39,5 +39,9 @@ namespace MOE.Common.Models
         [StringLength(50)]
         [DataMember]
         public string Password { get; set; }
+
+        [StringLength(50)]
+        [DataMember]
+        public string PhysicalLocation { get; set; }
     }
 }
