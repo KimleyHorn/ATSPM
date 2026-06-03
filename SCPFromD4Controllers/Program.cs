@@ -49,6 +49,8 @@ namespace SCPFromD4Controllers
                     Convert.ToBoolean(ConfigurationManager.AppSettings["IsGzip"]),
                     Convert.ToBoolean(ConfigurationManager.AppSettings["UsePhysicalLocation"])
                 );
+                var physicalLocationFallbacks = ParsePhysicalLocationFallbacks(
+                    ConfigurationManager.AppSettings["PhysicalLocationFallbacks"]);
 
                 Log.Information("Querying signal list from database...");
                 var signalList = GetLatestVersionOfAllSignalsForD4Sftp(connectionString);
@@ -67,7 +69,7 @@ namespace SCPFromD4Controllers
                             try
                             {
                                 EnsureLocalDirectory(signalFtpOptions.LocalDirectory, signal.SignalID);
-                                GetD4Files(signal, signalFtpOptions, connectionString);
+                                GetD4Files(signal, signalFtpOptions, connectionString, physicalLocationFallbacks);
                             }
                             catch (Exception ex)
                             {
@@ -107,6 +109,19 @@ namespace SCPFromD4Controllers
             var path = Path.Combine(localDirectory, signalId);
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
+        }
+
+        private static IReadOnlyList<string> ParsePhysicalLocationFallbacks(string? configuredLocations)
+        {
+            if (string.IsNullOrWhiteSpace(configuredLocations))
+                return Array.Empty<string>();
+
+            return configuredLocations
+                .Split(new[] { ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         // -------------------------------------------------------------------------
@@ -303,26 +318,26 @@ namespace SCPFromD4Controllers
         // -------------------------------------------------------------------------
 
         private static void GetD4Files(
-            Signal signal, SignalFtpOptions options, string connectionString)
+            Signal signal, SignalFtpOptions options, string connectionString,
+            IReadOnlyList<string> physicalLocationFallbacks)
         {
             string username = signal.ControllerType.UserName;
             string password = signal.ControllerType.Password;
             string host = signal.IPAddress;
-            string remoteDirectory = signal.ControllerType.FTPDirectory;
             string localDirectory = Path.Combine(options.LocalDirectory, signal.SignalID) + @"\";
             string connType = GetOrDetectConnType(signal, connectionString, host, username, password);
-
-            //here is the switch on the physical location. If the UsePhysicalLocation flag is set, we will override the remote directory with the physical location of the controller
-            if (options.UsePhysicalLocation)
-            {
-                remoteDirectory = signal.ControllerType.PhysicalLocation;
-                Log.Information("Signal {SignalID}: Using physical location for connection: {Host}",
-                    signal.SignalID, host);
-            }
+            var remoteDirectories = GetRemoteDirectories(signal, options, physicalLocationFallbacks);
 
             if (connType == null)
             {
                 Log.Warning("Signal {SignalID} @ {Host}: No connection type detected. Skipping.",
+                    signal.SignalID, host);
+                return;
+            }
+
+            if (remoteDirectories.Count == 0)
+            {
+                Log.Warning("Signal {SignalID} @ {Host}: No remote directories configured. Skipping.",
                     signal.SignalID, host);
                 return;
             }
@@ -340,22 +355,72 @@ namespace SCPFromD4Controllers
                         return;
                     }
 
-                    FetchViaSftp(signal, host, username, password, remoteDirectory, localDirectory, ppkLocation);
+                    FetchViaSftp(signal, options, host, username, password, remoteDirectories, localDirectory,
+                        ppkLocation);
                 }
                 else
                 {
-                    FetchViaSftp(signal, host, username, password, remoteDirectory, localDirectory);
+                    FetchViaSftp(signal, options, host, username, password, remoteDirectories, localDirectory);
                 }
             }
             else if (connType.Equals("ftp", StringComparison.OrdinalIgnoreCase))
             {
-                FetchViaFtp(signal, options, host, username, password, remoteDirectory, localDirectory);
+                FetchViaFtp(signal, options, host, username, password, remoteDirectories, localDirectory);
             }
         }
 
+        private static IReadOnlyList<string> GetRemoteDirectories(
+            Signal signal, SignalFtpOptions options, IReadOnlyList<string> physicalLocationFallbacks)
+        {
+            var remoteDirectories = new List<string>();
+
+            if (!options.UsePhysicalLocation)
+            {
+                AddRemoteDirectory(remoteDirectories, signal.ControllerType.FTPDirectory);
+                return remoteDirectories;
+            }
+
+            if (!string.IsNullOrWhiteSpace(signal.ControllerType.PhysicalLocation))
+            {
+                AddRemoteDirectory(remoteDirectories, signal.ControllerType.PhysicalLocation);
+                Log.Information("Signal {SignalID}: Using controller physical location.",
+                    signal.SignalID);
+                return remoteDirectories;
+            }
+
+            foreach (var configuredLocation in physicalLocationFallbacks)
+                AddRemoteDirectory(remoteDirectories, configuredLocation);
+
+            if (remoteDirectories.Count > 0)
+            {
+                Log.Information(
+                    "Signal {SignalID}: Controller physical location is null; using configured fallback location(s): {Locations}",
+                    signal.SignalID, string.Join(", ", remoteDirectories));
+            }
+            else
+            {
+                Log.Warning(
+                    "Signal {SignalID}: Controller physical location is null and no configured fallback locations were provided.",
+                    signal.SignalID);
+            }
+
+            return remoteDirectories;
+        }
+
+        private static void AddRemoteDirectory(List<string> remoteDirectories, string? remoteDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(remoteDirectory))
+                return;
+
+            var trimmedDirectory = remoteDirectory.Trim();
+
+            if (!remoteDirectories.Contains(trimmedDirectory, StringComparer.OrdinalIgnoreCase))
+                remoteDirectories.Add(trimmedDirectory);
+        }
+
         private static void FetchViaSftp(
-            Signal signal, string host, string username, string password,
-            string remoteDirectory, string localDirectory, string ppkLocation = null)
+            Signal signal, SignalFtpOptions options, string host, string username, string password,
+            IReadOnlyList<string> remoteDirectories, string localDirectory, string? ppkLocation = null)
         {
             SftpClient sftp;
 
@@ -390,6 +455,10 @@ namespace SCPFromD4Controllers
 
                     sftp.Connect();
 
+                    var remoteDirectory = FindExistingSftpDirectory(sftp, signal, remoteDirectories);
+                    if (remoteDirectory == null)
+                        return;
+
                     var files = sftp.ListDirectory(remoteDirectory)
                         .Where(x => x.FullName.Contains(".dat")
                                     || x.FullName.Contains(".datZ")
@@ -397,6 +466,10 @@ namespace SCPFromD4Controllers
                         .ToList();
 
                     Log.Information("Signal {SignalID}: Found {Count} file(s) via SFTP.", signal.SignalID, files.Count);
+
+                    var currentLog = options.SkipCurrentLog
+                        ? files.OrderByDescending(x => x.FullName).FirstOrDefault()
+                        : null;
 
                     foreach (var file in files)
                     {
@@ -406,6 +479,28 @@ namespace SCPFromD4Controllers
                             using var fs = File.OpenWrite(localPath);
                             sftp.DownloadFile(file.FullName, fs);
                             Log.Information("Signal {SignalID}: Downloaded {File}.", signal.SignalID, file.Name);
+
+                            if (!options.DeleteAfterFtp)
+                                continue;
+
+                            if (options.SkipCurrentLog && currentLog == file)
+                            {
+                                Log.Information("Signal {SignalID}: Skipped deleting current SFTP log {File}.",
+                                    signal.SignalID, file.FullName);
+                                continue;
+                            }
+
+                            if (sftp.Exists(file.FullName))
+                            {
+                                sftp.DeleteFile(file.FullName);
+                                Log.Information("Signal {SignalID}: Deleted remote SFTP file {File}.",
+                                    signal.SignalID, file.FullName);
+                            }
+                            else
+                            {
+                                Log.Warning("Signal {SignalID}: Remote SFTP file {File} no longer exists.",
+                                    signal.SignalID, file.FullName);
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -423,9 +518,50 @@ namespace SCPFromD4Controllers
             }
         }
 
+        private static string? FindExistingSftpDirectory(
+            SftpClient sftp, Signal signal, IReadOnlyList<string> remoteDirectories)
+        {
+            foreach (var remoteDirectory in remoteDirectories)
+            {
+                try
+                {
+                    Log.Information("Signal {SignalID}: Checking remote directory: '{RemoteDir}'",
+                        signal.SignalID, remoteDirectory);
+
+                    if (sftp.Exists(remoteDirectory))
+                    {
+                        var attributes = sftp.GetAttributes(remoteDirectory);
+                        if (attributes.IsDirectory)
+                        {
+                            Log.Information("Signal {SignalID}: Using remote directory: '{RemoteDir}'",
+                                signal.SignalID, remoteDirectory);
+                            return remoteDirectory;
+                        }
+
+                        Log.Warning("Signal {SignalID}: Remote path '{RemoteDir}' exists but is not a directory.",
+                            signal.SignalID, remoteDirectory);
+                    }
+                    else
+                    {
+                        Log.Warning("Signal {SignalID}: Remote directory '{RemoteDir}' does not exist.",
+                            signal.SignalID, remoteDirectory);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Signal {SignalID}: Could not check remote directory '{RemoteDir}'.",
+                        signal.SignalID, remoteDirectory);
+                }
+            }
+
+            Log.Warning("Signal {SignalID}: None of the remote directories exist: {RemoteDirs}",
+                signal.SignalID, string.Join(", ", remoteDirectories));
+            return null;
+        }
+
         private static void FetchViaFtp(
             Signal signal, SignalFtpOptions options, string host, string username, string password,
-            string remoteDirectory, string localDirectory)
+            IReadOnlyList<string> remoteDirectories, string localDirectory)
         {
             try
             {
@@ -458,8 +594,9 @@ namespace SCPFromD4Controllers
                     //await LogDirectoryStructure(ftp, signal, "/", 0, maxDepth: 3);
 
                     // --- Step 2: Resolve the configured remote directory ---
-                    Log.Information("Signal {SignalID}: Checking configured remote directory: '{RemoteDir}'",
-                        signal.SignalID, remoteDirectory);
+                    var remoteDirectory = await FindExistingFtpDirectory(ftp, signal, remoteDirectories);
+                    if (remoteDirectory == null)
+                        return;
 
                     // --- Step 3: Get listing with full symlink resolution ---
                     var filesToDownload = await ResolveFilesFromDirectory(ftp, signal, remoteDirectory);
@@ -519,6 +656,38 @@ namespace SCPFromD4Controllers
             {
                 Log.Error(ex, "Signal {SignalID} @ {Host}: FTP fetch error.", signal.SignalID, host);
             }
+        }
+
+        private static async Task<string?> FindExistingFtpDirectory(
+            AsyncFtpClient ftp, Signal signal, IReadOnlyList<string> remoteDirectories)
+        {
+            foreach (var remoteDirectory in remoteDirectories)
+            {
+                try
+                {
+                    Log.Information("Signal {SignalID}: Checking remote directory: '{RemoteDir}'",
+                        signal.SignalID, remoteDirectory);
+
+                    if (await ftp.DirectoryExists(remoteDirectory))
+                    {
+                        Log.Information("Signal {SignalID}: Using remote directory: '{RemoteDir}'",
+                            signal.SignalID, remoteDirectory);
+                        return remoteDirectory;
+                    }
+
+                    Log.Warning("Signal {SignalID}: Remote directory '{RemoteDir}' does not exist.",
+                        signal.SignalID, remoteDirectory);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Signal {SignalID}: Could not check remote directory '{RemoteDir}'.",
+                        signal.SignalID, remoteDirectory);
+                }
+            }
+
+            Log.Warning("Signal {SignalID}: None of the remote directories exist: {RemoteDirs}",
+                signal.SignalID, string.Join(", ", remoteDirectories));
+            return null;
         }
 
         /// <summary>
