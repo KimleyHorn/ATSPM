@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using ATSPM.Application.Models;
 using CsvHelper;
 using CsvHelper.Configuration;
+using MOE.Common.Business;
 using Serilog;
 
 namespace CsvLogReader;
@@ -23,7 +24,6 @@ internal class Program
     private static DateTime earliestAcceptableDate;
     private static int _maxDegreeOfParallelism;
     private static int _batchSize;
-    public static MOE.Common.Models.Repositories.IControllerEventLogRepository CELRepository = MOE.Common.Models.Repositories.ControllerEventLogRepositoryFactory.Create();
 
     static void Main(string[] args)
     {
@@ -64,7 +64,8 @@ internal class Program
                 path: Path.Combine(logPath, "log-.txt"),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{ThreadId}] {Message:lj}{NewLine}{Exception}",
+                outputTemplate:
+                "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{ThreadId}] {Message:lj}{NewLine}{Exception}",
                 shared: true)
             .CreateLogger();
     }
@@ -168,45 +169,27 @@ internal class Program
         }
     }
 
-    private static void ProcessSingleFile(string directory, string signalid, string filePath, NameValueCollection appSettings)
+    private static void ProcessSingleFile(string directory, string signalid, string filePath,
+        NameValueCollection appSettings)
     {
         var fileName = Path.GetFileName(filePath);
-        var threadId = Environment.CurrentManagedThreadId;
+        var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
-        Log.Debug("Starting to process file {FileName} for SignalId {SignalId}", fileName, signalid);
+        Log.Information($"[Thread {threadId}] Processing: {fileName}");
 
         try
         {
             if (_uploadEnabled)
             {
+
                 var records = ReadCsvFileOptimized(signalid, filePath, fileName, threadId);
+                if (records.Count == 0) return;
 
-                if (records.Count == 0)
-                {
-                    Log.Warning("No records read from file {FileName}", fileName);
-                    return;
-                }
-
-                Log.Debug("Read {RecordCount} records from {FileName}", records.Count, fileName);
-
+                // Create and populate data table
                 var table = new MOE.Common.Data.MOE.Controller_Event_LogDataTable();
                 PopulateDataTable(signalid, records, table, threadId);
 
-                var firstRecord = records[0];
-                Log.Debug("Checking for existing records - SignalId: {SignalId}, Timestamp: {Timestamp}, EventCode: {EventCode}, EventParam: {EventParam}",
-                    signalid, firstRecord.Timestamp, firstRecord.EventCode, firstRecord.EventParam);
-
-                var recordExists = CELRepository.CheckIfSingleRecordExists(
-                    signalid, firstRecord.Timestamp, firstRecord.EventCode, firstRecord.EventParam);
-
-                if (recordExists)
-                {
-                    Log.Warning("DUPLICATE DETECTED - Records already exist for {FileName}. SignalId: {SignalId}, FirstTimestamp: {Timestamp}, EventCode: {EventCode}, EventParam: {EventParam}",
-                        fileName, signalid, firstRecord.Timestamp, firstRecord.EventCode, firstRecord.EventParam);
-                    return;
-                }
-
-                Log.Information("No existing records found, proceeding with insert for {FileName}", fileName);
+                // Bulk insert to database
                 BulkInsertToDatabase(table, appSettings, threadId, fileName);
             }
 
@@ -221,11 +204,13 @@ internal class Program
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error processing {FileName} for SignalId {SignalId}", fileName, signalid);
+            Log.Error(ex, $"[Thread {threadId}] Error processing {fileName}");
         }
     }
 
-    private static List<ControllerEventLog> ReadCsvFileOptimized(string signalID, string filePath, string fileName, int threadId)
+
+    private static List<ControllerEventLog> ReadCsvFileOptimized(string signalID, string filePath, string fileName,
+        int threadId)
     {
         var records = new List<ControllerEventLog>();
 
@@ -257,7 +242,7 @@ internal class Program
                 Log.Debug("Successfully parsed {Count} records from {FileName}", records.Count, fileName);
 
                 // Check for duplicates within the file
-                CheckForDuplicatesInFile(records, fileName, signalID);
+                records = CheckForDuplicatesInFile(records, fileName, signalID);
             }
             catch (Exception ex)
             {
@@ -272,7 +257,7 @@ internal class Program
         return records;
     }
 
-    private static void CheckForDuplicatesInFile(List<ControllerEventLog> records, string fileName, string signalID)
+    private static List<ControllerEventLog> CheckForDuplicatesInFile(List<ControllerEventLog> records, string fileName, string signalID)
     {
         var duplicateGroups = records
             .GroupBy(r => new { r.Timestamp, r.EventCode, r.EventParam })
@@ -282,25 +267,42 @@ internal class Program
         if (duplicateGroups.Count == 0)
         {
             Log.Debug("No duplicates found within {FileName}", fileName);
-            return;
+            return records;
         }
 
         Log.Warning("Found {DuplicateGroupCount} duplicate groups in {FileName} for SignalId {SignalId}",
             duplicateGroups.Count, fileName, signalID);
 
+        //create a running count of the number of duplicates removed
+        var totalDuplicatesRemoved = 0;
+
         foreach (var group in duplicateGroups)
         {
             Log.Warning("Duplicate records in {FileName}: {Count} occurrences - Timestamp: {Timestamp}, EventCode: {EventCode}, EventParam: {EventParam}",
                 fileName, group.Count(), group.Key.Timestamp, group.Key.EventCode, group.Key.EventParam);
+
+            // Remove all but the first
+            var duplicatesToRemove = group.Skip(1);
+            records = records.Except(duplicatesToRemove).ToList();
+            totalDuplicatesRemoved += duplicatesToRemove.Count();
+            // Log each removal
+            foreach (var duplicate in duplicatesToRemove)
+            {
+                Log.Debug("Removing duplicate record from {FileName} - Timestamp: {Timestamp}, EventCode: {EventCode}, EventParam: {EventParam}",
+                    fileName, duplicate.Timestamp, duplicate.EventCode, duplicate.EventParam);
+            }
         }
+
+        Log.Information("Total duplicates removed from {FileName}: {Count}", fileName, totalDuplicatesRemoved);
+        return records;
     }
 
-    private static void PopulateDataTable(string signalId, List<ControllerEventLog> records,
-        MOE.Common.Data.MOE.Controller_Event_LogDataTable table, int threadId)
-    {
-        var validRecords = records.Where(r => r.Timestamp > earliestAcceptableDate).ToList();
+        private static void PopulateDataTable(string signalId, List<ControllerEventLog> records, 
+            MOE.Common.Data.MOE.Controller_Event_LogDataTable table, int threadId)
+        {
+            var validRecords = records.Where(r => r.Timestamp > earliestAcceptableDate).ToList();
         var filteredCount = records.Count - validRecords.Count;
-
+            
         Log.Debug("Filtered records for SignalId {SignalId}: {ValidCount} valid, {FilteredCount} filtered (before {EarliestDate})",
             signalId, validRecords.Count, filteredCount, earliestAcceptableDate);
 
@@ -325,93 +327,124 @@ internal class Program
                     signalId, record.Timestamp, record.EventCode, record.EventParam);
             }
         }
-    }
-
-    private static void BulkInsertToDatabase(MOE.Common.Data.MOE.Controller_Event_LogDataTable table,
-        NameValueCollection appSettings, int threadId, string fileName)
-    {
-        if (table.Rows.Count == 0)
-        {
-            Log.Warning("No data to insert for {FileName}", fileName);
-            return;
         }
 
-        Log.Information("Attempting bulk insert of {RowCount} rows from {FileName} to {Table}",
-            table.Rows.Count, fileName, _destinationTableName);
-
-        try
+        private static void BulkInsertToDatabase(MOE.Common.Data.MOE.Controller_Event_LogDataTable table,
+            NameValueCollection appSettings, int threadId, string fileName)
         {
-            var options = new MOE.Common.Business.BulkCopyOptions(
-                _connectionString,
-                _destinationTableName,
-                Convert.ToBoolean(appSettings["WriteToConsole"]),
-                Convert.ToBoolean(appSettings["forceNonParallel"]),
-                Convert.ToInt32(appSettings["MaxThreads"]),
-                Convert.ToBoolean(appSettings["DeleteFile"]),
-                Convert.ToDateTime(appSettings["EarliestAcceptableDate"]),
-                Convert.ToInt32(appSettings["BulkCopyBatchSize"]),
-                Convert.ToInt32(appSettings["BulkCopyTimeOut"]));
-
-            MOE.Common.Business.SignalFtp.BulktoDb(table, options, _destinationTableName);
-            Log.Information("Successfully inserted {RowCount} records from {FileName}", table.Rows.Count, fileName);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Database insert error for {FileName}", fileName);
-            throw;
-        }
-    }
-
-    private static void MoveFile(string directory, CsvFileInfo file)
-    {
-        var location = Path.Combine(_movedLocation, directory);
-        if (!Directory.Exists(location))
-        {
-            Directory.CreateDirectory(location);
-            Log.Debug("Created directory {Location}", location);
-        }
-
-        try
-        {
-            if (File.Exists(file.FilePath))
+            if (table.Rows.Count == 0)
             {
-                var destPath = Path.Combine(location, file.FileName);
-                File.Move(file.FilePath, destPath);
-                Log.Debug("File moved: {FileName} to {Destination}", file.FileName, destPath);
+                Log.Warning("No data to insert for {FileName}", fileName);
+                return;
+            }
+
+            Log.Information("Attempting bulk insert of {RowCount} rows from {FileName} to {Table}",
+                table.Rows.Count, fileName, _destinationTableName);
+
+            try
+            {
+                var options = new BulkCopyOptions(
+                    _connectionString,
+                    _destinationTableName,
+                    Convert.ToBoolean(appSettings["WriteToConsole"]),
+                    Convert.ToBoolean(appSettings["forceNonParallel"]),
+                    Convert.ToInt32(appSettings["MaxThreads"]),
+                    Convert.ToBoolean(appSettings["DeleteFile"]),
+                    Convert.ToDateTime(appSettings["EarliestAcceptableDate"]),
+                    Convert.ToInt32(appSettings["BulkCopyBatchSize"]),
+                    Convert.ToInt32(appSettings["BulkCopyTimeOut"]));
+            
+
+                bool exists = SignalFtp.CheckFirstRowExists(table, options, _destinationTableName);
+                if (!exists)
+                {
+                    options = new BulkCopyOptions(
+                        _connectionString,
+                        _destinationTableName,
+                        Convert.ToBoolean(appSettings["WriteToConsole"]),
+                        Convert.ToBoolean(appSettings["forceNonParallel"]),
+                        Convert.ToInt32(appSettings["MaxThreads"]),
+                        Convert.ToBoolean(appSettings["DeleteFile"]),
+                        Convert.ToDateTime(appSettings["EarliestAcceptableDate"]),
+                        Convert.ToInt32(appSettings["BulkCopyBatchSize"]),
+                        Convert.ToInt32(appSettings["BulkCopyTimeOut"]));
+                    SignalFtp.BulktoDb(table, options, _destinationTableName);
+                    Log.Information("Successfully inserted {RowCount} records from {FileName}", table.Rows.Count,
+                        fileName);
+                }
+                else
+                {
+                    Log.Information("file {FileName} is a DUPLICATE", fileName);
+                    //delete the file since it is a duplicate
+                    DeleteFile(new CsvFileInfo { FilePath = Path.Combine(_logsPath, fileName), FileName = fileName });
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Database insert error for {FileName}", fileName);
+                throw;
             }
         }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Move failed for {FileName}", file.FileName);
-        }
-    }
 
-    private static void DeleteFile(CsvFileInfo file)
-    {
-        try
+        private static void MoveFile(string directory, CsvFileInfo file)
         {
-            if (File.Exists(file.FilePath))
+            var location = Path.Combine(_movedLocation, directory);
+            if (!Directory.Exists(location))
             {
-                File.Delete(file.FilePath);
+                Directory.CreateDirectory(location);
+                Log.Debug("Created directory {Location}", location);
+            }
+
+            try
+            {
+                if (File.Exists(file.FilePath))
+                {
+                    var destPath = Path.Combine(location, file.FileName);
+                    File.Move(file.FilePath, destPath);
+                    Log.Debug("File moved: {FileName} to {Destination}", file.FileName, destPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                //if the exception is because file already exists, delete the duplicate file
+                if (ex is IOException && ex.Message.Contains("already exists"))
+                {
+                    Log.Warning("File {FileName} already exists at destination. Deleting source file.", file.FileName);
+                    DeleteFile(file);
+                    return;
+                }
+
+                Log.Error(ex, "Move failed for {FileName} for non duped file reason", file.FileName);
+                //delete the file if move fails
+            }
+        }
+
+        private static void DeleteFile(CsvFileInfo file)
+        {
+            try
+            {
+                if (File.Exists(file.FilePath))
+                {
+                    File.Delete(file.FilePath);
                 Log.Debug("File deleted: {FileName}", file.FileName);
+                }
+            }
+            catch (Exception ex)
+            {
+            Log.Error(ex, "Delete failed for {FileName}", file.FileName);
             }
         }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Delete failed for {FileName}", file.FileName);
-        }
     }
-}
 
 public class CsvFileInfo
-{
-    public string FilePath { get; set; }
-    public string FileName { get; set; }
-    public string IPAddress { get; set; }
-    public string Port { get; set; }
-    public DateTime FileDate { get; set; }
-    public string SignalID { get; set; }
-}
+    {
+        public string FilePath { get; set; }
+        public string FileName { get; set; }
+        public string IPAddress { get; set; }
+        public string Port { get; set; }
+        public DateTime FileDate { get; set; }
+        public string SignalID { get; set; }
+    }
 
 public class ControllerEventLogMap : ClassMap<ControllerEventLog>
 {
