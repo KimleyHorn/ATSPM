@@ -210,32 +210,44 @@ namespace SCPFromD4Controllers
         // Connection detection
         // -------------------------------------------------------------------------
 
-        private static string GetOrDetectConnType(
-            Signal signal, string connectionString, string host, string username, string password)
+        private static string? GetOrDetectConnType(
+            Signal signal, string connectionString, string host, string username, string password, bool requiresPpk)
         {
+            string? existing = null;
+
             try
             {
                 using var db = new SqlConnection(connectionString);
-                var existing = db.QueryFirstOrDefault<string>(
+                existing = db.QueryFirstOrDefault<string>(
                     "SELECT ConnType FROM dbo.Signals WHERE SignalID = @SignalID",
                     new { signal.SignalID });
-
-                if (!string.IsNullOrWhiteSpace(existing))
-                {
-                    Log.Information("Signal {SignalID}: ConnType already '{ConnType}', skipping detection.",
-                        signal.SignalID, existing);
-                    return existing;
-                }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Signal {SignalID}: Failed to query ConnType.", signal.SignalID);
-                return null;
+                return requiresPpk ? "sftp" : null;
+            }
+
+            if (requiresPpk)
+            {
+                if (!string.Equals(existing, "sftp", StringComparison.OrdinalIgnoreCase))
+                    UpdateSignalConnType(signal, connectionString, "sftp");
+
+                Log.Information("Signal {SignalID}: PPK is enabled; using ConnType 'sftp'.",
+                    signal.SignalID);
+                return "sftp";
+            }
+
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                Log.Information("Signal {SignalID}: ConnType already '{ConnType}', skipping detection.",
+                    signal.SignalID, existing);
+                return existing;
             }
 
             Log.Information("Signal {SignalID}: ConnType is null, testing connections...", signal.SignalID);
 
-            string detected = null;
+            string? detected = null;
 
             if (TestSftpConnection(signal, host, username, password))
                 detected = "sftp";
@@ -243,21 +255,7 @@ namespace SCPFromD4Controllers
                 detected = "ftp";
 
             if (detected != null)
-            {
-                try
-                {
-                    using var db = new SqlConnection(connectionString);
-                    int rows = db.Execute(
-                        "UPDATE dbo.Signals SET ConnType = @ConnType WHERE SignalID = @SignalID",
-                        new { ConnType = detected, signal.SignalID });
-                    Log.Information("Signal {SignalID}: ConnType set to '{ConnType}' ({Rows} row(s) affected).",
-                        signal.SignalID, detected, rows);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Signal {SignalID}: Failed to update ConnType.", signal.SignalID);
-                }
-            }
+                UpdateSignalConnType(signal, connectionString, detected);
             else
             {
                 Log.Warning("Signal {SignalID} @ {Host}: Neither SFTP nor FTP responded.",
@@ -265,6 +263,23 @@ namespace SCPFromD4Controllers
             }
 
             return detected;
+        }
+
+        private static void UpdateSignalConnType(Signal signal, string connectionString, string connType)
+        {
+            try
+            {
+                using var db = new SqlConnection(connectionString);
+                int rows = db.Execute(
+                    "UPDATE dbo.Signals SET ConnType = @ConnType WHERE SignalID = @SignalID",
+                    new { ConnType = connType, signal.SignalID });
+                Log.Information("Signal {SignalID}: ConnType set to '{ConnType}' ({Rows} row(s) affected).",
+                    signal.SignalID, connType, rows);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Signal {SignalID}: Failed to update ConnType.", signal.SignalID);
+            }
         }
 
         private static bool TestSftpConnection(Signal signal, string host, string username, string password)
@@ -325,7 +340,7 @@ namespace SCPFromD4Controllers
             string password = signal.ControllerType.Password;
             string host = signal.IPAddress;
             string localDirectory = Path.Combine(options.LocalDirectory, signal.SignalID) + @"\";
-            string connType = GetOrDetectConnType(signal, connectionString, host, username, password);
+            string? connType = GetOrDetectConnType(signal, connectionString, host, username, password, options.RequiresPpk);
             var remoteDirectories = GetRemoteDirectories(signal, options, physicalLocationFallbacks);
 
             if (connType == null)
@@ -346,8 +361,15 @@ namespace SCPFromD4Controllers
             {
                 string ppkLocation = options.PpkLocation;
 
-                if (!string.IsNullOrWhiteSpace(ppkLocation) || options.RequiresPpk == false)
+                if (options.RequiresPpk)
                 {
+                    if (string.IsNullOrWhiteSpace(ppkLocation))
+                    {
+                        Log.Error("PPK is required but no PPK path is configured. Skipping signal {SignalID}.",
+                            signal.SignalID);
+                        return;
+                    }
+
                     if (!File.Exists(ppkLocation))
                     {
                         Log.Error("PPK file not found at path: {PpkLocation}. Skipping signal {SignalID}.",
