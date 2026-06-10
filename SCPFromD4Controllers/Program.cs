@@ -232,7 +232,7 @@ namespace SCPFromD4Controllers
                     using var db = new SqlConnection(_connectionString);
                     db.Execute(@"
                         INSERT INTO dbo.ApplicationEvents
-                            (Timestamp, ApplicationName, Description, SeverityLevel, Class, Function)
+                            ([Timestamp], [ApplicationName], [Description], [SeverityLevel], [Class], [Function])
                         VALUES
                             (@Timestamp, @ApplicationName, @Description, @SeverityLevel, @Class, @Function)",
                         new
@@ -247,7 +247,7 @@ namespace SCPFromD4Controllers
                 }
                 catch
                 {
-                    // Avoid recursive logging if the database sink itself fails.
+
                 }
             }
 
