@@ -5,6 +5,8 @@ using Microsoft.Data.SqlClient;
 using MOE.Common.Business;
 using Renci.SshNet;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using MOE.Common.Models;
 
 namespace SCPFromD4Controllers
@@ -13,20 +15,22 @@ namespace SCPFromD4Controllers
     {
         static void Main(string[] args)
         {
+            var connectionString = ConfigurationManager.ConnectionStrings["SPM"].ConnectionString;
+
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console()
                 .WriteTo.File(
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "d4-controllers-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 30)
+                    retainedFileCountLimit: 30,
+                    restrictedToMinimumLevel: LogEventLevel.Error)
+                .WriteTo.Sink(new ApplicationEventsSink(connectionString), restrictedToMinimumLevel: LogEventLevel.Error)
                 .CreateLogger();
 
             try
             {
                 Log.Information("Application starting up at {Time}", DateTime.Now);
-
-                var connectionString = ConfigurationManager.ConnectionStrings["SPM"].ConnectionString;
 
                 var signalFtpOptions = new SignalFtpOptions(
                     Convert.ToInt32(ConfigurationManager.AppSettings["SNMPTimeout"]),
@@ -203,6 +207,53 @@ namespace SCPFromD4Controllers
             catch (Exception ex)
             {
                 Log.Error(ex, "Signal {SignalID}: Failed to write to ApplicationEvents.", signalId);
+            }
+        }
+
+        private sealed class ApplicationEventsSink : ILogEventSink
+        {
+            private const string ApplicationName = "SCPFromD4Controllers";
+            private readonly string _connectionString;
+
+            public ApplicationEventsSink(string connectionString)
+            {
+                _connectionString = connectionString;
+            }
+
+            public void Emit(LogEvent logEvent)
+            {
+                try
+                {
+                    using var db = new SqlConnection(_connectionString);
+                    db.Execute(@"
+                        INSERT INTO dbo.ApplicationEvents
+                            (Timestamp, ApplicationName, Description, SeverityLevel, Class, Function)
+                        VALUES
+                            (@Timestamp, @ApplicationName, @Description, @SeverityLevel, @Class, @Function)",
+                        new
+                        {
+                            Timestamp = logEvent.Timestamp.LocalDateTime,
+                            ApplicationName,
+                            Description = GetDescription(logEvent),
+                            SeverityLevel = (int)ApplicationEvent.SeverityLevels.High,
+                            Class = "Program",
+                            Function = "ApplicationError"
+                        });
+                }
+                catch
+                {
+                    // Avoid recursive logging if the database sink itself fails.
+                }
+            }
+
+            private static string GetDescription(LogEvent logEvent)
+            {
+                var description = logEvent.RenderMessage();
+
+                if (logEvent.Exception != null)
+                    description += Environment.NewLine + logEvent.Exception;
+
+                return description;
             }
         }
 
@@ -527,6 +578,7 @@ namespace SCPFromD4Controllers
                         catch (Exception ex)
                         {
                             Log.Error(ex, "Signal {SignalID}: Failed to download {File}.", signal.SignalID, file.Name);
+                            return;
                         }
                     }
 
@@ -661,11 +713,13 @@ namespace SCPFromD4Controllers
                             {
                                 Log.Warning("Signal {SignalID}: Download of {File} returned status {Status}.",
                                     signal.SignalID, fileName, status);
+                                return;
                             }
                         }
                         catch (Exception ex)
                         {
                             Log.Error(ex, "Signal {SignalID}: Error downloading {File}.", signal.SignalID, fileName);
+                            return;
                         }
                     }
 
