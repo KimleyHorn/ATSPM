@@ -57,7 +57,9 @@ namespace SCPFromD4Controllers
                     ConfigurationManager.AppSettings["PhysicalLocationFallbacks"]);
 
                 Log.Information("Querying signal list from database...");
-                var signalList = GetLatestVersionOfAllSignalsForD4Sftp(connectionString);
+                var signalList = GetLatestVersionOfAllSignalsForD4Sftp(
+                    connectionString,
+                    signalFtpOptions.RegionControllerType);
                 var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
                 Log.Information("Found {Count} signal(s) to process.", signalList.Count);
 
@@ -132,7 +134,9 @@ namespace SCPFromD4Controllers
         // DB
         // -------------------------------------------------------------------------
 
-        public static List<Signal> GetLatestVersionOfAllSignalsForD4Sftp(string connectionString)
+        public static List<Signal> GetLatestVersionOfAllSignalsForD4Sftp(
+            string connectionString,
+            int regionalControllerType)
         {
             const string sql = @"
                 SELECT 
@@ -170,7 +174,7 @@ namespace SCPFromD4Controllers
                 ) latest ON s.SignalID = latest.SignalID
                        AND s.Start = latest.LatestStart
                 WHERE s.VersionActionId != 3
-                  AND s.ControllerTypeID = 30";
+                  AND s.ControllerTypeID = @RegionalControllerType";
 
             using var db = new SqlConnection(connectionString);
             return db.Query<Signal, ControllerType, Signal>(
@@ -180,6 +184,7 @@ namespace SCPFromD4Controllers
                     signal.ControllerType = controllerType;
                     return signal;
                 },
+                new { RegionalControllerType = regionalControllerType },
                 splitOn: "ControllerTypeID"
             ).ToList();
         }
