@@ -106,6 +106,11 @@ namespace SPM.Controllers
         [HttpGet, AllowAnonymous]
         public ActionResult GetSignalsForMap()
         {
+            // Basic metrics apply to every signal; fetch once instead of per-signal (avoids N+1).
+            var basicMetricIds = _metricTypeRepository.GetBasicMetrics().Select(m => m.MetricID).ToList();
+
+            // GetAllSignals eager-loads Areas and Approaches->Detectors->DetectionTypes->MetricTypes,
+            // so the filter metadata below is read from memory without additional queries.
             var signals = _signalsRepository.GetAllSignals()
                 .Select(x => new
                 {
@@ -113,9 +118,21 @@ namespace SPM.Controllers
                     x.PrimaryName,
                     x.SecondaryName,
                     x.Latitude,
-                    x.Longitude
+                    x.Longitude,
+                    x.RegionID,
+                    x.JurisdictionId,
+                    AreaIds = x.Areas.Select(a => a.Id).ToList(),
+                    MetricTypeIds = basicMetricIds
+                        .Concat(x.Approaches
+                            .SelectMany(a => a.Detectors)
+                            .SelectMany(d => d.DetectionTypes)
+                            .Where(dt => dt.DetectionTypeID != 1)
+                            .SelectMany(dt => dt.MetricTypes)
+                            .Select(m => m.MetricID))
+                        .Distinct()
+                        .ToList()
                 });
-            
+
             return Json(signals, JsonRequestBehavior.AllowGet);
         }
 

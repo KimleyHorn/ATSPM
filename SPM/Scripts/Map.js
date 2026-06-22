@@ -1,4 +1,10 @@
 ﻿// Map-TomTom.js
+
+// Shared state so the dropdown handlers (RegionChange/ReportTypeChange) can
+// filter the already-loaded signals client-side instead of re-fetching.
+let mapInstance = null;
+let allSignalRecords = [];
+
 (function (window, document) {
     const apiKey = 'J3L0PYtBvPci4B36q2aVL4712eohQbPD';
 
@@ -56,6 +62,7 @@
                     center: [0, 0],
                     zoom: 1
                 });
+                mapInstance = map;
 
                 map.addControl(new maplibregl.NavigationControl());
                 $('#collapseTwoLink').on('click', function () {
@@ -98,7 +105,11 @@
                                         PrimaryName: s.PrimaryName,
                                         SecondaryName: s.SecondaryName,
                                         Longitude: lon,
-                                        Latitude: lat
+                                        Latitude: lat,
+                                        RegionID: s.RegionID,
+                                        JurisdictionId: s.JurisdictionId,
+                                        AreaIds: Array.isArray(s.AreaIds) ? s.AreaIds : [],
+                                        MetricTypeIds: Array.isArray(s.MetricTypeIds) ? s.MetricTypeIds : []
                                     });
                                 }
                             });
@@ -106,14 +117,25 @@
                                 console.warn('Invalid signals (after parsing):', invalid);
                             }
 
-                            const features = valid.map(s => ({
-                                type: 'Feature',
-                                properties: {
-                                    signalId: s.SignalID,
-                                    signalName: s.PrimaryName + " & " + s.SecondaryName
+                            // Master list kept in memory: a GeoJSON feature plus the
+                            // metadata the dropdowns filter on. Dropdown changes recompute
+                            // the visible subset from this list — no server round-trip.
+                            allSignalRecords = valid.map(s => ({
+                                feature: {
+                                    type: 'Feature',
+                                    properties: {
+                                        signalId: s.SignalID,
+                                        signalName: s.PrimaryName + " & " + s.SecondaryName
+                                    },
+                                    geometry: { type: 'Point', coordinates: [s.Longitude, s.Latitude] }
                                 },
-                                geometry: { type: 'Point', coordinates: [s.Longitude, s.Latitude] }
+                                regionId: s.RegionID,
+                                jurisdictionId: s.JurisdictionId,
+                                areaIds: s.AreaIds,
+                                metricTypeIds: s.MetricTypeIds
                             }));
+
+                            const features = allSignalRecords.map(r => r.feature);
 
                             map.addSource('signals', {
                                 type: 'geojson',
@@ -156,20 +178,7 @@
                                 map.getCanvas().classList.remove('pointer-cursor');
                             });
                             // Center map over signals
-                            if (features.length) {
-                                const bounds = features.reduce((b, f) => {
-                                    return b.extend(f.geometry.coordinates);
-                                }, new maplibregl.LngLatBounds(
-                                    features[0].geometry.coordinates,
-                                    features[0].geometry.coordinates
-                                ));
-
-                                map.fitBounds(bounds, {
-                                    padding: 40,      // pixels
-                                    maxZoom: 14,      // don’t zoom in too far
-                                    duration: 1000    // animate for 1s
-                                });
-                            }
+                            fitMapToFeatures(map, features);
 
                             map.on('click', 'signalsLayer', (e) => {
                                 const feature = e.features[0];
@@ -251,10 +260,68 @@ function displayInfobox(e, map) {
         });
 }
 
-function ReportTypeChange() {
+// Re-center/zoom the map to fit the supplied features.
+function fitMapToFeatures(map, features) {
+    if (!map || !features || !features.length) return;
+
+    const bounds = features.reduce((b, f) => {
+        return b.extend(f.geometry.coordinates);
+    }, new maplibregl.LngLatBounds(
+        features[0].geometry.coordinates,
+        features[0].geometry.coordinates
+    ));
+
+    map.fitBounds(bounds, {
+        padding: 40,      // pixels
+        maxZoom: 14,      // don’t zoom in too far
+        duration: 1000    // animate for 1s
+    });
 }
 
-function RegionChange(e) {
+// Read a dropdown's selected value; returns null when nothing meaningful is
+// chosen (the "--Select ...--" placeholder has an empty value).
+function selectedFilterValue(id) {
+    const el = document.getElementById(id);
+    if (!el || el.selectedIndex < 0) return null;
+    const value = el.options[el.selectedIndex].value;
+    return value === '' ? null : value;
+}
+
+// Filter the in-memory signal list against the current dropdown selections,
+// push the subset to the clustered source (re-clusters correctly), and
+// re-center on what's now visible. No network request.
+function applyMapFilters() {
+    if (!mapInstance) return;
+
+    const source = mapInstance.getSource('signals');
+    if (!source) return;
+
+    const regionFilter = selectedFilterValue('Regions');
+    const jurisdictionFilter = selectedFilterValue('Jurisdictions');
+    const areaFilter = selectedFilterValue('Areas');
+    const metricFilter = selectedFilterValue('MetricTypes');
+
+    const matches = allSignalRecords.filter(r => {
+        if (regionFilter !== null && String(r.regionId) !== regionFilter) return false;
+        if (jurisdictionFilter !== null && String(r.jurisdictionId) !== jurisdictionFilter) return false;
+        if (areaFilter !== null && !r.areaIds.map(String).includes(areaFilter)) return false;
+        if (metricFilter !== null && !r.metricTypeIds.map(String).includes(metricFilter)) return false;
+        return true;
+    });
+
+    const features = matches.map(r => r.feature);
+    source.setData({ type: 'FeatureCollection', features });
+    fitMapToFeatures(mapInstance, features);
+}
+
+// Area, Jurisdiction, and Metric Type dropdowns.
+function ReportTypeChange() {
+    applyMapFilters();
+}
+
+// Region dropdown.
+function RegionChange() {
+    applyMapFilters();
 }
 
 //var infobox;

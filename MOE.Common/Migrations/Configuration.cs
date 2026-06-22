@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Data.Entity.Migrations;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
@@ -338,7 +339,8 @@ namespace MOE.Common.Migrations
                  }
             );
 
-            context.ExternalLinks.AddOrUpdate(
+            if (!context.ExternalLinks.Any())
+                context.ExternalLinks.AddOrUpdate(
                 c => c.DisplayOrder,
                 new ExternalLink
                 {
@@ -407,8 +409,10 @@ namespace MOE.Common.Migrations
                     Url = "https://connectdot.connectsolutions.com/p3ua8gtj09r/"
                 }
             );
-            context.ControllerType.AddOrUpdate(
-                c => c.ControllerTypeID,
+            // Insert default controller types only when missing, so a new version can
+            // add a new ControllerTypeID without overwriting client-edited credentials.
+            var seedControllerTypes = new ControllerType[]
+            {
                 new ControllerType
                 {
                     ControllerTypeID = 1,
@@ -509,7 +513,11 @@ namespace MOE.Common.Migrations
                     UserName = "none",
                     Password = "none"
                 }
-            );
+            };
+
+            foreach (var ct in seedControllerTypes)
+                if (!context.ControllerType.Any(x => x.ControllerTypeID == ct.ControllerTypeID))
+                    context.ControllerType.Add(ct);
 
             context.DetectionTypes.AddOrUpdate(
                 c => c.DetectionTypeID,
@@ -522,7 +530,8 @@ namespace MOE.Common.Migrations
                 new DetectionType { DetectionTypeID = 7, Description = "Advanced Presence" }
             );
 
-            context.MeasuresDefaults.AddOrUpdate(
+            if (!context.MeasuresDefaults.Any())
+                context.MeasuresDefaults.AddOrUpdate(
                 new MeasuresDefaults { Measure = "AoR", OptionName = "SelectedBinSize", Value = "15" },
                 new MeasuresDefaults { Measure = "AoR", OptionName = "ShowPlanStatistics", Value = "True" },
                 new MeasuresDefaults { Measure = "AoR", OptionName = "YAxisMax", Value = null },
@@ -1009,7 +1018,8 @@ namespace MOE.Common.Migrations
                 new Application { ID = 4, Name = "DatabaseArchive" }
             );
 
-            context.WatchdogApplicationSettings.AddOrUpdate(
+            if (!context.WatchdogApplicationSettings.Any())
+                context.WatchdogApplicationSettings.AddOrUpdate(
                 c => c.ApplicationID,
                 new WatchDogApplicationSettings
                 {
@@ -1033,7 +1043,8 @@ namespace MOE.Common.Migrations
                 }
             );
 
-            context.DatabaseArchiveSettings.AddOrUpdate(m => m.ApplicationID,
+            if (!context.DatabaseArchiveSettings.Any())
+                context.DatabaseArchiveSettings.AddOrUpdate(m => m.ApplicationID,
                 new DatabaseArchiveSettings
                 {
                     ApplicationID = 4,
@@ -1123,7 +1134,8 @@ namespace MOE.Common.Migrations
                 }
             );
 
-            context.Regions.AddOrUpdate(
+            if (!context.Regions.Any())
+                context.Regions.AddOrUpdate(
                 new Region { ID = 1, Description = "Region 1" },
                 new Region { ID = 2, Description = "Region 2" },
                 new Region { ID = 3, Description = "Region 3" },
@@ -1131,7 +1143,8 @@ namespace MOE.Common.Migrations
                 new Region { ID = 10, Description = "Other" }
             );
 
-            context.Agencies.AddOrUpdate(
+            if (!context.Agencies.Any())
+                context.Agencies.AddOrUpdate(
                 new Agency { AgencyID = 1, Description = "Academics" },
                 new Agency { AgencyID = 2, Description = "City Government" },
                 new Agency { AgencyID = 3, Description = "Consultant" },
