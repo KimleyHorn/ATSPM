@@ -1,5 +1,6 @@
 ﻿using MOE.Common.Business;
 using MOE.Common.Models.Repositories;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Configuration;

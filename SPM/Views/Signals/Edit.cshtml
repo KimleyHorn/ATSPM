@@ -9,6 +9,27 @@
             });
         });
     </script>
+    <style>
+        .signal-action-message {
+            display: inline-block;
+            padding: 0.45rem 0.8rem;
+            border-radius: 0.35rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .signal-action-message-error {
+            color: #ffffff;
+            background-color: #c82333;
+            border: 2px solid #f5c6cb;
+        }
+
+        .signal-action-message-success {
+            color: #ffffff;
+            background-color: #218838;
+            border: 2px solid #c3e6cb;
+        }
+    </style>
     @Html.AntiForgeryToken()
     <div class="card panel-signal">
         <div class="card-header">
@@ -18,7 +39,7 @@
             <button type="button" class="float-right btn btn-dark" onclick="CopySignal()" style="margin-left: 10px">Copy Signal&nbsp;<span class="" aria-hidden="true"></span></button>
             <Button type="button" onclick="AddNewVersion()" class="float-right btn btn-info" style="margin-left: 10px">Add New Version &nbsp;<span class="" aria-hidden="true"></span></Button>
             <Button type="button" onclick="DeleteVersion()" class="float-right btn btn-warning">Delete This Version &nbsp;<span class="" aria-hidden="true"></span></Button>
-            <span class="pull-right" id="ActionMessage"></span>
+            <span class="pull-right" id="ActionMessage" aria-live="polite"></span>
         </div>
         <div class="card-body">
             <div class="form-horizontal">

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
+using System.Web.Mvc;
 
 namespace MOE.Common.Models
 {
@@ -85,6 +86,7 @@ namespace MOE.Common.Models
         [Required]
         [Display(Name = "IP Address")]
         [StringLength(50)]
+        [Remote("ValidateSignalIPAddress", "Signals", AdditionalFields = "SignalID,VersionID")]
         [DataMember]
         public string IPAddress { get; set; }
 

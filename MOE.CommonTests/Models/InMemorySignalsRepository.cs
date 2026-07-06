@@ -532,6 +532,20 @@ namespace MOE.CommonTests.Models
             throw new NotImplementedException();
         }
 
+        public Signal GetLatestVersionOfSignalByIPAddress(string ipAddress, string signalId = null)
+        {
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                return null;
+            }
+
+            return GetLatestVersionOfAllSignals()
+                .Where(signal => string.Equals(signal.IPAddress, ipAddress, StringComparison.OrdinalIgnoreCase))
+                .Where(signal => string.IsNullOrWhiteSpace(signalId) || signal.SignalID != signalId)
+                .OrderBy(signal => signal.SignalID)
+                .FirstOrDefault();
+        }
+
         public Signal GetVersionOfSignalByDateWithDetectionTypes(string signalId, DateTime startDate)
         {
             throw new NotImplementedException();

@@ -496,6 +496,52 @@ namespace MOE.Common.Models.Repositories
             }
         }
 
+        public ControllerEventLogArchiveDiagnostics GetArchiveDiagnostics(DateTime startTime, DateTime endTime)
+        {
+            try
+            {
+                var recordsInRange = _db.Controller_Event_Log
+                    .Where(s => s.Timestamp >= startTime && s.Timestamp < endTime);
+
+                return new ControllerEventLogArchiveDiagnostics
+                {
+                    TotalRecordsInRange = recordsInRange.Count(),
+                    DistinctSignalsInRange = recordsInRange.Select(s => s.SignalID).Distinct().Count(),
+                    EarliestRecordInDatabase = _db.Controller_Event_Log
+                        .OrderBy(s => s.Timestamp)
+                        .Select(s => (DateTime?)s.Timestamp)
+                        .FirstOrDefault(),
+                    LatestRecordInDatabase = _db.Controller_Event_Log
+                        .OrderByDescending(s => s.Timestamp)
+                        .Select(s => (DateTime?)s.Timestamp)
+                        .FirstOrDefault(),
+                    ClosestRecordBeforeRange = _db.Controller_Event_Log
+                        .Where(s => s.Timestamp < startTime)
+                        .OrderByDescending(s => s.Timestamp)
+                        .Select(s => (DateTime?)s.Timestamp)
+                        .FirstOrDefault(),
+                    ClosestRecordAfterRange = _db.Controller_Event_Log
+                        .Where(s => s.Timestamp >= endTime)
+                        .OrderBy(s => s.Timestamp)
+                        .Select(s => (DateTime?)s.Timestamp)
+                        .FirstOrDefault()
+                };
+            }
+            catch (Exception ex)
+            {
+                var logRepository = ApplicationEventRepositoryFactory.Create();
+                var e = new ApplicationEvent();
+                e.ApplicationName = "MOE.TMC";
+                e.Class = GetType().ToString();
+                e.Function = "GetArchiveDiagnostics";
+                e.SeverityLevel = ApplicationEvent.SeverityLevels.High;
+                e.Timestamp = DateTime.Now;
+                e.Description = ex.Message;
+                logRepository.Add(e);
+                throw;
+            }
+        }
+
         public List<Controller_Event_Log> GetEventsByEventCodesParam(string signalId, DateTime startTime,
             DateTime endTime, List<int> eventCodes, int param)
         {

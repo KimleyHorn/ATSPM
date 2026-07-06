@@ -150,6 +150,31 @@ namespace MOE.Common.Models.Repositories
             return _db.DatabaseArchiveExcludedSignals.Any(s => s.SignalId == signalId);
         }
 
+        public Signal GetLatestVersionOfSignalByIPAddress(string ipAddress, string signalId = null)
+        {
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                return null;
+            }
+
+            var normalizedIpAddress = ipAddress.Trim();
+
+            var matchingSignals = _db.Signals
+                .Where(signal => signal.VersionActionId != 3)
+                .Where(signal => signal.IPAddress == normalizedIpAddress);
+
+            if (!string.IsNullOrWhiteSpace(signalId))
+            {
+                matchingSignals = matchingSignals.Where(signal => signal.SignalID != signalId);
+            }
+
+            return matchingSignals
+                .GroupBy(signal => signal.SignalID)
+                .Select(group => group.OrderByDescending(signal => signal.Start).FirstOrDefault())
+                .OrderBy(signal => signal.SignalID)
+                .FirstOrDefault();
+        }
+
         public Signal CopySignalToNewVersion(Signal originalVersion, bool isImport = false, string user = "")
         {
             var newVersion = new Signal();
@@ -527,7 +552,8 @@ namespace MOE.Common.Models.Repositories
             ct.FTPDirectory,
             ct.ActiveFTP,
             ct.UserName,
-            ct.Password
+            ct.Password,
+            ct.PhysicalLocation
         FROM dbo.Signals s
         INNER JOIN dbo.ControllerTypes ct ON ct.ControllerTypeID = s.ControllerTypeID
         INNER JOIN (

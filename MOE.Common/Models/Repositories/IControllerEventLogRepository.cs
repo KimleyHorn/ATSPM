@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace MOE.Common.Models.Repositories
@@ -15,6 +15,7 @@ namespace MOE.Common.Models.Repositories
             DateTime startTime, DateTime endTime, List<int> eventCodes);
 
         List<string> GetSignalIdsInControllerEventLog(DateTime startTime, DateTime endTime);
+        ControllerEventLogArchiveDiagnostics GetArchiveDiagnostics(DateTime startTime, DateTime endTime);
 
         List<Controller_Event_Log> GetEventsByEventCodesParam(string signalId,
             DateTime startTime, DateTime endTime, List<int> eventCodes, int param);

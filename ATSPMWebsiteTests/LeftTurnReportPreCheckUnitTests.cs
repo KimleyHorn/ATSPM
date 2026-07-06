@@ -171,7 +171,7 @@ namespace ATSPMWebsiteTests
             throw new NotImplementedException();
         }
 
-        public Signal CopySignalToNewVersion(Signal originalVersion)
+        public Signal CopySignalToNewVersion(Signal originalVersion, bool isImport = false, string user = "")
         {
             throw new NotImplementedException();
         }
@@ -221,6 +221,11 @@ namespace ATSPMWebsiteTests
             throw new NotImplementedException();
         }
 
+        public Signal GetLatestVersionOfSignalByIPAddress(string ipAddress, string signalId = null)
+        {
+            throw new NotImplementedException();
+        }
+
         public string GetSignalDescription(string signalId)
         {
             throw new NotImplementedException();
@@ -270,6 +275,11 @@ namespace ATSPMWebsiteTests
         {
             throw new NotImplementedException();
         }
+
+        public IQueryable<Signal> GetLatestVersionOfAllSignalsAsQueryable()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class TestSignalRepositoryExistsReturnsFalse : MOE.Common.Models.Repositories.ISignalsRepository
@@ -289,7 +299,7 @@ namespace ATSPMWebsiteTests
             throw new NotImplementedException();
         }
 
-        public Signal CopySignalToNewVersion(Signal originalVersion)
+        public Signal CopySignalToNewVersion(Signal originalVersion, bool isImport = false, string user = "")
         {
             throw new NotImplementedException();
         }
@@ -339,6 +349,11 @@ namespace ATSPMWebsiteTests
             throw new NotImplementedException();
         }
 
+        public Signal GetLatestVersionOfSignalByIPAddress(string ipAddress, string signalId = null)
+        {
+            throw new NotImplementedException();
+        }
+
         public string GetSignalDescription(string signalId)
         {
             throw new NotImplementedException();
@@ -385,6 +400,11 @@ namespace ATSPMWebsiteTests
         }
 
         public void SetVersionToDeleted(int versionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IQueryable<Signal> GetLatestVersionOfAllSignalsAsQueryable()
         {
             throw new NotImplementedException();
         }

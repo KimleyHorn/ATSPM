@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Web.Mvc;
 using MOE.Common.Models;
 using MOE.Common.Models.Repositories;
@@ -117,6 +118,22 @@ namespace SPM.Controllers
                 });
             
             return Json(signals, JsonRequestBehavior.AllowGet);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin, Configuration")]
+        public JsonResult ValidateSignalIPAddress(string ipAddress, string signalID, int? versionID)
+        {
+            var duplicateSignal = _signalsRepository.GetLatestVersionOfSignalByIPAddress(ipAddress, signalID);
+
+            if (duplicateSignal == null)
+            {
+                return Json(true, JsonRequestBehavior.AllowGet);
+            }
+
+            return Json(
+                $"SignalIP already exists for SignalID {duplicateSignal.SignalID}.",
+                JsonRequestBehavior.AllowGet);
         }
 
         public ActionResult Index()
@@ -811,6 +828,7 @@ namespace SPM.Controllers
             {
                 ModelState.Clear();
                 signal = SetDetectionTypes(signal);
+                AddDuplicateIpAddressModelError(signal);
 
                 //var modelStateErrors = this.ModelState.Keys.SelectMany(key => this.ModelState[key].Errors);
 
@@ -833,9 +851,9 @@ namespace SPM.Controllers
                         }
                     }
                     
-                    return Content("Save Successful! " + DateTime.Now.ToString());
+                    return BuildActionMessageResponse("Save Successful! " + DateTime.Now.ToString(), false);
                 }
-                return Content("There was a validation error.");
+                return BuildActionMessageResponse(GetSignalValidationMessage(), true);
             }
 
             catch (ValidationException ex)
@@ -876,6 +894,56 @@ namespace SPM.Controllers
                 }
             }
             return signal;
+        }
+
+        private void AddDuplicateIpAddressModelError(Signal signal)
+        {
+            var duplicateSignal = _signalsRepository.GetLatestVersionOfSignalByIPAddress(signal?.IPAddress, signal?.SignalID);
+
+            if (duplicateSignal != null)
+            {
+                ModelState.AddModelError(
+                    nameof(signal.IPAddress),
+                    $"Duplicate IP address: {duplicateSignal.IPAddress} is already assigned to Signal {duplicateSignal.SignalID}. Please use a unique IP address before saving.");
+            }
+        }
+
+        private ActionResult BuildActionMessageResponse(string message, bool isError)
+        {
+            var encodedMessage = Server.HtmlEncode(message ?? string.Empty);
+            var cssClass = isError
+                ? "signal-action-message signal-action-message-error"
+                : "signal-action-message signal-action-message-success";
+
+            return Content($"<span class=\"{cssClass}\">{encodedMessage}</span>");
+        }
+
+        private string GetSignalValidationMessage()
+        {
+            var errors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Distinct()
+                .ToList();
+
+            var duplicateError = errors.FirstOrDefault(error =>
+                error.IndexOf("duplicate", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                error.IndexOf("already exists", StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (!string.IsNullOrWhiteSpace(duplicateError))
+            {
+                return duplicateError;
+            }
+
+            if (!errors.Any())
+            {
+                return "Unable to save this signal because validation failed. Please review the highlighted fields and try again.";
+            }
+
+            var builder = new StringBuilder("Unable to save this signal: ");
+            builder.Append(string.Join(" ", errors));
+            return builder.ToString();
         }
 
         private void AddSelectListsToViewBag(Signal signal)

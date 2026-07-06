@@ -17,16 +17,25 @@ namespace MOE.Common.Models
             :base("SPM")
             //: base("name=SPM")
         {
-            
-
-            Database.SetInitializer<SPM>(new CreateDatabaseIfNotExists<SPM>());
-            Database.CommandTimeout = 900;
+            ConfigureDatabase(new CustomInitializer());
         }
 
         public SPM(string ConnectionString) : base(ConnectionString)
         {
-            Database.SetInitializer(new CustomInitializer());
+            ConfigureDatabase(new CustomInitializer());
             Database.Initialize(true);
+        }
+
+        private SPM(string connectionString, IDatabaseInitializer<SPM> initializer)
+            : base(connectionString)
+        {
+            ConfigureDatabase(initializer);
+        }
+
+        private void ConfigureDatabase(IDatabaseInitializer<SPM> initializer)
+        {
+            Database.SetInitializer(initializer);
+            Database.CommandTimeout = 900;
         }
 
 
@@ -99,6 +108,76 @@ namespace MOE.Common.Models
         public static SPM Create()
         {
             return new SPM();
+        }
+
+        public static DatabaseMigrationStatus GetDatabaseMigrationStatus(string connectionString)
+        {
+            var status = new DatabaseMigrationStatus();
+            var cfg = BuildMigrationConfiguration(connectionString);
+            var dbMigrator = new DbMigrator(cfg);
+
+            status.AppliedMigrations = dbMigrator.GetDatabaseMigrations().ToList();
+            status.PendingMigrations = dbMigrator.GetPendingMigrations().ToList();
+            status.LocalMigrations = dbMigrator.GetLocalMigrations().ToList();
+            status.LastAppliedMigration = status.AppliedMigrations.LastOrDefault();
+            status.LastKnownMigration = status.LocalMigrations.LastOrDefault();
+
+            var sqlBuilder = new global::System.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+            status.DataSource = sqlBuilder.DataSource;
+            status.DatabaseName = sqlBuilder.InitialCatalog;
+
+            using (var context = new SPM(connectionString, null))
+            {
+                status.IsModelCompatible = context.Database.CompatibleWithModel(false);
+            }
+
+            if (status.PendingMigrations.Any())
+            {
+                status.Summary =
+                    $"Database '{status.DatabaseName}' on '{status.DataSource}' is behind the codebase. Pending migrations: {string.Join(", ", status.PendingMigrations)}";
+            }
+            else if (!status.IsModelCompatible)
+            {
+                status.Summary =
+                    $"Database '{status.DatabaseName}' on '{status.DataSource}' does not match the current EF model, but there are no pending checked-in migrations. A new migration likely needs to be added in MOE.Common before updating the database.";
+            }
+            else
+            {
+                status.Summary =
+                    $"Database '{status.DatabaseName}' on '{status.DataSource}' matches the current EF migration state.";
+            }
+
+            return status;
+        }
+
+        public static DatabaseMigrationStatus EnsureDatabaseIsCurrent(string connectionString)
+        {
+            var status = GetDatabaseMigrationStatus(connectionString);
+            if (status.PendingMigrations.Any())
+            {
+                var cfg = BuildMigrationConfiguration(connectionString);
+                var dbMigrator = new DbMigrator(cfg);
+                dbMigrator.Update();
+                status = GetDatabaseMigrationStatus(connectionString);
+                status.MigrationsApplied = true;
+            }
+
+            if (!status.IsModelCompatible)
+            {
+                throw new global::System.InvalidOperationException(
+                    $"{status.Summary} Last applied migration: {status.LastAppliedMigration ?? "(none)"}. Last known migration: {status.LastKnownMigration ?? "(none)"}.");
+            }
+
+            return status;
+        }
+
+        private static Configuration BuildMigrationConfiguration(string connectionString)
+        {
+            var cfg = new Configuration
+            {
+                TargetDatabase = new DbConnectionInfo(connectionString, "System.Data.SqlClient")
+            };
+            return cfg;
         }
 
 
@@ -202,19 +281,31 @@ namespace MOE.Common.Models
         // by copying the connection string FROM the context
         public void InitializeDatabase(SPM context)
         {
-            
-            Configuration cfg = new Configuration(); // migration configuration class
-            cfg.TargetDatabase = new DbConnectionInfo(context.Database.Connection.ConnectionString, "System.Data.SqlClient");
-
-          
-            DbMigrator dbMigrator = new DbMigrator(cfg);
-            if(dbMigrator.GetPendingMigrations().Any())
-                // this will call the parameterless constructor of the datacontext
-                // but the connection string from above will be then set on in
-                dbMigrator.Update();
+            var status = SPM.EnsureDatabaseIsCurrent(context.Database.Connection.ConnectionString);
+            if (!status.IsModelCompatible)
+            {
+                throw new global::System.InvalidOperationException(status.Summary);
+            }
         }
 
         #endregion
+    }
+
+    public class DatabaseMigrationStatus
+    {
+        public string DataSource { get; set; }
+        public string DatabaseName { get; set; }
+        public string LastAppliedMigration { get; set; }
+        public string LastKnownMigration { get; set; }
+        public bool IsModelCompatible { get; set; }
+        public bool MigrationsApplied { get; set; }
+        public string Summary { get; set; }
+        public global::System.Collections.Generic.List<string> AppliedMigrations { get; set; } =
+            new global::System.Collections.Generic.List<string>();
+        public global::System.Collections.Generic.List<string> PendingMigrations { get; set; } =
+            new global::System.Collections.Generic.List<string>();
+        public global::System.Collections.Generic.List<string> LocalMigrations { get; set; } =
+            new global::System.Collections.Generic.List<string>();
     }
 
 }
