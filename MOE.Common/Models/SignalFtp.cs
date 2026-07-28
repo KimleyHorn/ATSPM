@@ -1301,74 +1301,77 @@ namespace MOE.Common.Business
             }
         }
 
-        public void GetCubicFilesAsync(string filePath)
+        public void GetCubicFilesAsync()
         {
             var errorRepository = ApplicationEventRepositoryFactory.Create();
-            string username = null;
-            string password = null;
+            if (Signal.ControllerType == null)
+            {
+                var message = Signal.SignalID + " @ " + Signal.IPAddress +
+                              " - Missing controller type; SFTP credentials cannot be read.";
+                Console.WriteLine(message);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsync",
+                    ApplicationEvent.SeverityLevels.Medium, message);
+                return;
+            }
 
-            try
+            string username = Signal.ControllerType.UserName;
+            string password = Signal.ControllerType.Password;
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                // Create a new StreamReader instance with the file path
-                using (var reader = new StreamReader(filePath))
-                {
-                    // Read the first two lines of the file and store them as the username and password
-                    username = reader.ReadLine();
-                    password = reader.ReadLine();
-                }
-            }
-            catch (FileNotFoundException ex)
-            {
-                Console.WriteLine("Error: File not found.");
-                Console.WriteLine(ex.Message);
-            }
-            catch (IOException ex)
-            {
-                Console.WriteLine("Error: An I/O error occurred.");
-                Console.WriteLine(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("An unexpected error occurred.");
-                Console.WriteLine(ex.Message);
+                var message = Signal.SignalID + " @ " + Signal.IPAddress +
+                              " - Missing SFTP username or password on controller type.";
+                Console.WriteLine(message);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsync",
+                    ApplicationEvent.SeverityLevels.Medium, message);
+                return;
             }
 
             // run the sftp fetch operation async
             Thread sftpFetch = new Thread(delegate()
             {
-                // to-do: replace with common data access to access signal IP in batch from ATSPM DB
                 string host = Signal.IPAddress;
-                //string username = Signal.ControllerType.UserName;
-                //string password = Signal.ControllerType.Password;
                 string remoteDirectory = Signal.ControllerType.FTPDirectory;
                 string localDirectory = SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\";
-                using (SftpClient sftp = new SftpClient(host, username, password))
+
+                try
                 {
-                    try
+                    using (SftpClient sftp = new SftpClient(CreatePasswordConnectionInfo(host, username, password)))
                     {
                         Console.WriteLine($"Trying to connect to {Signal.SignalID}");
+                        if (SignalFtpOptions.UseLegacySshAlgorithms)
+                        {
+                            Console.WriteLine("Using legacy SSH algorithms for " + Signal.SignalID +
+                                              ": diffie-hellman-group1-sha1, ssh-rsa, aes128-cbc, hmac-sha1");
+                        }
                         sftp.Connect();
                         Console.WriteLine($"Connected to {Signal.SignalID}");
 
                         var files = sftp.ListDirectory(remoteDirectory);
-                        List<ISftpFile> cubicFiles = files.Where(x =>
-                            x.FullName.Contains(".dat") || x.FullName.Contains(".datZ") ||
-                            x.FullName.Contains(".gz")).ToList();
+                        List<ISftpFile> cubicFiles = files
+                            .Where(IsCubicSftpLogFile)
+                            .ToList();
 
                         //download current files, remove files from remote directory
                         TransferCubicFiles(cubicFiles, localDirectory, sftp);
                         sftp.Disconnect();
-
                     }
-                    catch (Exception ex)
-                    {
-                        //to-do: add some custom error handling as fit 
-                        Console.WriteLine(ex.Message);
-                        errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsync",
-                            ApplicationEvent.SeverityLevels.Medium,
-                            Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                }
+                catch (Exception ex)
+                {
+                    var errorMessage = BuildSftpErrorMessage(
+                        "Password SFTP transfer",
+                        host,
+                        username,
+                        "Password",
+                        remoteDirectory,
+                        localDirectory,
+                        ex);
+                    Console.WriteLine(errorMessage);
+                    errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsync",
+                        ApplicationEvent.SeverityLevels.Medium,
+                        errorMessage);
 
-                    }
                 }
             });
             try
@@ -1377,10 +1380,23 @@ namespace MOE.Common.Business
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine(BuildSftpErrorMessage(
+                    "Starting password SFTP worker thread",
+                    Signal.IPAddress,
+                    username,
+                    "Password",
+                    Signal.ControllerType.FTPDirectory,
+                    SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\",
+                    e));
                 throw;
             }
 
+        }
+
+        public void GetCubicFilesAsync(string filePath)
+        {
+            // Retained for older callers; credentials now always come from the controller type.
+            GetCubicFilesAsync();
         }
 
 
@@ -1389,6 +1405,26 @@ namespace MOE.Common.Business
         {
             var errorRepository = ApplicationEventRepositoryFactory.Create();
             var PPKLocation = filePath;
+            if (Signal.ControllerType == null)
+            {
+                var message = Signal.SignalID + " @ " + Signal.IPAddress +
+                              " - Missing controller type; SFTP credentials cannot be read.";
+                Console.WriteLine(message);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsyncPpk",
+                    ApplicationEvent.SeverityLevels.Medium, message);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(Signal.ControllerType.UserName) ||
+                string.IsNullOrWhiteSpace(PPKLocation))
+            {
+                var message = Signal.SignalID + " @ " + Signal.IPAddress +
+                              " - Missing SFTP username or private key path.";
+                Console.WriteLine(message);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsyncPpk",
+                    ApplicationEvent.SeverityLevels.Medium, message);
+                return;
+            }
 
             // run the sftp fetch operation async
             Thread sftpFetch = new Thread(delegate()
@@ -1505,7 +1541,18 @@ namespace MOE.Common.Business
                                 }
                                 catch (Exception ex)
                                 {
-                                    Console.WriteLine("Failed to delete {0}: {1}", remoteFilePath, ex.Message);
+                                    var deleteErrorMessage = BuildSftpErrorMessage(
+                                        "Deleting transferred SFTP file " + remoteFilePath,
+                                        host,
+                                        UserName,
+                                        "Private key",
+                                        remoteFilePath,
+                                        localDirectory,
+                                        ex);
+                                    Console.WriteLine(deleteErrorMessage);
+                                    errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "DeleteTransferredFile",
+                                        ApplicationEvent.SeverityLevels.Medium,
+                                        deleteErrorMessage);
                                 }
                             }
                         }
@@ -1514,8 +1561,18 @@ namespace MOE.Common.Business
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
-                    throw;
+                    var errorMessage = BuildSftpErrorMessage(
+                        "Private key SFTP transfer",
+                        host,
+                        UserName,
+                        "Private key",
+                        remoteDirectory,
+                        localDirectory,
+                        e);
+                    Console.WriteLine(errorMessage);
+                    errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "GetCubicFilesAsyncPpk",
+                        ApplicationEvent.SeverityLevels.Medium,
+                        errorMessage);
 
                 }
             });
@@ -1526,20 +1583,183 @@ namespace MOE.Common.Business
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine(BuildSftpErrorMessage(
+                    "Starting private key SFTP worker thread",
+                    Signal.IPAddress,
+                    Signal.ControllerType.UserName,
+                    "Private key",
+                    Signal.ControllerType.FTPDirectory,
+                    SignalFtpOptions.LocalDirectory + Signal.SignalID + @"\",
+                    e));
                 throw;
 
             }
         }
 
+        private ConnectionInfo CreatePasswordConnectionInfo(string host, string username, string password)
+        {
+            var connectionInfo = new PasswordConnectionInfo(host, 22, username, password)
+            {
+                Timeout = TimeSpan.FromSeconds(SignalFtpOptions.FtpConectionTimeoutInSeconds)
+            };
+
+            if (SignalFtpOptions.UseLegacySshAlgorithms)
+            {
+                UseLegacyDropbearAlgorithms(connectionInfo);
+            }
+
+            return connectionInfo;
+        }
+
+        private static void UseLegacyDropbearAlgorithms(ConnectionInfo connectionInfo)
+        {
+            KeepOnly(connectionInfo.KeyExchangeAlgorithms, "diffie-hellman-group1-sha1");
+            KeepOnly(connectionInfo.HostKeyAlgorithms, "ssh-rsa");
+            KeepOnly(connectionInfo.Encryptions, "aes128-cbc");
+            KeepOnly(connectionInfo.HmacAlgorithms, "hmac-sha1");
+        }
+
+        private static void KeepOnly<TValue>(IDictionary<string, TValue> algorithms, params string[] algorithmNames)
+        {
+            var algorithmsToKeep = algorithmNames
+                .Where(algorithms.ContainsKey)
+                .Select(algorithmName => new KeyValuePair<string, TValue>(algorithmName, algorithms[algorithmName]))
+                .ToList();
+
+            algorithms.Clear();
+
+            foreach (var algorithm in algorithmsToKeep)
+            {
+                algorithms.Add(algorithm.Key, algorithm.Value);
+            }
+        }
+
+        private string BuildSftpErrorMessage(
+            string operation,
+            string host,
+            string username,
+            string authenticationMethod,
+            string remoteDirectory,
+            string localDirectory,
+            Exception ex)
+        {
+            var message = new StringBuilder();
+            message.AppendLine(operation + " failed.");
+            message.AppendLine("Signal ID: " + SafeValue(Signal?.SignalID));
+            message.AppendLine("Signal Name: " + SafeValue(Signal?.PrimaryName) + " / " + SafeValue(Signal?.SecondaryName));
+            message.AppendLine("IP Address: " + SafeValue(host));
+            message.AppendLine("SFTP Port: 22");
+            message.AppendLine("Controller Type ID: " + (Signal == null ? "(unknown)" : Signal.ControllerTypeID.ToString()));
+            message.AppendLine("Controller Type: " + SafeValue(Signal?.ControllerType?.Description));
+            message.AppendLine("Remote Directory: " + SafeValue(remoteDirectory));
+            message.AppendLine("Local Directory: " + SafeValue(localDirectory));
+            message.AppendLine("Authentication Method: " + SafeValue(authenticationMethod));
+            message.AppendLine("Username: " + SafeValue(username));
+            message.AppendLine("Password Configured: " + YesNo(!string.IsNullOrWhiteSpace(Signal?.ControllerType?.Password)));
+            message.AppendLine("PPK Configured: " + YesNo(!string.IsNullOrWhiteSpace(SignalFtpOptions?.PpkLocation)));
+            message.AppendLine("Delete After FTP: " + YesNo(SignalFtpOptions?.DeleteAfterFtp == true));
+            message.AppendLine("Skip Current Log: " + YesNo(SignalFtpOptions?.SkipCurrentLog == true));
+            message.AppendLine("Rename Duplicate Files: " + YesNo(SignalFtpOptions?.RenameDuplicateFiles == true));
+            message.AppendLine("Legacy SSH Algorithms: " + YesNo(SignalFtpOptions?.UseLegacySshAlgorithms == true));
+            message.AppendLine("Max Files Per Transfer: " +
+                               (SignalFtpOptions == null
+                                   ? "(unknown)"
+                                   : SignalFtpOptions.MaximumNumberOfFilesTransferAtOneTime.ToString()));
+            message.AppendLine("Exception Details:");
+            message.Append(FormatExceptionDetails(ex));
+            return message.ToString();
+        }
+
+        private static string FormatExceptionDetails(Exception ex)
+        {
+            var message = new StringBuilder();
+            AppendExceptionDetails(message, ex, 0);
+            return message.ToString();
+        }
+
+        private static void AppendExceptionDetails(StringBuilder message, Exception ex, int depth)
+        {
+            if (ex == null)
+            {
+                return;
+            }
+
+            message.AppendLine(depth == 0
+                ? "Exception:"
+                : "Inner Exception " + depth + ":");
+            message.AppendLine("Type: " + ex.GetType().FullName);
+            message.AppendLine("Message: " + ex.Message);
+
+            if (!string.IsNullOrWhiteSpace(ex.StackTrace))
+            {
+                message.AppendLine("Stack Trace:");
+                message.AppendLine(ex.StackTrace);
+            }
+
+            var aggregateException = ex as AggregateException;
+            if (aggregateException != null)
+            {
+                var innerDepth = depth + 1;
+                foreach (var innerException in aggregateException.Flatten().InnerExceptions)
+                {
+                    AppendExceptionDetails(message, innerException, innerDepth);
+                    innerDepth++;
+                }
+
+                return;
+            }
+
+            AppendExceptionDetails(message, ex.InnerException, depth + 1);
+        }
+
+        private static string SafeValue(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "(blank)" : value;
+        }
+
+        private static string YesNo(bool value)
+        {
+            return value ? "Yes" : "No";
+        }
+
+        private static bool IsCubicSftpLogFile(ISftpFile file)
+        {
+            if (file == null || file.IsDirectory)
+            {
+                return false;
+            }
+
+            var fileName = file.Name ?? file.FullName;
+            return fileName.EndsWith(".dat", StringComparison.OrdinalIgnoreCase) ||
+                   fileName.EndsWith(".datZ", StringComparison.OrdinalIgnoreCase) ||
+                   fileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
+                   fileName.EndsWith(".gzip", StringComparison.OrdinalIgnoreCase);
+        }
+
         private void TransferCubicFiles(List<ISftpFile> receivedFiles, string directory, SftpClient client)
         {
-            //var errorRepository = ApplicationEventRepositoryFactory.Create();
+            var errorRepository = ApplicationEventRepositoryFactory.Create();
             try
             {
-                var finalFile = receivedFiles.OrderByDescending(x => x.FullName);
-                var mostRecentFile = finalFile.First();
-                foreach (var ret in receivedFiles)
+                var filesToTransfer = (receivedFiles ?? new List<ISftpFile>())
+                    .Where(x => x != null)
+                    .OrderBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (!filesToTransfer.Any())
+                {
+                    Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress +
+                                      " - No SFTP log files found to transfer.");
+                    return;
+                }
+
+                Directory.CreateDirectory(directory);
+
+                var mostRecentFile = filesToTransfer
+                    .OrderByDescending(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                    .First();
+
+                foreach (var ret in filesToTransfer)
                 {
                     // FullName will include full path in sFTP
                     // Name will just include the file name without path
@@ -1570,19 +1790,33 @@ namespace MOE.Common.Business
             }
             catch (FtpException ex)
             {
-                //capture if there is any sFTP related exception
-                //errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
-                //    ApplicationEvent.SeverityLevels.Medium,
-                //    Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                var errorMessage = BuildSftpErrorMessage(
+                    "Transferring SFTP files",
+                    Signal.IPAddress,
+                    Signal.ControllerType?.UserName,
+                    SignalFtpOptions.RequiresPpk ? "Private key" : "Password",
+                    Signal.ControllerType?.FTPDirectory,
+                    directory,
+                    ex);
+                Console.WriteLine(errorMessage);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
+                    ApplicationEvent.SeverityLevels.Medium,
+                    errorMessage);
             }
             catch (IOException ex)
             {
-                //capture if there is any file IO exception
-                //errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
-                //    ApplicationEvent.SeverityLevels.Medium,
-                //    Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
-                Console.WriteLine(Signal.SignalID + " @ " + Signal.IPAddress + " - " + ex.Message);
+                var errorMessage = BuildSftpErrorMessage(
+                    "Writing transferred SFTP files",
+                    Signal.IPAddress,
+                    Signal.ControllerType?.UserName,
+                    SignalFtpOptions.RequiresPpk ? "Private key" : "Password",
+                    Signal.ControllerType?.FTPDirectory,
+                    directory,
+                    ex);
+                Console.WriteLine(errorMessage);
+                errorRepository.QuickAdd("sFTPFromControllers", "SignalFtp", "TransferCubicFiles",
+                    ApplicationEvent.SeverityLevels.Medium,
+                    errorMessage);
             }
         }
     }
@@ -1606,7 +1840,8 @@ namespace MOE.Common.Business
             int regionControllerType,
             string sshFingerprint,
             bool isGzip,
-            bool usePhysicalLocation
+            bool usePhysicalLocation,
+            bool useLegacySshAlgorithms = false
             )
         {
             SnmpTimeout = snmpTimeout;
@@ -1626,6 +1861,7 @@ namespace MOE.Common.Business
             SshFingerprint = sshFingerprint;
             IsGzip = isGzip;
             UsePhysicalLocation = usePhysicalLocation;
+            UseLegacySshAlgorithms = useLegacySshAlgorithms;
         }
 
         public int SnmpTimeout { get; set; }
@@ -1645,6 +1881,7 @@ namespace MOE.Common.Business
         public string SshFingerprint { get; set; }
         public bool IsGzip { get; set; }
         public bool UsePhysicalLocation { get; set; }
+        public bool UseLegacySshAlgorithms { get; set; }
 
     }
 
