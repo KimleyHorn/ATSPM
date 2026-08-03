@@ -471,8 +471,12 @@ namespace ParquetArchiver
             var retVal = new List<DateTime>();
             foreach (var date in dateRange)
             {
-                var storageObject = storage.ListObjects(GoogleBucketName).Where(x => x.Id.StartsWith($"{GoogleBucketName}/{FolderName}/{FilePathPrefix}={date.Date:yyyy-MM-dd}")).ToList();
-                if (!storageObject.Any())
+                // Filter server-side by prefix and short-circuit on the first hit.
+                // Previously this listed the ENTIRE bucket per day and filtered in memory,
+                // which hangs for minutes on large buckets.
+                var prefix = $"{FolderName}/{FilePathPrefix}={date.Date:yyyy-MM-dd}";
+                var exists = storage.ListObjects(GoogleBucketName, prefix).Any();
+                if (!exists)
                 {
                     retVal.Add(date);
                     _missingDaysStr += $"{date.ToLongDateString()}\n";
