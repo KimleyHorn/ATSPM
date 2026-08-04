@@ -63,32 +63,20 @@ namespace SCPFromD4Controllers
                 var maxThreads = Convert.ToInt32(ConfigurationManager.AppSettings["MaxThreads"]);
                 Log.Information("Found {Count} signal(s) to process.", signalList.Count);
 
-                foreach (var signal in signalList)
+                var options = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
+
+                Parallel.ForEach(signalList, options, signal =>
                 {
                     try
                     {
-
-                        var options = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
-
-                        Parallel.ForEach(signalList, options, signal =>
-                        {
-                            try
-                            {
-                                EnsureLocalDirectory(signalFtpOptions.LocalDirectory, signal.SignalID);
-                                GetD4Files(signal, signalFtpOptions, connectionString, physicalLocationFallbacks);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error(ex, "Error at highest level for signal {SignalID}.", signal.SignalID);
-                            }
-                        });
-
+                        EnsureLocalDirectory(signalFtpOptions.LocalDirectory, signal.SignalID);
+                        GetD4Files(signal, signalFtpOptions, connectionString, physicalLocationFallbacks);
                     }
                     catch (Exception ex)
                     {
-                        Log.Error(ex, "Signal {SignalID}: Error in PPK path.", signal.SignalID);
+                        Log.Error(ex, "Error at highest level for signal {SignalID}.", signal.SignalID);
                     }
-                }
+                });
 
 
                 Log.Information("Processing complete.");
@@ -156,6 +144,7 @@ namespace SCPFromD4Controllers
                     s.JurisdictionId,
                     s.Pedsare1to1,
                     s.ConnType,
+                    ct.ControllerTypeID AS ControllerTypeSplit,
                     ct.ControllerTypeID,
                     ct.Description,
                     ct.SNMPPort,
@@ -163,9 +152,17 @@ namespace SCPFromD4Controllers
                     ct.ActiveFTP,
                     ct.UserName,
                     ct.Password,
-                    ct.PhysicalLocation
+                    ct.PhysicalLocation,
+                    j.Id AS JurisdictionSplit,
+                    j.Id,
+                    j.JurisdictionName,
+                    j.MPO,
+                    j.CountyParish,
+                    j.OtherPartners,
+                    j.JurisdictionKey
                 FROM dbo.Signals s
                 INNER JOIN dbo.ControllerTypes ct ON ct.ControllerTypeID = s.ControllerTypeID
+                LEFT JOIN dbo.Jurisdictions j ON j.Id = s.JurisdictionId
                 INNER JOIN (
                     SELECT SignalID, MAX(Start) AS LatestStart
                     FROM dbo.Signals
@@ -174,18 +171,20 @@ namespace SCPFromD4Controllers
                 ) latest ON s.SignalID = latest.SignalID
                        AND s.Start = latest.LatestStart
                 WHERE s.VersionActionId != 3
-                  AND s.ControllerTypeID = @RegionalControllerType";
+                  AND s.ControllerTypeID = @RegionalControllerType
+                ORDER BY j.JurisdictionKey, s.SignalID";
 
             using var db = new SqlConnection(connectionString);
-            return db.Query<Signal, ControllerType, Signal>(
+            return db.Query<Signal, ControllerType, Jurisdiction, Signal>(
                 sql,
-                (signal, controllerType) =>
+                (signal, controllerType, jurisdiction) =>
                 {
                     signal.ControllerType = controllerType;
+                    signal.Jurisdiction = jurisdiction;
                     return signal;
                 },
                 new { RegionalControllerType = regionalControllerType },
-                splitOn: "ControllerTypeID"
+                splitOn: "ControllerTypeSplit,JurisdictionSplit"
             ).ToList();
         }
 
@@ -415,13 +414,13 @@ namespace SCPFromD4Controllers
 
             if (connType.Equals("sftp", StringComparison.OrdinalIgnoreCase))
             {
-                string ppkLocation = options.PpkLocation;
-
                 if (options.RequiresPpk)
                 {
+                    string? ppkLocation = GetPpkLocation(signal, options.PpkLocation);
+
                     if (string.IsNullOrWhiteSpace(ppkLocation))
                     {
-                        Log.Error("PPK is required but no PPK path is configured. Skipping signal {SignalID}.",
+                        Log.Error("PPK is required but no jurisdiction key or fallback PPK path is configured. Skipping signal {SignalID}.",
                             signal.SignalID);
                         return;
                     }
@@ -445,6 +444,38 @@ namespace SCPFromD4Controllers
             {
                 FetchViaFtp(signal, options, host, username, password, remoteDirectories, localDirectory);
             }
+        }
+
+        private static string? GetPpkLocation(Signal signal, string configuredPpkLocation)
+        {
+            var jurisdictionKey = signal.Jurisdiction?.JurisdictionKey;
+
+            if (string.IsNullOrWhiteSpace(jurisdictionKey))
+            {
+                Log.Warning(
+                    "Signal {SignalID}: Jurisdiction {JurisdictionId} has no JurisdictionKey; using configured fallback PPK path.",
+                    signal.SignalID, signal.JurisdictionId);
+                return string.IsNullOrWhiteSpace(configuredPpkLocation) ? null : configuredPpkLocation;
+            }
+
+            var trimmedKey = jurisdictionKey.Trim();
+
+            if (Path.IsPathRooted(trimmedKey))
+                return trimmedKey;
+
+            if (string.IsNullOrWhiteSpace(configuredPpkLocation))
+                return trimmedKey;
+
+            var configuredLocation = configuredPpkLocation.Trim();
+            var baseDirectory = Directory.Exists(configuredLocation)
+                || configuredLocation.EndsWith(Path.DirectorySeparatorChar.ToString())
+                || configuredLocation.EndsWith(Path.AltDirectorySeparatorChar.ToString())
+                    ? configuredLocation
+                    : Path.GetDirectoryName(configuredLocation);
+
+            return string.IsNullOrWhiteSpace(baseDirectory)
+                ? trimmedKey
+                : Path.Combine(baseDirectory, trimmedKey);
         }
 
         private static IReadOnlyList<string> GetRemoteDirectories(
