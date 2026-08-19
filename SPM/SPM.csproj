@@ -1038,6 +1038,7 @@
     <Content Include="Views\DefaultCharts\TimingAndActuationsOptions.cshtml" />
     <Content Include="Views\WatchdogExclusions\WatchdogExclusionsList.cshtml" />
     <Content Include="Views\Signals\SignalMultiSelect.cshtml" />
+    <Content Include="Web.config" />
     <None Include="Web.Debug.config">
       <DependentUpon>*.config</DependentUpon>
     </None>
