@@ -306,6 +306,14 @@ namespace SPM.Controllers
             detector.DetectorComments = new List<DetectorComment>();
             detector.DateAdded = DateTime.Now;
             detector.DetChannel = _detectorRepository.GetMaximumDetectorChannel(approach.VersionID) + 1;
+            if (!IsUsableSignalId(signalID))
+            {
+                signalID = approach.SignalID;
+            }
+            if (!IsUsableSignalId(signalID))
+            {
+                throw new Exception("Cannot add a detector: this signal has no valid Signal ID.");
+            }
             detector.DetectorID = signalID + detector.DetChannel.ToString("D2");
             detector = _detectorRepository.Add(detector);
             detector.Approach = approach;
@@ -870,13 +878,26 @@ namespace SPM.Controllers
         {
             if (signal.Approaches != null)
             {
+                // Approach.SignalID is a denormalized copy of the signal's ID.  When it is missing or
+                // holds the literal text "null" every detector under it was being rewritten as
+                // "null02", "null24", etc.  The signal being saved is the authority, so use it and
+                // repair the approach on the way through.  If it is unusable, leave the existing
+                // DetectorIDs alone rather than replacing them with garbage.
+                string signalId = IsUsableSignalId(signal.SignalID) ? signal.SignalID : null;
                 foreach (Approach a in signal.Approaches)
                 {
+                    if (signalId != null)
+                    {
+                        a.SignalID = signalId;
+                    }
                     if (a.Detectors != null)
                     {
                         foreach (Detector gd in a.Detectors)
                         {
-                            gd.DetectorID = a.SignalID + gd.DetChannel.ToString("D2");
+                            if (signalId != null)
+                            {
+                                gd.DetectorID = signalId + gd.DetChannel.ToString("D2");
+                            }
                             if (gd.DetectionTypeIDs == null)
                             {
                                 gd.DetectionTypeIDs = new List<int>();
@@ -893,6 +914,12 @@ namespace SPM.Controllers
                 }
             }
             return signal;
+        }
+
+        private static bool IsUsableSignalId(string signalId)
+        {
+            return !string.IsNullOrWhiteSpace(signalId)
+                   && !signalId.Equals("null", StringComparison.OrdinalIgnoreCase);
         }
 
         private void AddSelectListsToViewBag(Signal signal)
