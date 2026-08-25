@@ -68,7 +68,9 @@ namespace MOE.Common.Business.Parquet
                     Class = "ParquetArchive",
                     Function = "GetDataFromArchive",
                     SeverityLevel = ApplicationEvent.SeverityLevels.High,
-                    Description = ex.Message,
+                    Description =
+                        $"StorageLocation={Destination}, Bucket={GoogleBucketName}, Path={FolderName}{FilePathPrefix}=, " +
+                        $"Signal={signalId}, {startTime:yyyy-MM-dd HH:mm} to {endTime:yyyy-MM-dd HH:mm}{Environment.NewLine}{ex}",
                     Timestamp = DateTime.Now
                 };
                 logRepository.Add(e);

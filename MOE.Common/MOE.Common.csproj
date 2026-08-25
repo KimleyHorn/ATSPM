@@ -715,7 +715,10 @@
     <Compile Include="Migrations\202606222144568_AddPhysicalLocationToControllerType.Designer.cs">
       <DependentUpon>202606222144568_AddPhysicalLocationToControllerType.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\202608031830000_AddJurisdictionKey.cs" />
+    <Compile Include="Migrations\202608251957400_AddJurisdictionKey.cs" />
+    <Compile Include="Migrations\202608251957400_AddJurisdictionKey.Designer.cs">
+      <DependentUpon>202608251957400_AddJurisdictionKey.cs</DependentUpon>
+    </Compile>
     <Compile Include="Models\Area.cs" />
     <Compile Include="Data\MOE.cs">
       <DependentUpon>MOE.xsd</DependentUpon>
@@ -1414,6 +1417,9 @@
       <DependentUpon>202606222144568_AddPhysicalLocationToControllerType.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202608031830000_AddJurisdictionKey.sql" />
+    <EmbeddedResource Include="Migrations\202608251957400_AddJurisdictionKey.resx">
+      <DependentUpon>202608251957400_AddJurisdictionKey.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Migrations\CustomStuffForExistingUpgrade.txt" />
     <EmbeddedResource Include="Migrations\FillDetectorTypeMetricTypesTable.SQL" />
     <None Include="ClassDiagram1.cd" />
