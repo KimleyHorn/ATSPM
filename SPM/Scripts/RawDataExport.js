@@ -25,10 +25,13 @@ function GetRecordCount() {
             404: function (content) { alert('cannot find resource'); },
             500: function (content) { alert(content.responseText); }
         },
+        // One count at a time: a long date range can take minutes, and repeat clicks stack up on the server.
         beforeSend: function () {
+            $("#CheckRecordCount").prop("disabled", true);
             StartReportSpinner();
         },
         complete: function () {
+            $("#CheckRecordCount").prop("disabled", false);
             StopReportSpinner();
         },
         error: function (req, status, errorObj) {
