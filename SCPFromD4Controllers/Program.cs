@@ -171,6 +171,7 @@ namespace SCPFromD4Controllers
                 ) latest ON s.SignalID = latest.SignalID
                        AND s.Start = latest.LatestStart
                 WHERE s.VersionActionId != 3
+                  AND s.Enabled = 1
                   AND s.ControllerTypeID = @RegionalControllerType
                 ORDER BY j.JurisdictionKey, s.SignalID";
 
