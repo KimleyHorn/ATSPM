@@ -139,7 +139,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="*.config">
+    <None Include="*.config" Exclude="Web.config">
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config">
@@ -147,6 +147,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Web.config" />
     <Content Include="MOEWcfServiceLibrary.LinkPivotService.svc">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

@@ -28,6 +28,10 @@ namespace MOE.Common.Models
         [Display(Name = "Other Partners")]
         public string OtherPartners { get; set; }
 
+        [StringLength(255)]
+        [Display(Name = "Jurisdiction Key")]
+        public string JurisdictionKey { get; set; }
+
 
         [Display(Name = "Signal")]
         [DataMember]

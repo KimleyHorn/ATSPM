@@ -229,6 +229,48 @@ each must be rebuilt with `ON ps_controller_event_log_daily(Timestamp)`
 and have `Timestamp` somewhere in the key. Unaligned indexes will make
 `SWITCH` and `TRUNCATE WITH (PARTITIONS())` fail with error 7733.
 
+### Fresh database — table doesn't exist yet
+
+When deploying on a brand-new ATSPM database where `dbo.Controller_Event_Log`
+hasn't been created yet (or exists as an empty heap with no indexes), use
+this sequence instead — create the table directly on the partition scheme,
+and create the indexes without `DROP_EXISTING = ON`:
+
+```sql
+USE MOE;
+GO
+
+CREATE TABLE dbo.Controller_Event_Log
+(
+    SignalID    nvarchar(10) NOT NULL,
+    Timestamp   datetime     NOT NULL,
+    EventCode   int          NOT NULL,
+    EventParam  int          NOT NULL
+) ON ps_controller_event_log_daily(Timestamp);
+GO
+
+CREATE CLUSTERED COLUMNSTORE INDEX CCI_Controller_Event_Log
+ON dbo.Controller_Event_Log
+ON ps_controller_event_log_daily(Timestamp);
+GO
+
+CREATE NONCLUSTERED INDEX IX_Controller_Event_Log_SignalID_Timestamp_EventCode_EventParam
+ON dbo.Controller_Event_Log (SignalID, Timestamp, EventCode, EventParam)
+WITH (DATA_COMPRESSION = PAGE)
+ON ps_controller_event_log_daily(Timestamp);
+GO
+```
+
+Why `ON ps_controller_event_log_daily(Timestamp)` on the **table** and not
+just on the indexes: a clustered columnstore index requires the base table
+to already be partition-aligned with the same scheme. Without putting the
+table itself on the partition scheme, `CREATE CLUSTERED COLUMNSTORE INDEX
+... ON ps_...` fails with `Msg 35316 — columnstore index must be
+partition-aligned with the base table`. For rowstore, this is not required —
+creating the clustered rowstore index on the partition scheme moves the
+heap data onto the scheme — but columnstore demands the table be there
+first.
+
 ### Fallback: rowstore (pre-2016 or specific reason)
 
 ```sql
@@ -562,6 +604,10 @@ Give the DBA team / operations:
 
 - [ ] Partition function parameter type **matches the column type exactly**
       (`datetime` vs `datetime2(7)` will throw error 7439)
+- [ ] If creating from scratch on a fresh DB: the base table itself is
+      created `ON ps_controller_event_log_daily(Timestamp)`. Columnstore
+      requires this (error 35316 otherwise); also remove `DROP_EXISTING = ON`
+      from the index creates since there's nothing to drop yet
 - [ ] Every index on the table is **aligned** (on the partition scheme,
       with `Timestamp` somewhere in the key)
 - [ ] No foreign keys reference `Controller_Event_Log`

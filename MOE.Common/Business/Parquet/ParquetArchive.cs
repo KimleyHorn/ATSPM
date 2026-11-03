@@ -31,49 +31,108 @@ namespace MOE.Common.Business.Parquet
         {
             try
             {
-                
-                var dateRange = startTime.Date == endTime.Date
-                    ? new List<DateTime> { startTime.Date }
-                    : GetDateRange(startTime, endTime);
-
-                var events = new List<Controller_Event_Log>();
-
-                switch (Destination)
-                {
-                    case "0":
-                        if (string.IsNullOrWhiteSpace(localPath)) return new List<Controller_Event_Log>();
-                        events = GetEventsFromLocalFile(localPath, signalId, dateRange);
-                        break;
-                    case "1":
-                        events = GetEventsFromGoogleCloud(signalId, dateRange);
-                        break;
-                    case "2":
-                        events = GetEventsFromAws(signalId, dateRange);
-                        break;
-                    case "3":
-                        events = GetEventsFromAzure(signalId, dateRange);
-                        break;
-                    default:
-                        return events;
-                }
-
+                var events = GetEventsFromArchive(localPath, signalId, GetArchiveDates(startTime, endTime));
                 return events.Where(x => x.Timestamp >= startTime && x.Timestamp < endTime).ToList();
             }
             catch (Exception ex)
             {
-                var logRepository = ApplicationEventRepositoryFactory.Create();
-                var e = new ApplicationEvent
-                {
-                    ApplicationName = "MOE.Common",
-                    Class = "ParquetArchive",
-                    Function = "GetDataFromArchive",
-                    SeverityLevel = ApplicationEvent.SeverityLevels.High,
-                    Description = ex.Message,
-                    Timestamp = DateTime.Now
-                };
-                logRepository.Add(e);
+                LogArchiveError("GetDataFromArchive", signalId, startTime, endTime, ex);
                 return new List<Controller_Event_Log>();
             }
+        }
+
+        /// <summary>
+        /// Gets the archived events from startTime up to endTime that match the filter. Reads one day of the
+        /// archive at a time and keeps only matching events, so memory grows with the result, not the date range.
+        /// </summary>
+        public static List<Controller_Event_Log> GetDataFromArchive(string localPath, string signalId,
+            DateTime startTime, DateTime endTime, Func<Controller_Event_Log, bool> filter)
+        {
+            try
+            {
+                return ReadArchiveOneDayAtATime(localPath, signalId, startTime, endTime, filter).ToList();
+            }
+            catch (Exception ex)
+            {
+                LogArchiveError("GetDataFromArchive", signalId, startTime, endTime, ex);
+                return new List<Controller_Event_Log>();
+            }
+        }
+
+        /// <summary>
+        /// Counts the archived events from startTime up to endTime that match the filter, holding no more than
+        /// one day of events in memory at a time.
+        /// </summary>
+        public static int GetArchivedEventCount(string localPath, string signalId, DateTime startTime,
+            DateTime endTime, Func<Controller_Event_Log, bool> filter)
+        {
+            try
+            {
+                return ReadArchiveOneDayAtATime(localPath, signalId, startTime, endTime, filter).Count();
+            }
+            catch (Exception ex)
+            {
+                LogArchiveError("GetArchivedEventCount", signalId, startTime, endTime, ex);
+                return 0;
+            }
+        }
+
+        private static IEnumerable<Controller_Event_Log> ReadArchiveOneDayAtATime(string localPath,
+            string signalId, DateTime startTime, DateTime endTime, Func<Controller_Event_Log, bool> filter)
+        {
+            foreach (var date in GetArchiveDates(startTime, endTime))
+            {
+                foreach (var e in GetEventsFromArchive(localPath, signalId, new[] { date }))
+                {
+                    if (e.Timestamp >= startTime && e.Timestamp < endTime && (filter == null || filter(e)))
+                        yield return e;
+                }
+            }
+        }
+
+        private static IEnumerable<DateTime> GetArchiveDates(DateTime startTime, DateTime endTime)
+        {
+            return startTime.Date == endTime.Date
+                ? new List<DateTime> { startTime.Date }
+                : GetDateRange(startTime, endTime);
+        }
+
+        private static List<Controller_Event_Log> GetEventsFromArchive(string localPath, string signalId,
+            IEnumerable<DateTime> dateRange)
+        {
+            switch (Destination)
+            {
+                case "0":
+                    return string.IsNullOrWhiteSpace(localPath)
+                        ? new List<Controller_Event_Log>()
+                        : GetEventsFromLocalFile(localPath, signalId, dateRange);
+                case "1":
+                    return GetEventsFromGoogleCloud(signalId, dateRange);
+                case "2":
+                    return GetEventsFromAws(signalId, dateRange);
+                case "3":
+                    return GetEventsFromAzure(signalId, dateRange);
+                default:
+                    return new List<Controller_Event_Log>();
+            }
+        }
+
+        private static void LogArchiveError(string function, string signalId, DateTime startTime,
+            DateTime endTime, Exception ex)
+        {
+            var logRepository = ApplicationEventRepositoryFactory.Create();
+            var e = new ApplicationEvent
+            {
+                ApplicationName = "MOE.Common",
+                Class = "ParquetArchive",
+                Function = function,
+                SeverityLevel = ApplicationEvent.SeverityLevels.High,
+                Description =
+                    $"StorageLocation={Destination}, Bucket={GoogleBucketName}, Path={FolderName}{FilePathPrefix}=, " +
+                    $"Signal={signalId}, {startTime:yyyy-MM-dd HH:mm} to {endTime:yyyy-MM-dd HH:mm}{Environment.NewLine}{ex}",
+                Timestamp = DateTime.Now
+            };
+            logRepository.Add(e);
         }
 
         private static List<Controller_Event_Log> GetEventsFromAzure(string signalId, IEnumerable<DateTime> dateRange)

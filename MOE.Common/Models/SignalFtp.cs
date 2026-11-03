@@ -1490,8 +1490,7 @@ namespace MOE.Common.Business
             //var errorRepository = ApplicationEventRepositoryFactory.Create();
             try
             {
-                var finalFile = receivedFiles.OrderByDescending(x => x.FullName);
-                var mostRecentFile = finalFile.First();
+                var mostRecentName = receivedFiles.OrderByDescending(x => x.FullName).First().FullName;
                 foreach (var ret in receivedFiles)
                 {
                     // FullName will include full path in sFTP
@@ -1500,20 +1499,42 @@ namespace MOE.Common.Business
                     string fileName = ret.Name;
                     string remoteFileName = ret.FullName;
 
+                    // Skip the current (most-recent) log entirely when SkipCurrentLog is set.
+                    // It may still be getting written by the controller, so don't download
+                    // OR delete it - leave it untouched until a newer file rolls in.
+                    if (SignalFtpOptions.SkipCurrentLog && remoteFileName == mostRecentName)
+                    {
+                        Console.WriteLine("skipping current log {0} (may still be writing)", remoteFileName);
+                        continue;
+                    }
+
                     using (Stream fileStream = File.OpenWrite(Path.Combine(directory, fileName)))
                     {
                         Console.WriteLine("Downloading {0}", fileName);
                         //copy file and get to local diretory
                         client.DownloadFile(remoteFileName, fileStream);
 
-                        //remove file in remote directory
-                        Console.WriteLine("deleting {0} in sFTP instance", remoteFileName);
-                        //delete file in remote sFTP directory
-                        if (client.Exists(remoteFileName) &&
-                            !(SignalFtpOptions.SkipCurrentLog && mostRecentFile == ret) &&
-                            SignalFtpOptions.DeleteAfterFtp)
+                        //delete file in remote sFTP directory when enabled
+                        if (SignalFtpOptions.DeleteAfterFtp)
                         {
-                            client.DeleteFile(remoteFileName);
+                            try
+                            {
+                                Console.WriteLine("deleting {0} in sFTP instance", remoteFileName);
+                                client.DeleteFile(remoteFileName);
+                            }
+                            catch (Exception delEx)
+                            {
+                                Console.WriteLine("FAILED to delete {0}: {1}", remoteFileName, delEx.Message);
+                                ApplicationEventRepositoryFactory.Create().QuickAdd(
+                                    "sFTPFromControllers", "SignalFtp", "TransferCubicFiles.Delete",
+                                    ApplicationEvent.SeverityLevels.Medium,
+                                    Signal.SignalID + " @ " + Signal.IPAddress + " - failed to delete " +
+                                    remoteFileName + ": " + delEx.Message);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("keeping {0} on controller (delete disabled)", remoteFileName);
                         }
                     }
 

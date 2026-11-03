@@ -130,9 +130,13 @@ namespace MOE.Common.Business.WCFServiceLibrary
                         where r.MovementTypeID == x
                         select r).FirstOrDefault();
 
+                    //Compare the foreign keys rather than the navigation properties.  A lane-by-lane
+                    //detector that has no Movement Type or Lane Type selected leaves the navigation
+                    //null, which used to throw and take down the whole report instead of just
+                    //leaving that detector off the chart.
                     var DetectorsForChart = (from r in DetectorsByDirection
-                        where r.MovementType.MovementTypeID == movementType.MovementTypeID
-                              && r.LaneType.LaneTypeID == lanetype.LaneTypeID
+                        where r.MovementTypeID == movementType.MovementTypeID
+                              && r.LaneTypeID == lanetype.LaneTypeID
                         select r).ToList();
 
                     //movement type 1 is the thru movement.  We have to add the thru/turn lanes to the thru movment count.
@@ -140,8 +144,8 @@ namespace MOE.Common.Business.WCFServiceLibrary
                     if (x == 1)
                     {
                         var turnthrudetectors = (from r in DetectorsByDirection
-                            where (r.MovementType.MovementTypeID == 4 || r.MovementType.MovementTypeID == 5)
-                                  && r.LaneType.LaneTypeID == lanetype.LaneTypeID
+                            where (r.MovementTypeID == 4 || r.MovementTypeID == 5)
+                                  && r.LaneTypeID == lanetype.LaneTypeID
                             select r).ToList();
 
                         if (turnthrudetectors != null && turnthrudetectors.Count > 0)

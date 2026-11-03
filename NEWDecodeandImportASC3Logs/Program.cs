@@ -26,6 +26,8 @@ namespace NEWDecodeandImportASC3Logs
             var appSettings = ConfigurationManager.AppSettings;
             List<string> dirList = new List<string>();
             string cwd = appSettings["ASC3LogsPath"];
+            string failedFileLocation = appSettings["FailedFileLocation"];
+            bool writeToConsole = Convert.ToBoolean(appSettings["WriteToConsole"]);
             int maxFilesToImportPerSignal = Convert.ToInt32(appSettings["MaxFilesPerSignalToImport"]);
             string startSignal = null;
             string endSignal = null;
@@ -53,22 +55,47 @@ namespace NEWDecodeandImportASC3Logs
                 {
                     var toDelete = new ConcurrentBag<string>();
                     var mergedEventsTable = new BlockingCollection<MOE.Common.Data.MOE.Controller_Event_LogRow>();
-                    if (Convert.ToBoolean(appSettings["WriteToConsole"]))
+                    if (writeToConsole)
                     {
                         Console.WriteLine("-----------------------------Starting Signal " + dir);
                     }
                     //foreach (var fileName in fileNames)
                         for(int i = 0; i < maxFilesToImportPerSignal && i < fileNames.Length; i++)
                     {
+                        var decodedFileEvents = new BlockingCollection<MOE.Common.Data.MOE.Controller_Event_LogRow>();
                         try
                         {
                             MOE.Common.Business.LogDecoder.Asc3Decoder.DecodeAsc3File(fileNames[i], signalId,
-                                mergedEventsTable, Convert.ToDateTime(appSettings["EarliestAcceptableDate"]));
+                                decodedFileEvents, Convert.ToDateTime(appSettings["EarliestAcceptableDate"]));
+
+                            // Do not add any rows from this file to the import batch until the
+                            // entire file has decoded successfully. A decoder exception can occur
+                            // after rows have already been produced.
+                            foreach (var decodedEvent in decodedFileEvents)
+                            {
+                                mergedEventsTable.Add(decodedEvent);
+                            }
+
                             toDelete.Add(fileNames[i]);
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine(ex.Message);
+                            Console.WriteLine("Failed to decode file '" + fileNames[i] + "': " + ex);
+
+                            if (string.IsNullOrWhiteSpace(failedFileLocation))
+                            {
+                                Console.WriteLine("FailedFileLocation is not configured; leaving failed file in place.");
+                            }
+                            else
+                            {
+                                var failedFile = new ConcurrentBag<string>();
+                                failedFile.Add(fileNames[i]);
+                                MoveFiles(failedFile, failedFileLocation, signalId, writeToConsole);
+                            }
+                        }
+                        finally
+                        {
+                            decodedFileEvents.Dispose();
                         }
                     }
 
