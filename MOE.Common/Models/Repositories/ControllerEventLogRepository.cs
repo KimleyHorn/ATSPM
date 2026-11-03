@@ -56,24 +56,32 @@ namespace MOE.Common.Models.Repositories
             if (eventCodes != null && eventCodes.Count > 0)
                 query = query.Where(c => eventCodes.Contains(c.EventCode));
 
-            var queryList = query.ToList();
-            if (queryList.Any())
+            // Count in SQL. Loading the rows just to count them took several GB per request on long date
+            // ranges, enough to run the web server out of memory.
+            var databaseCount = query.Count();
+            if (databaseCount > 0)
             {
-                var minTime = queryList.Min(x => x.Timestamp);
+                var minTime = query.Min(x => x.Timestamp);
                 if (minTime.Date == startTime.Date)
-                    return queryList.Count();
+                    return databaseCount;
                 endTime = minTime;
             }
 
-            //Check the archive if no data in DB
-            var archivedData = ParquetArchive.GetDataFromArchive(_localPath, signalId, startTime, endTime);
+            //Check the archive for the part of the range that is no longer in the DB
+            var archivedCount = ParquetArchive.GetArchivedEventCount(_localPath, signalId, startTime, endTime,
+                EventFilter(eventParameters, eventCodes));
 
-            if (eventParameters != null && eventParameters.Count > 0)
-                archivedData = archivedData.Where(c => eventParameters.Contains(c.EventParam)).ToList();
-            if (eventCodes != null && eventCodes.Count > 0)
-                archivedData = archivedData.Where(c => eventCodes.Contains(c.EventCode)).ToList();
+            return databaseCount + archivedCount;
+        }
 
-            return archivedData.Count + queryList.Count;
+        private static Func<Controller_Event_Log, bool> EventFilter(List<int> eventParameters, List<int> eventCodes)
+        {
+            var parameters = eventParameters != null && eventParameters.Count > 0
+                ? new HashSet<int>(eventParameters)
+                : null;
+            var codes = eventCodes != null && eventCodes.Count > 0 ? new HashSet<int>(eventCodes) : null;
+            return e => (parameters == null || parameters.Contains(e.EventParam)) &&
+                        (codes == null || codes.Contains(e.EventCode));
         }
 
         public List<Controller_Event_Log> GetRecordsByParameterAndEvent(string signalId, DateTime startTime,
@@ -95,12 +103,9 @@ namespace MOE.Common.Models.Repositories
                 endTime = minTime;
             }
 
-            var archivedData = ParquetArchive.GetDataFromArchive(_localPath, signalId, startTime, endTime);
-
-            if (eventParameters != null && eventParameters.Count > 0)
-                archivedData = archivedData.Where(c => eventParameters.Contains(c.EventParam)).ToList();
-            if (eventCodes != null && eventCodes.Count > 0)
-                archivedData = archivedData.Where(c => eventCodes.Contains(c.EventCode)).ToList();
+            // Filter while reading the archive so a narrow export over a long range doesn't load every event first.
+            var archivedData = ParquetArchive.GetDataFromArchive(_localPath, signalId, startTime, endTime,
+                EventFilter(eventParameters, eventCodes));
 
             return archivedData.Concat(queryList).ToList();
         }
